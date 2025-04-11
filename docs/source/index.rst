@@ -1,17 +1,12 @@
-.. Machine Learning Compiler documentation master file, created by
-   sphinx-quickstart on Fri Apr 11 09:56:00 2025.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Project
+=======
 
-Machine Learning Compiler documentation
-=======================================
-
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
-
+Hello this is our project report :).
 
 .. toctree::
+   :hidden:
+   :numbered: 0
    :maxdepth: 2
-   :caption: Contents:
 
+   self
+   chapters/week_01.rst

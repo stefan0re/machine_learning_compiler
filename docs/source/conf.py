@@ -7,7 +7,7 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'Machine Learning Compiler'
-copyright = '2025, Phillip Rothenbeck, Stefan Remke'
+copyright = '2025, Phillip Rothenbeck, Stefan Remke, Tom Schmidt'
 author = 'Phillip Rothenbeck, Stefan Remke'
 
 # -- General configuration ---------------------------------------------------
