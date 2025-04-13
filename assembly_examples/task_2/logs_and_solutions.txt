@@ -1,0 +1,15 @@
+as -o add_values.o add_values.s
+hexdump -C add_values.o > add_values_hex_dump.txt
+readelf -S add_values.o > add_values_sections.txt
+objdump -D add_values.o > add_values_full_disassembly.txt
+
+The size of our .text section can be read in the section header out put of the readelf call. It has a size of 0x20 = 32 bytes. As labels and directives do not contribute to this size, we only have to count the instructions. add_values.s contains 8 instructions (1x stp, 1x mov, 2x ldr, 1x add, 1x str, 1x ldp), with each instruction being 32 bit = 4 bytes long. Thus we get a size of 4 bytes * 8 instructions = 32 bytes.
+
+g++ -c add_values.cpp -o add_values_wrapper.o
+as -o add_values.o add_values.s
+g++ add_values_wrapper.o add_values.o -o add_values
+./add_values
+32 + 10 = 42
+
+as -g -o add_values.o add_values.s
+g++ -g -ggdb add_values.cpp add_values.o -o add_values
