@@ -23,6 +23,6 @@ jobs:
       - name: Test Building
         run: |
           brew --prefix binutils
-          /opt/homebrew/bin/gas -c data/add_values.s -o add_values.o 
+          /opt/homebrew/opt/binutils/bin/gas -c data/add_values.s -o add_values.o 
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
