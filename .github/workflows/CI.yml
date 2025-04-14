@@ -6,12 +6,13 @@ jobs:
     runs-on: macos-latest
     
     steps:
-      - run: echo "Job Information"
-      - run: echo "Branch:  ${{ github.ref }}"
-      - run: echo "OS:      ${{ runner.os }} on GitHub"
-      - run: echo "Event:   ${{ github.event_name }}"
+      - name: Job Info
+        run: |
+          echo "Branch:  ${{ github.ref }}"
+          echo "OS:      ${{ runner.os }} on GitHub"
+          echo "Event:   ${{ github.event_name }}"
       
       - name: Install dependencies
         run: |
-          sudo apt update
-          sudo apt install -y build-essential
+          brew update
+          brew install gcc make
