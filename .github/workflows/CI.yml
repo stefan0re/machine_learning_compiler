@@ -12,6 +12,9 @@ jobs:
           echo "OS:      ${{ runner.os }} on GitHub"
           echo "Event:   ${{ github.event_name }}"
 
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
       - name: Install Dependencies
         run: |
           brew update
@@ -20,6 +23,6 @@ jobs:
       - name: Test Building
         run: |
           pwd
-          as -o add_values.o ./data/add_values.s
-          g++ ./assembly_examples/task_2/add_values.cpp add_values.o -o add_values
+          as -o add_values.o data/add_values.s
+          g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
