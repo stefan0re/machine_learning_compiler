@@ -22,7 +22,6 @@ jobs:
 
       - name: Test Building
         run: |
-          BINUTILS_PATH=$(brew --prefix binutils)
-          $BINUTILS_PATH/bin/as -c data/add_values.s -o add_values.o
+          as -c data/add_values.s -o add_values.o
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
