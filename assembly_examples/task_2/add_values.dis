@@ -1,0 +1,22 @@
+
+add_values.o:     file format elf64-littleaarch64
+
+SYMBOL TABLE:
+0000000000000000 l    d  .text	0000000000000000 .text
+0000000000000000 l    d  .data	0000000000000000 .data
+0000000000000000 l    d  .bss	0000000000000000 .bss
+0000000000000000 g     F .text	0000000000000000 add_values
+
+
+
+Disassembly of section .text:
+
+0000000000000000 <add_values>:
+   0:	a9bf7bfd 	stp	x29, x30, [sp, #-16]!
+   4:	910003fd 	mov	x29, sp
+   8:	b9400003 	ldr	w3, [x0]
+   c:	b9400024 	ldr	w4, [x1]
+  10:	0b040065 	add	w5, w3, w4
+  14:	b9000045 	str	w5, [x2]
+  18:	a8c17bfd 	ldp	x29, x30, [sp], #16
+  1c:	d65f03c0 	ret

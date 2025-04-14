@@ -3,16 +3,25 @@ run-name: CI Pipeline triggered by ${{ github.actor }}
 on: [push]
 jobs:
   build:
-    runs-on: macos-latest
-    
+    runs-on: ubuntu-24.04-arm
+
     steps:
       - name: Job Info
         run: |
           echo "Branch:  ${{ github.ref }}"
           echo "OS:      ${{ runner.os }} on GitHub"
           echo "Event:   ${{ github.event_name }}"
-      
-      - name: Install dependencies
+
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        
+      - name: Install Dependencies
         run: |
-          brew update
-          brew install gcc make
+          sudo apt update
+          sudo apt install -y build-essential
+
+      - name: Test Building
+        run: |
+          as -c data/add_values.s -o add_values.o
+          g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
+          ./add_values
