@@ -3,7 +3,7 @@ run-name: CI Pipeline triggered by ${{ github.actor }}
 on: [push]
 jobs:
   build:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Job Info
@@ -17,11 +17,11 @@ jobs:
         
       - name: Install Dependencies
         run: |
-          brew update
-          brew install gcc make binutils
+          sudo apt update
+          sudo apt install -y build-essential
 
       - name: Test Building
         run: |
-          clang -c data/add_values.s -o add_values.o
+          as -c data/add_values.s -o add_values.o
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
