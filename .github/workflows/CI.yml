@@ -7,7 +7,6 @@ jobs:
     
     steps:
       - run: echo "Job Information"
-      - run: echo "Repo:    ${{ github.repository }}"
       - run: echo "Branch:  ${{ github.ref }}"
       - run: echo "OS:      ${{ runner.os }} on GitHub"
       - run: echo "Event:   ${{ github.event_name }}"
