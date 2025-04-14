@@ -22,6 +22,6 @@ jobs:
 
       - name: Test Building
         run: |
-          as -c data/add_values.s -o add_values.o
+          clang -c data/add_values.s -o add_values.o
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
