@@ -18,11 +18,11 @@ jobs:
       - name: Install Dependencies
         run: |
           brew update
-          brew install gcc make
+          brew install gcc make binutils
 
       - name: Test Building
         run: |
           pwd
-          g++ -c data/add_values.s -o add_values.o 
+          /opt/homebrew/bin/gas -c data/add_values.s -o add_values.o 
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
