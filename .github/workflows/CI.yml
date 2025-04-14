@@ -19,10 +19,10 @@ jobs:
         run: |
           brew update
           brew install gcc make binutils
+          which gas
 
       - name: Test Building
         run: |
-          pwd
           /opt/homebrew/bin/gas -c data/add_values.s -o add_values.o 
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
