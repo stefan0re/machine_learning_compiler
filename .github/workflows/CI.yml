@@ -19,6 +19,7 @@ jobs:
 
       - name: Test Building
         run: |
+          pwd
           as -o add_values.o data/add_values.s
           g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
           ./add_values
