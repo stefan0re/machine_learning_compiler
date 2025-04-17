@@ -174,6 +174,11 @@ Resulting in the following output:
 
 Here the .text header can be found at line 8.
 
+The size of our .text section can be read in the section header out put of the readelf call. 
+It has a size of 0x20 = 32 bytes. As labels and directives do not contribute to this size, we only have to count the instructions. 
+:code:`add_values.s` contains 8 instructions (1x stp, 1x :code:`mov`, 2x :code:`ldr`, 1x :code:`add`, 1x :code:`str`, 1x :code:`ldp`), with each instruction being 32 bit = 4 bytes long. 
+Thus we get a size of 4 bytes * 8 instructions = 32 bytes.
+
 Finally we disassembled our binary:
 
 .. code-block:: shell
@@ -183,7 +188,7 @@ Finally we disassembled our binary:
 As we expected, the same program comes out here that we originally wrote in assembly.
 
 
-.. code-block:: 
+.. code-block:: text
 
     add_values.o:     file format elf64-littleaarch64
 
@@ -207,10 +212,11 @@ As we expected, the same program comes out here that we originally wrote in asse
     18:	a8c17bfd 	ldp	x29, x30, [sp], #16
     1c:	d65f03c0 	ret
 
-
 To use the assembly add function we have written the following driver, which can be viewed in our `GitHub <https://github.com/stefan0re/machine_learning_compiler/blob/main/assembly_examples/task_2/add_values.cpp>`_ repository.
 
-You can see how all the translating commands were executed in the `log file <../_static/logs_and_solutions.txt>`_.
+The `pdf <../_static/steps.pdf>`_ holds all output from the GDB debugger outputs for the task.
+
+You can see how all the translating commands were executed in the `log file <../_static/logs_and_solutions.txt>`_. 
 It also illustrates how we used our driver to execute an example calculation using the assembly function.
 It also describes how we traced the steps of the assembly function with the GDB debugger.
 In particular, we took a closer look at the GP registers x3-x5 because this is where our addition was calculated.
