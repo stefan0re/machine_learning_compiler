@@ -1,0 +1,370 @@
+as -o add_values.o add_values.s
+hexdump -C add_values.o > add_values_hex_dump.txt
+readelf -S add_values.o > add_values_sections.txt
+objdump -D add_values.o > add_values_full_disassembly.txt
+
+The size of our .text section can be read in the section header out put of the readelf call. It has a size of 0x20 = 32 bytes. As labels and directives do not contribute to this size, we only have to count the instructions. add_values.s contains 8 instructions (1x stp, 1x mov, 2x ldr, 1x add, 1x str, 1x ldp), with each instruction being 32 bit = 4 bytes long. Thus we get a size of 4 bytes * 8 instructions = 32 bytes.
+
+g++ -c add_values.cpp -o add_values_wrapper.o
+as -o add_values.o add_values.s
+g++ add_values_wrapper.o add_values.o -o add_values
+./add_values
+32 + 10 = 42
+
+as -g -o add_values.o add_values.s
+g++ -g -ggdb add_values.cpp add_values.o -o add_values
+gdb ./add_values
+
+(gdb) break add_values
+(gdb) define hook-stop
+Type commands for definition of "hook-stop".
+End with a line saying just "end".
+>info registers
+>end
+(gdb) run
+
+Using host libthread_db library "/lib64/libthread_db.so.1".
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x4007f4            4196340
+x4             0xffffa8bb4aa0      281473512589984
+x5             0x4cd18e47aa65d63b  5535361855467673147
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28c0      281474884053184
+x30            0x400914            4196628
+sp             0xfffffa7a28c0      0xfffffa7a28c0
+pc             0x400998            0x400998 <add_values>
+cpsr           0x60000000          [ EL=0 BTYPE=0 C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+
+Breakpoint 1, add_values () at add_values.s:5
+5           stp fp, lr, [sp, #-16]!
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x4007f4            4196340
+x4             0xffffa8bb4aa0      281473512589984
+x5             0x4cd18e47aa65d63b  5535361855467673147
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28c0      281474884053184
+x30            0x400914            4196628
+sp             0xfffffa7a28b0      0xfffffa7a28b0
+pc             0x40099c            0x40099c <add_values+4>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+6           mov fp, sp
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x4007f4            4196340
+x4             0xffffa8bb4aa0      281473512589984
+x5             0x4cd18e47aa65d63b  5535361855467673147
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28b0      281474884053168
+x30            0x400914            4196628
+sp             0xfffffa7a28b0      0xfffffa7a28b0
+pc             0x4009a0            0x4009a0 <add_values+8>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+8           ldr w3, [x0]
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x20                32
+x4             0xffffa8bb4aa0      281473512589984
+x5             0x4cd18e47aa65d63b  5535361855467673147
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28b0      281474884053168
+x30            0x400914            4196628
+sp             0xfffffa7a28b0      0xfffffa7a28b0
+pc             0x4009a4            0x4009a4 <add_values+12>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+9           ldr w4, [x1]
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x20                32
+x4             0xa                 10
+x5             0x4cd18e47aa65d63b  5535361855467673147
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28b0      281474884053168
+x30            0x400914            4196628
+sp             0xfffffa7a28b0      0xfffffa7a28b0
+pc             0x4009a8            0x4009a8 <add_values+16>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+10          add w5, w3, w4
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x20                32
+x4             0xa                 10
+x5             0x2a                42
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28b0      281474884053168
+x30            0x400914            4196628
+sp             0xfffffa7a28b0      0xfffffa7a28b0
+pc             0x4009ac            0x4009ac <add_values+20>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+11          str w5, [x2]
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x20                32
+x4             0xa                 10
+x5             0x2a                42
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28b0      281474884053168
+x30            0x400914            4196628
+sp             0xfffffa7a28b0      0xfffffa7a28b0
+pc             0x4009b0            0x4009b0 <add_values+24>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+13          ldp fp, lr, [sp], #16
+
+(gdb) si
+x0             0xfffffa7a28dc      281474884053212
+x1             0xfffffa7a28d8      281474884053208
+x2             0xfffffa7a28d4      281474884053204
+x3             0x20                32
+x4             0xa                 10
+x5             0x2a                42
+x6             0x0                 0
+x7             0xffffa8ae5000      281473511739392
+x8             0xffffa8810ae0      281473508772576
+x9             0x7f7f7f7f7f7f7f7f  9187201950435737471
+x10            0xffffa8662fe8      281473507012584
+x11            0x0                 0
+x12            0xffffa8bc2360      281473512645472
+x13            0x0                 0
+x14            0x2e                46
+x15            0x3d8f538           64550200
+x16            0xffffa880fd60      281473508769120
+x17            0xffffa8b936a0      281473512453792
+x18            0xffffa8ae60c0      281473511743680
+x19            0xfffffa7a2a58      281474884053592
+x20            0x1                 1
+x21            0x41fdc0            4324800
+x22            0x4007f4            4196340
+x23            0xfffffa7a2a68      281474884053608
+x24            0xffffa8bc0b20      281473512639264
+x25            0x0                 0
+x26            0xffffa8bc1000      281473512640512
+x27            0x41fdc0            4324800
+x28            0x0                 0
+x29            0xfffffa7a28c0      281474884053184
+x30            0x400914            4196628
+sp             0xfffffa7a28c0      0xfffffa7a28c0
+pc             0x4009b4            0x4009b4 <add_values+28>
+cpsr           0x60200000          [ EL=0 BTYPE=0 SS C Z ]
+fpsr           0x0                 [ ]
+fpcr           0x0                 [ Len=0 Stride=0 RMode=0 ]
+tpidr          0xffffa8bb50a0      0xffffa8bb50a0
+tpidr2         0x0                 0x0
+pauth_dmask    0x7f000000000000    35747322042253312
+pauth_cmask    0x7f000000000000    35747322042253312
+15          ret

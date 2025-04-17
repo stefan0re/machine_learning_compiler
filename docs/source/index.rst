@@ -1,7 +1,9 @@
-Project
-=======
+Machine Learning Compiler
+=========================
 
 Hello this is our project report :).
+
+You can see our code at `Github <https://github.com/stefan0re/machine_learning_compiler>`_.
 
 .. toctree::
    :hidden:
