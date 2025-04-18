@@ -24,7 +24,7 @@ jobs:
           chmod +x cmake-${CMAKE_VERSION}-linux-aarch64.sh
           sudo ./cmake-${CMAKE_VERSION}-linux-aarch64.sh --skip-license --prefix=/usr/local
 
-      - name: Verify CMake installation
+      - name: Verify CMake Installation
         run: cmake --version
 
       - name: Build Project
