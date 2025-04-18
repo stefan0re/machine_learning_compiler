@@ -21,5 +21,5 @@ foreach(ASM_FILE IN LISTS ASM_SOURCES)
 endforeach()
 
 # link and compile
-
+message(STATUS "Linking objects: ${ASM_OBJECTS}")
 add_executable(${TARGET_NAME} microbenchmark_driver.cpp ${ASM_OBJECTS})
