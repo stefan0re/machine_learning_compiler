@@ -29,14 +29,14 @@ loop:
     sub x0, x0, #1
 
     add x1, x1, x2, lsl #1
-    add x3, x3, x4, lsl #1
-    add x5, x5, x6, lsl #1
-    add x7, x7, x8, lsl #1
+    add x3, x3, x4, lsr #1
+    add x5, x5, x6, lsl #2
+    add x7, x7, x8, asr #1
 
     add x9, x9, x10, lsl #1
-    add x11, x11, x12, lsl #1
-    add x13, x13, x14, lsl #1
-    add x15, x15, x16, lsl #1
+    add x11, x11, x12, lsr #1
+    add x13, x13, x14, lsl #2
+    add x15, x15, x16, asr #1
 
     cbnz x0, loop
 
