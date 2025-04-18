@@ -4,6 +4,7 @@ set(TARGET_NAME microbenchmark)
 
 # get all benchmark files
 file(GLOB ASM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.s")
+message(STATUS "ASM sources found: ${ASM_SOURCES}")
 
 set(ASM_OBJECTS "")
 foreach(ASM_FILE IN LISTS ASM_SOURCES)
