@@ -4,7 +4,6 @@ set(TARGET_NAME microbenchmark)
 
 # get all benchmark files
 file(GLOB ASM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/throughput/*.s")
-message(STATUS "ASM sources found: ${ASM_SOURCES}")
 
 set(ASM_OBJECTS "")
 foreach(ASM_FILE IN LISTS ASM_SOURCES)
@@ -22,5 +21,4 @@ foreach(ASM_FILE IN LISTS ASM_SOURCES)
 endforeach()
 
 # link and compile
-message(STATUS "Linking objects: ${ASM_OBJECTS}")
 add_executable(${TARGET_NAME} microbenchmark_driver.cpp ${ASM_OBJECTS})
