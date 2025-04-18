@@ -3,7 +3,7 @@ set(TARGET_NAME microbenchmark)
 # Assemble
 
 # get all benchmark files
-file(GLOB ASM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.s")
+file(GLOB ASM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/throughput/*.s")
 message(STATUS "ASM sources found: ${ASM_SOURCES}")
 
 set(ASM_OBJECTS "")
