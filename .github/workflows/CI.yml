@@ -36,5 +36,6 @@ jobs:
 
       - name: Run Microbenchmarks
         run: |
-          cd ./build/benchmarks/microbenchmarks/
+          cd ./build/
+          ls
           ./microbenchmark
