@@ -14,14 +14,26 @@ jobs:
 
       - name: Checkout Repository
         uses: actions/checkout@v3
-        
+
       - name: Install Dependencies
         run: |
           sudo apt update
           sudo apt install -y build-essential
+          CMAKE_VERSION=3.27.7
+          wget https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-aarch64.sh
+          chmod +x cmake-${CMAKE_VERSION}-linux-aarch64.sh
+          sudo ./cmake-${CMAKE_VERSION}-linux-aarch64.sh --skip-license --prefix=/usr/local
 
-      - name: Test Building
+      - name: Verify CMake installation
+        run: cmake --version
+
+      - name: Build Project
         run: |
-          as -c data/add_values.s -o add_values.o
-          g++ assembly_examples/task_2/add_values.cpp add_values.o -o add_values
-          ./add_values
+          mkdir -p build
+          cd build 
+          cmake ..
+          cmake --build .
+
+      - name: Run Microbenchmarks
+        run: |
+          ls
