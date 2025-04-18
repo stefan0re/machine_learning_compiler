@@ -33,9 +33,8 @@ jobs:
           cd build 
           cmake ..
           cmake --build .
+          cd ./build/bin/
 
       - name: Run Microbenchmarks
         run: |
-          cd ./build/bin/
-          ls
           ./microbenchmark
