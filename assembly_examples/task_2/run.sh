@@ -1,7 +1,6 @@
-cd ...
 [ -d build ] || mkdir build
 cd build
-cmake ../assembly_examples/task_2
+cmake ..
 make
 ./driver
-cd ../assembly_examples/task_2 
+cd ..
