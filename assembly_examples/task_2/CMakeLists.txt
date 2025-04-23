@@ -1,5 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
-project(driver_copy C CXX ASM)
+set(TARGET_NAME driver_copy)
 
 set(SOURCES
     copy_c.c
@@ -8,4 +7,4 @@ set(SOURCES
 )
 
 # Create the executable
-add_executable(copy_driver ${SOURCES})
+add_executable(${TARGET_NAME} ${SOURCES})
