@@ -2,7 +2,7 @@ set(TARGET_NAME driver_copy)
 
 set(SRC_CPP copy_driver.cpp)
 set(SRC_C copy_c.c)
-set(SRC_ASM copy_asm.s)
+set(SRC_ASM ${CMAKE_CURRENT_SOURCE_DIR}/copy_asm.s)
 
 get_filename_component(ASM_OBJ_NAME ${SRC_ASM} NAME_WE)
 set(ASM_OBJ ${CMAKE_CURRENT_BINARY_DIR}/${ASM_OBJ_NAME}.o)
