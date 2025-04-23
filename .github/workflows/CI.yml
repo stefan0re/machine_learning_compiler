@@ -1,6 +1,9 @@
 name: Continuous Integration Pipeline
 run-name: CI Pipeline triggered by ${{ github.actor }}
-on: [push]
+on:
+  push:
+    branches:
+      - main
 jobs:
   build:
     runs-on: ubuntu-24.04-arm
