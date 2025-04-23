@@ -74,5 +74,30 @@ For 10^9 iterations we get a execution duration of 0.691266 seconds and a throug
 Latency
 ```````
 
+Now we want to look at the latency of the :code:`ADD` and :code:`MUL` instruction, for this we have to create dependencies in the assembly code in order to execute one instruction after the other sequentially.
+To do this, we add a read after write dependency on a register so that no parallelism can be used in the processor core.
+
+We loop over such dependencies in the assembly code:
+
+.. code-block:: text
+    :linenos:
+
+    add x1, x16, x17
+    add x2, x1, x17
+    add x3, x2, x17
+    add x4, x3, x17
+
+As one can see, the instruction in line 2 depends on the completion of the instruction in line 1.
+
+Again we loop over this code and measure the time of multiple iterations, with the same C++ driver as before.
+
+Here we can measured a throughput of 4.3 GOPS for the :code:`ADD` instruction.
+If we assume that the processor has an approximate clock frequency of 4.3 Ghz, we can say that the latency of the :code:`ADD` instruction is 1 instruction per cycle.
+This would also be consistent with other ARM microarchitectures where the :code:`ADD` instruction also almost always has a latency of 1.
+This also explains our assumption about the processor frequency.
+
+We did the same again for the :code:`MUL` instruction and got a throughput with the read after write dependencies of 1.4 GOPS.
+If we multiply this result by three, we come close to our assumed processor speed.
+Therefore we conclude that the MUL instruction has a latency of 3 clock cycles. 
 
 We all worked on the tasks in equal parts.
