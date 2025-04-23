@@ -1,4 +1,4 @@
-set(TARGET_NAME driver_copy)
+set(TARGET_NAME copy_driver)
 
 set(SRC_CPP copy_driver.cpp)
 set(SRC_C copy_c.c)
