@@ -66,6 +66,8 @@ in the copy_c.c counterpart.
     loop_end:
         ret
 
+**Note:** The copy_driver.cpp file already includes tests for copy_asm_0 and copy_asm_1; therefore, separate unit tests have been omitted.
+
 Task 2: Instruction Throughput and Latency
 ------------------------------------------
 

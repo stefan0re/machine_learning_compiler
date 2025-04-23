@@ -38,3 +38,9 @@ jobs:
         run: |
           cd ./build/bin/
           ./microbenchmark
+      
+      - name: Run copy_driver
+        run: |
+          cd ./build/bin/
+          ./copy_driver
+        
