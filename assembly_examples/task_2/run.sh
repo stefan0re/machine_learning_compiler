@@ -1,5 +1,6 @@
 [ -d build ] || mkdir build
 cd build
-gcc copy_driver.cpp copy_c.c copy_asm.s -o copy_driver
-./driver
+gcc -c ../copy_c.c -o copy_c.o
+g++ ../copy_driver.cpp copy_c.o ../copy_asm.s -o copy_driver
+./copy_driver
 cd ..
