@@ -48,6 +48,7 @@ jobs:
           ./copy_driver
 
       - name: Run Unittests
+        run: |
           cd ./build/
           ctest --verbose
         
