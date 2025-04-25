@@ -47,7 +47,7 @@ jobs:
           cd ./build/bin/
           ./copy_driver
 
-      -name: Run Unittests
+      - name: Run Unittests
           cd ./build/
           ctest --verbose
         
