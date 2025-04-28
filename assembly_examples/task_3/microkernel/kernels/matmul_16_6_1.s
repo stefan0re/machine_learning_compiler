@@ -47,7 +47,7 @@ matmul_16_6_1:
     ld1 {v4.4s}, [x1], #16
     ld1 {v5.2s}, [x1]
 
-    // matrix mul
+    // matrix multiplication
 
     // column 0
     fmla v8.4s, v0.4s, v4.S[0]
