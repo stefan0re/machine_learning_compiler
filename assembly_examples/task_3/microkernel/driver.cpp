@@ -93,17 +93,14 @@ int test_matmul_16_6_64() {
         }
     }
 
-    matmul_16_6_64(a, b, c, 16, 6, 16);
-    visualize_matix(c, 16, 6);
+    matmul_16_6_64(a, b, c, 16, 64, 16);
     reference_mat_mul(a, b, c_ref, 6, 16, 64);
-    std::cout << std::endl;
-    visualize_matix(c_ref, 16, 6);
 
     for (int i = 0; i < 16; i++) {
         for (int j = 0; j < 6; j++) {
             int c_index = j * 16 + i;
             if (c[c_index] != c_ref[c_index]) {
-                std::cout << "Failed in matmul_16_6_1: i=" << i << ", j=" << j << std::endl;
+                std::cout << "Failed in matmul_16_6_64: i=" << i << ", j=" << j << std::endl;
 
                 std::cout << c[c_index] << " != " << c_ref[c_index] << std::endl;
                 is_correct = false;
@@ -111,20 +108,20 @@ int test_matmul_16_6_64() {
         }
     }
 
-    /*start = std::chrono::high_resolution_clock::now();
+    start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; i++) {
-        matmul_16_6_1(a, b, c, 16, 6, 16);
+        matmul_16_6_1(a, b, c, 16, 64, 16);
     }
     end = std::chrono::high_resolution_clock::now();
 
     double duration = std::chrono::duration<double>(end - start).count();
-    double throughput = (iterations / duration) * 192;  // 192 flops in one iter
+    double throughput = (iterations * 192 * 64) / duration;  // 192 flops in one iter
 
     std::cout << "---------------------------------" << std::endl;
-    std::cout << "matmul_16_6_1" << std::endl;
+    std::cout << "matmul_16_6_64" << std::endl;
     std::cout << "Duration:\t" << duration << " sec" << std::endl;
     std::cout << "Throughput:\t" << throughput / 1e9 << " GFLOPS\n"
-              << std::endl;*/
+              << std::endl;
 
     return is_correct;
 }
@@ -148,7 +145,7 @@ int test_matmul_16_6_1() {
         }
     }
 
-    matmul_16_6_1(a, b, c, 16, 6, 16);
+    matmul_16_6_1(a, b, c, 16, 1, 16);
     reference_mat_mul(a, b, c_ref, 6, 16, 1);
 
     for (int i = 0; i < 16; i++) {
@@ -165,7 +162,7 @@ int test_matmul_16_6_1() {
 
     start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; i++) {
-        matmul_16_6_1(a, b, c, 16, 6, 16);
+        matmul_16_6_1(a, b, c, 16, 1, 16);
     }
     end = std::chrono::high_resolution_clock::now();
 
