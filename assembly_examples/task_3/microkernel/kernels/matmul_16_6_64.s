@@ -40,14 +40,10 @@ matmul_16_6_64:
     ld1 {v24.4s, v25.4s, v26.4s, v27.4s}, [x6], #64
     ld1 {v28.4s, v29.4s, v30.4s, v31.4s}, [x6]
 
-    // initialize loop counter to k
-    mov x7, x4
-
-    // B row pointer 
-    mov x8, x1
-
-    // calculate byte offset for B
-    add x9, xzr, x4, lsl #4
+    mov x7, x4 // loop counter to k
+    mov x8, x1 // B row pointer 
+    mov x10, #1 // B counter
+    add x9, xzr, x4, lsl #2 // byte offset for B
 
 loop:
     sub x7, x7, #1
@@ -56,13 +52,12 @@ loop:
     ld1 {v0.4s, v1.4s, v2.4s, v3.4s}, [x0], #64
 
     // load b
-
     ld1 {v4.s}[0], [x8], x9
     ld1 {v4.s}[1], [x8], x9
     ld1 {v4.s}[2], [x8], x9
     ld1 {v4.s}[3], [x8], x9
     ld1 {v5.s}[0], [x8], x9
-    ld1 {v5.s}[0], [x8], x9
+    ld1 {v5.s}[1], [x8]
 
     // matrix multiplication
 
@@ -101,6 +96,15 @@ loop:
     fmla v29.4s, v1.4s, v5.S[1]
     fmla v30.4s, v2.4s, v5.S[1]
     fmla v31.4s, v3.4s, v5.S[1]
+
+    // move one row down in B
+    mov x8, x1
+    add x8, x8, x10, lsl #2
+
+    // increment B counter
+    add x10, x10, #1
+
+    cbnz x7, loop
 
     st1 {v8.4s, v9.4s, v10.4s, v11.4s}, [x2], #64
     st1 {v12.4s, v13.4s, v14.4s, v15.4s}, [x2], #64
