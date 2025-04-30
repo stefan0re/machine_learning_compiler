@@ -40,7 +40,8 @@ jobs:
       - name: Run Microbenchmarks
         run: |
           cd ./build/bin/
-          ./microbenchmark
+          ./throughput_microbenchmark
+          ./latency_microbenchmark
       
       - name: Run copy_driver
         run: |
