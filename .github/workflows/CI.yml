@@ -42,6 +42,7 @@ jobs:
           cd ./build/bin/
           ./throughput_microbenchmark
           ./latency_microbenchmark
+          ./neon_microbenchmark
       
       - name: Run copy_driver
         run: |

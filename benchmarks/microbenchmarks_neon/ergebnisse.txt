@@ -1,0 +1,39 @@
+---------------------------------
+Throughput FMLA 4S...
+  Duration: 1.01432
+  GFLOPS: 126.193
+[mlc_02@b1976c8ae2d8 microbenchmark]$ g++ -o main driver.cpp kernels/fmla.s
+
+// nutzung des gleichen registers: 
+[mlc_02@b1976c8ae2d8 microbenchmark]$ ./main 
+---------------------------------
+Throughput FMLA 4S...
+  Duration: 1.15412
+  GFLOPS: 103.975
+
+
+
+
+
+---------------------------------
+Throughput FMLA 4S...
+  Duration: 1.50647
+  GFLOPS: 127.451
+---------------------------------
+Throughput FMLA 2S...
+  Duration: 1.44664
+  GFLOPS: 66.3607
+---------------------------------
+Throughput FMADD...
+  Duration: 1.36229
+  GFLOPS: 30.8304
+---------------------------------
+Latency SRC FMLA 4S...
+  Duration: 2.19377
+  GFLOPS: 11.3048
+---------------------------------
+Latency DST FMLA 4S...
+  Duration: 2.21079
+  GFLOPS: 11.2177
+---------------------------------
+
