@@ -48,6 +48,21 @@ void matmul_64_6_64(float const *a,
                     int64_t lda,
                     int64_t ldb,
                     int64_t ldc);
+
+/**
+ * @param a pointer to column-major matrix A.
+ * @param b pointer to column-major matrix B.
+ * @param c pointer to column-major matrix C.
+ * @param lda leading dimension of A.
+ * @param ldb leading dimension of B.
+ * @param ldc leading dimension of C.
+ **/
+void matmul_64_48_64(float const *a,
+                     float const *b,
+                     float *c,
+                     int64_t lda,
+                     int64_t ldb,
+                     int64_t ldc);
 }
 
 void gemm_ref(float const *i_a,
@@ -193,6 +208,15 @@ int main() {
              64,
              64,
              matmul_64_6_64);
+
+    bench_mm(100000,
+             64,
+             48,
+             64,
+             64,
+             64,
+             64,
+             matmul_64_48_64);
 
     return EXIT_SUCCESS;
 }
