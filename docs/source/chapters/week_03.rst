@@ -135,7 +135,7 @@ Implementation with m=64, n=6, k=64
 ___________________________________
 
 For this task, we draw a loop around our existing code and introduce a m counter.
-In each iteration of this loop, we load a new tile from c (16 rows lower). Thus, we have to adjust our pointer to A and C.
+In each iteration of this loop, we load a new tile from C (16 rows lower). Thus, we have to adjust our pointer to A and C.
 
 Implementation with m=64, n=48, k=64
 ____________________________________
