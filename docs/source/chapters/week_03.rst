@@ -81,8 +81,7 @@ __________________________________
 
 This implementation stands for one iteration of the inner k-loop.
 Therefore one column vector (A) is multiplied to a row vector (B).
-First, we load the complete target matrix values C completely into the vector 
-register.
+First, we load the complete target matrix values C completely into 24 vector registers.
 
 .. code-block:: text
 
@@ -99,7 +98,7 @@ register.
   add x2, x2, x5
   ld1 {v20.4s-v23.4s}, [x2]
 
-Afterwords we load the A vector into a register.
+Afterwords we load the A vector into 4 registers.
 
 .. code-block:: text
 
@@ -107,7 +106,7 @@ Afterwords we load the A vector into a register.
    ld1 {v24.4s - v27.4s}, [x0]
 
 Then we, load the row vector B into 4 registers (for two register we have to reload). 
-For this, we employ the offset in ldb.
+After each load of a B value we increment the address by the leading dimension.
 
 .. code-block:: text
 
@@ -121,7 +120,7 @@ For this, we employ the offset in ldb.
     ldr s31, [x1]
     add x1, x1, x4
 
-Finally, we use a broadcast fmla operation and multiply the column vector A with one element of the row vector B.
+Finally, we use a fmla by element operation and multiply the column vector A with one element of the row vector B.
 
 .. code-block:: text
 
@@ -135,19 +134,19 @@ This, we continue for each element of B. When this process is done, we store the
 Implementation with m=16, n=6, k=64
 ___________________________________
 
-For this task, we draw a loop around our existing code and introduce a k counter.
+For this task, we loop over our existing code and introduce a k counter.
 In each iteration, we load a new column of A and a new row of B but still use the same C Matrix. 
 
 Implementation with m=64, n=6, k=64
 ___________________________________
 
-For this task, we draw a loop around our existing code and introduce a m counter.
-In each iteration of this loop, we load a new tile from C (16 rows lower). Thus, we have to adjust our pointer to A and C.
+For this task, we introduced another loop around our existing code.
+In each iteration of this loop, we load a new tile from C (16 rows lower). Thus, we have to adjust the address of A and C.
 
 Implementation with m=64, n=48, k=64
 ____________________________________
 
-Finally, we draw a loop around our existing code and introduce a n counter.
+Finally, we implement a loop around our 64x6x16 kernel and introduce a n counter.
 In each iteration of this loop, we have to move 6 elements further in the n dimension in B and C.
 
 Our implementation can be found can be found in `matmul_1.s <https://github.com/stefan0re/machine_learning_compiler/tree/main/assembly_examples/task_3/kernels>`_.
