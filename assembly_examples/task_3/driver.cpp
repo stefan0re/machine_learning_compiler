@@ -1,7 +1,8 @@
 #include <chrono>
-#include <cmath>
-#include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <iostream>
+#include <random>
 
 extern "C" {
 /**
@@ -12,13 +13,12 @@ extern "C" {
  * @param ldb leading dimension of B.
  * @param ldc leading dimension of C.
  **/
-void matmul_16_6_1(float const *a,
-                   float const *b,
-                   float *c,
+void matmul_16_6_1(float const* a,
+                   float const* b,
+                   float* c,
                    int64_t lda,
                    int64_t ldb,
                    int64_t ldc);
-
 /**
  * @param a pointer to column-major matrix A.
  * @param b pointer to column-major matrix B.
@@ -27,9 +27,9 @@ void matmul_16_6_1(float const *a,
  * @param ldb leading dimension of B.
  * @param ldc leading dimension of C.
  **/
-void matmul_16_6_64(float const *a,
-                    float const *b,
-                    float *c,
+void matmul_16_6_64(float const* a,
+                    float const* b,
+                    float* c,
                     int64_t lda,
                     int64_t ldb,
                     int64_t ldc);
@@ -42,13 +42,12 @@ void matmul_16_6_64(float const *a,
  * @param ldb leading dimension of B.
  * @param ldc leading dimension of C.
  **/
-void matmul_64_6_64(float const *a,
-                    float const *b,
-                    float *c,
+void matmul_64_6_64(float const* a,
+                    float const* b,
+                    float* c,
                     int64_t lda,
                     int64_t ldb,
                     int64_t ldc);
-
 /**
  * @param a pointer to column-major matrix A.
  * @param b pointer to column-major matrix B.
@@ -57,166 +56,139 @@ void matmul_64_6_64(float const *a,
  * @param ldb leading dimension of B.
  * @param ldc leading dimension of C.
  **/
-void matmul_64_48_64(float const *a,
-                     float const *b,
-                     float *c,
+void matmul_64_48_64(float const* a,
+                     float const* b,
+                     float* c,
                      int64_t lda,
                      int64_t ldb,
                      int64_t ldc);
 }
 
-void gemm_ref(float const *i_a,
-              float const *i_b,
-              float *io_c,
-              int64_t i_m,
-              int64_t i_n,
-              int64_t i_k,
-              int64_t i_lda,
-              int64_t i_ldb,
-              int64_t i_ldc) {
-    for (int l_m = 0; l_m < i_m; l_m++) {
-        for (int l_n = 0; l_n < i_n; l_n++) {
-            for (int l_k = 0; l_k < i_k; l_k++) {
-                io_c[(l_n * i_ldc) + l_m] += i_a[(l_k * i_lda) + l_m] * i_b[(l_n * i_ldb) + l_k];
+void reference_mat_mul(float const* a,
+                       float const* b,
+                       float* c,
+                       int64_t n,
+                       int64_t m,
+                       int64_t k) {
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            for (int l = 0; l < k; l++) {
+                c[(j * m) + i] += a[(l * m) + i] * b[(j * k) + l];
             }
         }
     }
 }
 
-float checkDif(float *arr_1,
-               float *arr_2,
-               int length) {
-    float result = 0.0;
-
-    for (int i = 0; i < length; i++) {
-        if (std::abs(arr_1[i] - arr_2[i]) > 0.0001) {
-            std::cout << "ID " << i << ": " << arr_1[i] << " / " << arr_2[i] << std::endl;
-            result = std::abs(arr_1[i] - arr_2[i]);
+void visualize_matix(float* c,
+                     int64_t height,
+                     int64_t width) {
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = j * height + i;
+            std::cout << c[index] << " ";
         }
+        std::cout << std::endl;
     }
-    if (result < 1.0E-5) {
-        return 0.0;
-    }
-
-    return result;
 }
 
-void bench_mm(uint64_t i_reps,
-              int i_m,
-              int i_n,
-              int i_k,
-              int i_lda,
-              int i_ldb,
-              int i_ldc,
-              void (*matmul_kernel)(float const *,
-                                    float const *,
-                                    float *,
-                                    int64_t,
-                                    int64_t,
-                                    int64_t)) {
-    std::chrono::steady_clock::time_point start, end;
-    std::chrono::duration<double> dur;
-    uint64_t reps = i_reps;
-
-    srand48(time(NULL));
-
-    int l_m = i_m;
-    int l_k = i_k;
-    int l_n = i_n;
-    int l_lda = i_lda;
-    int l_ldb = i_ldb;
-    int l_ldc = i_ldc;
-
-    double l_g_flops = 2 * l_k * l_n * l_m;
-
-    // initialize matrix
-    float *l_a = (float *)malloc(l_k * l_lda * sizeof(float));
-    float *l_b = (float *)malloc(l_ldb * l_n * sizeof(float));
-    float *l_c_1 = (float *)malloc(l_ldc * l_n * sizeof(float));
-    float *l_c_2 = (float *)malloc(l_ldc * l_n * sizeof(float));
-
-    for (int i = 0; i < (l_k * l_lda); i++) {
-        l_a[i] = (float)drand48();
+void get_matrices(float* a,
+                  float* b,
+                  float* c,
+                  float* c_ref,
+                  int64_t n,
+                  int64_t m,
+                  int64_t k,
+                  bool visualization = false) {
+    float MAX = 100.f;
+    // fill a
+    for (int j = 0; j < k; j++) {
+        for (int i = 0; i < m; i++) {
+            int a_index = j * m + i;
+            a[a_index] = (1 - (double)visualization) * static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX)) + (double)visualization * i;
+        }
     }
 
-    for (int i = 0; i < (l_ldb * l_n); i++) {
-        l_b[i] = (float)drand48();
+    // fill b
+    for (int j = 0; j < n; j++) {
+        for (int i = 0; i < k; i++) {
+            int b_index = j * k + i;
+            b[b_index] = (1 - (double)visualization) * static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX)) + (double)visualization * j;
+        }
     }
 
-    for (int i = 0; i < (l_ldc * l_n); i++) {
-        l_c_1[i] = (float)drand48();
+    // fill c
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            int c_index = j * m + i;
+            float element = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX));
+            c[c_index] = (1 - (double)visualization) * element;
+            c_ref[c_index] = (1 - (double)visualization) * element;
+        }
+    }
+}
+
+int test_matmul(int64_t n,
+                int64_t m,
+                int64_t k,
+                int64_t ops_per_call,
+                int64_t iterations,
+                void (*matmul_func)(float const*, float const*, float*, int64_t, int64_t, int64_t)) {
+    std::cout << "---------------------------------" << std::endl;
+    std::cout << "Testing matmul_" << m << "_" << n << "_" << k << " ..." << std::endl;
+    alignas(16) float a[k * m];
+    alignas(16) float b[n * k];
+    alignas(16) float c[n * m];
+    alignas(16) float c_ref[n * m];
+    std::chrono::_V2::system_clock::time_point start, end;
+    bool is_correct = true;
+
+    get_matrices(a, b, c, c_ref, n, m, k, true);
+
+    matmul_func(a, b, c, m, k, m);
+    reference_mat_mul(a, b, c_ref, n, m, k);
+
+    double epsilon = 1e-3;
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            int c_index = j * m + i;
+            if (std::fabs(c[c_index] - c_ref[c_index]) > (epsilon * std::fabs(c_ref[c_index]))) {
+                std::cout << "Failed in: i=" << i << ", j=" << j << std::endl;
+                std::cout << c[c_index] << " != " << c_ref[c_index] << ", Diff=" << (std::fabs(c[c_index] - c_ref[c_index])) << std::endl;
+                return 0;  // is_correct = false;
+            }
+        }
     }
 
-    for (int i = 0; i < (l_ldc * l_n); i++) {
-        l_c_2[i] = l_c_1[i];
+    start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iterations; i++) {
+        matmul_func(a, b, c, m, k, m);
     }
+    end = std::chrono::high_resolution_clock::now();
 
-    gemm_ref(l_a, l_b, l_c_1, l_m, l_n, l_k, l_lda, l_ldb, l_ldc);
-    matmul_kernel(l_a, l_b, l_c_2, l_lda, l_ldb, l_ldc);
+    double duration = std::chrono::duration<double>(end - start).count();
+    double throughput = ((double)iterations * (double)ops_per_call) / duration;  // 192 flops in one iter
 
-    std::cout << "Error:  " << checkDif(l_c_1, l_c_2, l_m * l_n) << std::endl;
+    std::cout << "\nIterations:\t" << iterations << " times" << std::endl;
+    std::cout << "Duration:\t" << duration << " sec" << std::endl;
+    std::cout << "Throughput:\t" << throughput / 1e9 << " GFLOPS\n"
+              << std::endl;
 
-    start = std::chrono::steady_clock::now();
-    for (uint64_t i = 0; i < reps; i++) {
-        matmul_kernel(l_a, l_b, l_c_2, l_lda, l_ldb, l_ldc);
-    }
-    end = std::chrono::steady_clock::now();
-
-    dur = std::chrono::duration_cast<std::chrono::duration<double> >(end - start);
-
-    std::cout << "M = " << l_m << " , K = " << l_k << " , N = " << l_n << std::endl;
-    std::cout << "executions: " << reps << std::endl;
-    std::cout << "duration: " << dur.count() << " seconds" << std::endl;
-
-    l_g_flops *= reps;
-    l_g_flops *= 1.0E-9;
-    l_g_flops /= dur.count();
-
-    std::cout << "GFLOPS: " << l_g_flops << std::endl;
-    std::cout << "***********************" << std::endl;
-
-    free(l_a);
-    free(l_b);
-    free(l_c_1);
-    free(l_c_2);
+    return 1;
 }
 
 int main() {
-    bench_mm(200000000,
-             16,
-             6,
-             1,
-             16,
-             1,
-             16,
-             matmul_16_6_1);
-
-    bench_mm(15000000,
-             16,
-             6,
-             64,
-             16,
-             64,
-             16,
-             matmul_16_6_64);
-
-    bench_mm(3000000,
-             64,
-             6,
-             64,
-             64,
-             64,
-             64,
-             matmul_64_6_64);
-
-    bench_mm(300000,
-             64,
-             48,
-             64,
-             64,
-             64,
-             64,
-             matmul_64_48_64);
-
-    return EXIT_SUCCESS;
+    srand(static_cast<unsigned>(time(0)));
+    if (!test_matmul(6, 16, 1, 192, 150000000, matmul_16_6_1)) {
+        return 1;
+    }
+    if (!test_matmul(6, 16, 64, 192 * 64, 10000000, matmul_16_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 64, 64, 192 * 64 * 4, 2000000, matmul_64_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(48, 64, 64, 192 * 64 * 4 * 8, 250000, matmul_64_48_64)) {
+        return 1;
+    }
+    return 0;
 }
