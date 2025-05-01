@@ -3,7 +3,7 @@ set(TARGET_NAME throughput_microbenchmark)
 # Assemble
 
 # get all benchmark files
-file(GLOB ASM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/kernels/*.s")
+file(GLOB ASM_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/kernel/*.s")
 
 set(ASM_OBJECTS "")
 foreach(ASM_FILE IN LISTS ASM_SOURCES)
