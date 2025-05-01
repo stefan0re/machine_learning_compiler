@@ -182,7 +182,7 @@ void bench_mm(uint64_t i_reps,
 }
 
 int main() {
-    bench_mm(15000000,
+    bench_mm(150000000,
              16,
              6,
              1,
@@ -191,7 +191,7 @@ int main() {
              16,
              matmul_16_6_1);
 
-    bench_mm(1500000,
+    bench_mm(10000000,
              16,
              6,
              64,
@@ -200,7 +200,7 @@ int main() {
              16,
              matmul_16_6_64);
 
-    bench_mm(700000,
+    bench_mm(2000000,
              64,
              6,
              64,
@@ -209,7 +209,7 @@ int main() {
              64,
              matmul_64_6_64);
 
-    bench_mm(100000,
+    bench_mm(250000,
              64,
              48,
              64,
