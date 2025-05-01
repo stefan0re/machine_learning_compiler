@@ -40,6 +40,7 @@ matmul_16_6_64:
     ld1 {v24.4s, v25.4s, v26.4s, v27.4s}, [x6], #64
     ld1 {v28.4s, v29.4s, v30.4s, v31.4s}, [x6]
 
+
     mov x7, x4 // loop counter to k
     mov x8, x1 // B row pointer 
     mov x10, #1 // B counter
