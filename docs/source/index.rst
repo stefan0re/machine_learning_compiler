@@ -13,3 +13,4 @@ You can see our code at `Github <https://github.com/stefan0re/machine_learning_c
    self
    chapters/week_01.rst
    chapters/week_02.rst
+   chapters/week_03.rst

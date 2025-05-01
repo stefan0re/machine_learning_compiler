@@ -117,6 +117,9 @@ matmul_16_6_64:
     lsl x4, x4, #2
     lsl x5, x5, #2
 
+    mov x15, #5
+    mul x15, x15, x4
+
     // K loop counter
     mov x10, #64
 
@@ -186,12 +189,7 @@ k1_loop:
     fmla v22.4s, v26.4s, v29.s[0]
     fmla v23.4s, v27.4s, v29.s[0]
 
-    sub x1, x1, x4
-    sub x1, x1, x4
-    sub x1, x1, x4
-    sub x1, x1, x4
-    sub x1, x1, x4
-
+    sub x1, x1, x15
     add x1, x1, #4
 
     cbnz x10, k1_loop
@@ -233,11 +231,14 @@ matmul_64_6_64:
     mov x7, x0
     mov x8, x1
     mov x9, x2
-
+    
     // adjust leading dimension
     lsl x3, x3, #2
     lsl x4, x4, #2
     lsl x5, x5, #2
+
+    mov x15, #5
+    mul x15, x15, x4
 
     // M loop counter
     mov x11, #4
@@ -314,11 +315,7 @@ k2_loop:
     fmla v22.4s, v26.4s, v29.s[0]
     fmla v23.4s, v27.4s, v29.s[0]
 
-    sub x8, x8, x4
-    sub x8, x8, x4
-    sub x8, x8, x4
-    sub x8, x8, x4
-    sub x8, x8, x4
+    sub x8, x8, x15
 
     add x8, x8, #4
 
@@ -384,6 +381,10 @@ stp  d8,  d9, [sp, #-16]!
     mov x16, x5
     mov x14, #6
     mul x16, x16, x14
+
+    mov x17, #5
+    mul x17, x17, x4
+
 
     
 
@@ -467,11 +468,7 @@ k3_loop:
     fmla v22.4s, v26.4s, v29.s[0]
     fmla v23.4s, v27.4s, v29.s[0]
 
-    sub x8, x8, x4
-    sub x8, x8, x4
-    sub x8, x8, x4
-    sub x8, x8, x4
-    sub x8, x8, x4
+    sub x8, x8, x17
 
     add x8, x8, #4
 
