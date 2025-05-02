@@ -151,7 +151,7 @@ class jiter::instructions::InstGen {
      * @brief Generates a MOV (immediate) instruction.
      *
      */
-    static uint32_t base_mov(gpr_t dest, gpr_t src);
+    static uint32_t base_mov_imm(gpr_t dest, gpr_t src);
 
     /**
      * @brief Generates a MOV (shifted register) instruction.

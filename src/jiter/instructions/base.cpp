@@ -25,3 +25,69 @@ uint32_t jiter::instructions::InstGen::base_br_cbnz(gpr_t reg, int32_t imm19) {
 
     return l_ins;
 }
+
+uint32_t jiter::instructions::InstGen::base_ldp(gpr_t reg1, gpr_t reg2, gpr_t base, int32_t offset) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_stp(gpr_t reg1, gpr_t reg2, gpr_t base, int32_t offset) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_mov_imm(gpr_t dest, gpr_t src) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_mov_shifted(gpr_t dest, gpr_t src, uint32_t shift_type, uint32_t shift_amount) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_add_imm(gpr_t reg_dest, gpr_t reg_src, int32_t imm12) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_add_shifted(gpr_t reg_dest, gpr_t reg_src1, gpr_t reg_src2, uint32_t shift, int32_t imm6) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_sub_imm(gpr_t dest, gpr_t src, int32_t imm12) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_sub_shifted(gpr_t dest, gpr_t src1, gpr_t src2, uint32_t shift_type, uint32_t shift_amount) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_lsl(gpr_t dest, gpr_t src, uint32_t shift_amount) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_lsl_shifted(gpr_t dest, gpr_t src1, gpr_t src2, uint32_t shift_type, uint32_t shift_amount) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
+
+uint32_t jiter::instructions::InstGen::base_ret(gpr_t link_reg) {
+    uint32_t l_ins = 0x35000000;
+
+    return l_ins;
+}
