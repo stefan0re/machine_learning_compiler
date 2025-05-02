@@ -136,6 +136,24 @@ class jiter::instructions::InstGen {
                                  int32_t imm19);
 
     /**
+     * @brief Generates a ADD (immediate) instruction.
+     *
+     */
+    static uint32_t base_add_imm(gpr_t reg_dest,
+                                 gpr_t reg_src,
+                                 int32_t imm12);
+
+    /**
+     * @brief Generates a ADD (shifted register) instruction.
+     *
+     */
+    static uint32_t base_add_shifted(gpr_t reg_dest,
+                                     gpr_t reg_src1,
+                                     gpr_t reg_src2,
+                                     uint32_t shift,
+                                     int32_t imm6);
+
+    /**
      * @brief Generates an FMLA (vector) instruction.
      *
      * @param reg_dest destination register.
