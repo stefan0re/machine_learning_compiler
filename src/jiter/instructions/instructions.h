@@ -136,6 +136,30 @@ class jiter::instructions::InstGen {
                                  int32_t imm19);
 
     /**
+     * @brief Generates a LDP instruction.
+     *
+     */
+    static uint32_t base_ldp(gpr_t reg1, gpr_t reg2, gpr_t base, int32_t offset);
+
+    /**
+     * @brief Generates a STP instruction.
+     *
+     */
+    static uint32_t base_stp(gpr_t reg1, gpr_t reg2, gpr_t base, int32_t offset);
+
+    /**
+     * @brief Generates a MOV (immediate) instruction.
+     *
+     */
+    static uint32_t base_mov_imm(gpr_t dest, gpr_t src);
+
+    /**
+     * @brief Generates a MOV (shifted register) instruction.
+     *
+     */
+    static uint32_t base_mov_shifted(gpr_t dest, gpr_t src, uint32_t shift_type, uint32_t shift_amount);
+
+    /**
      * @brief Generates a ADD (immediate) instruction.
      *
      */
@@ -152,6 +176,36 @@ class jiter::instructions::InstGen {
                                      gpr_t reg_src2,
                                      uint32_t shift,
                                      int32_t imm6);
+
+    /**
+     * @brief Generates a SUB (immediate) instruction.
+     *
+     */
+    static uint32_t base_sub_imm(gpr_t dest, gpr_t src, int32_t imm12);
+
+    /**
+     * @brief Generates a SUB (shifted register) instruction.
+     *
+     */
+    static uint32_t base_sub_shifted(gpr_t dest, gpr_t src1, gpr_t src2, uint32_t shift_type, uint32_t shift_amount);
+
+    /**
+     * @brief Generates a LSL (immediate) instruction.
+     *
+     */
+    static uint32_t base_lsl(gpr_t dest, gpr_t src, uint32_t shift_amount);
+
+    /**
+     * @brief Generates a LSL (shifted register) instruction.
+     *
+     */
+    static uint32_t base_lsl_shifted(gpr_t dest, gpr_t src1, gpr_t src2, uint32_t shift_type, uint32_t shift_amount);
+
+    /**
+     * @brief Generates a RET instruction.
+     *
+     */
+    static uint32_t base_ret(gpr_t link_reg);
 
     /**
      * @brief Generates an FMLA (vector) instruction.
