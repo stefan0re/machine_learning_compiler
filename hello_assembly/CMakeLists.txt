@@ -1,5 +1,6 @@
+
 cmake_minimum_required(VERSION 3.10)
-project(Hello_Assembly)
+project(TensorCompiler)
 
 set(CMAKE_CXX_COMPILER g++)
 set(CMAKE_ASM_COMPILER as)
@@ -13,4 +14,4 @@ add_subdirectory(./benchmarks/microbenchmarks_gp/throughput)
 add_subdirectory(./benchmarks/microbenchmarks_gp/latency)
 add_subdirectory(./benchmarks/microbenchmarks_neon)
 add_subdirectory(./assembly_examples/task_2)
-add_subdirectory(./assembly_examples/task_3)
+add_subdirectory(./assembly_examples/neon)
