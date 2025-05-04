@@ -64,7 +64,6 @@ uint32_t jiter::instructions::InstGen::base_stp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_S
     return l_ins;
 }
 
-// MOV (wide immediate) alias of ORR (immediate) ????
 uint32_t jiter::instructions::InstGen::base_mov_imm(gpr_t Wd_WSP, gpr_t imm) {
     // here the opc AND the Rn field is encoded
     uint32_t l_ins = 0x288003E0;
@@ -72,7 +71,6 @@ uint32_t jiter::instructions::InstGen::base_mov_imm(gpr_t Wd_WSP, gpr_t imm) {
     return l_ins;
 }
 
-// alias of ORR (register)
 uint32_t jiter::instructions::InstGen::base_mov_register(gpr_t Wd, gpr_t Wm) {
     uint32_t l_ins = 0x2A0003E0;
 

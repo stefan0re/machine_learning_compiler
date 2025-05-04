@@ -125,87 +125,64 @@ class jiter::instructions::InstGen {
     } arr_spec_t;
 
     /**
-     * @brief Generates a CBNZ instruction.
-     *
-     * @param reg general-purpose register.
-     * @param imm19 immediate value (not the offset bytes!).
-     *
-     * @return instruction.
-     **/
-    static uint32_t base_br_cbnz(gpr_t reg,
-                                 int32_t imm19);
+     * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
+     */
+    static uint32_t base_br_cbnz(gpr_t reg, int32_t imm19);
 
     /**
-     * @brief Generates a LDP instruction.
-     *
+     * @brief Generates a LDP (Load Pair) instruction.
      */
-    static uint32_t base_ldp(gpr_t reg1, gpr_t reg2, gpr_t base, int32_t offset);
+    static uint32_t base_ldp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, int32_t imm7);
 
     /**
-     * @brief Generates a STP instruction.
-     *
+     * @brief Generates a STP (Store Pair) instruction.
      */
-    static uint32_t base_stp(gpr_t reg1, gpr_t reg2, gpr_t base, int32_t offset);
+    static uint32_t base_stp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, int32_t imm7);
 
     /**
-     * @brief Generates a MOV (immediate) instruction.
-     *
+     * @brief Generates a MOV (Move Immediate) instruction using an immediate value.
      */
-    static uint32_t base_mov_imm(gpr_t dest, gpr_t src);
+    static uint32_t base_mov_imm(gpr_t Wd_WSP, gpr_t imm);
 
     /**
-     * @brief Generates a MOV (shifted register) instruction.
-     *
+     * @brief Generates a MOV (Move Register) instruction using a source register.
      */
-    static uint32_t base_mov_shifted(gpr_t dest, gpr_t src, uint32_t shift_type, uint32_t shift_amount);
+    static uint32_t base_mov_register(gpr_t Wd, gpr_t Wm);
 
     /**
-     * @brief Generates a ADD (immediate) instruction.
-     *
+     * @brief Generates an ADD (Add Immediate) instruction.
      */
-    static uint32_t base_add_imm(gpr_t reg_dest,
-                                 gpr_t reg_src,
-                                 int32_t imm12);
+    static uint32_t base_add_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift);
 
     /**
-     * @brief Generates a ADD (shifted register) instruction.
-     *
+     * @brief Generates an ADD (Add Shifted Register) instruction.
      */
-    static uint32_t base_add_shifted(gpr_t reg_dest,
-                                     gpr_t reg_src1,
-                                     gpr_t reg_src2,
-                                     uint32_t shift,
-                                     int32_t imm6);
+    static uint32_t base_add_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
 
     /**
-     * @brief Generates a SUB (immediate) instruction.
-     *
+     * @brief Generates a SUB (Subtract Immediate) instruction.
      */
-    static uint32_t base_sub_imm(gpr_t dest, gpr_t src, int32_t imm12);
+    static uint32_t base_sub_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift);
 
     /**
-     * @brief Generates a SUB (shifted register) instruction.
-     *
+     * @brief Generates a SUB (Subtract Shifted Register) instruction.
      */
-    static uint32_t base_sub_shifted(gpr_t dest, gpr_t src1, gpr_t src2, uint32_t shift_type, uint32_t shift_amount);
+    static uint32_t base_sub_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
 
     /**
-     * @brief Generates a LSL (immediate) instruction.
-     *
+     * @brief Generates a LSL (Logical Shift Left Immediate) instruction.
      */
-    static uint32_t base_lsl(gpr_t dest, gpr_t src, uint32_t shift_amount);
+    static uint32_t base_lsl(gpr_t Wd, gpr_t Wn, uint32_t shift);
 
     /**
-     * @brief Generates a LSL (shifted register) instruction.
-     *
+     * @brief Generates a LSL (Logical Shift Left Shifted Register) instruction.
      */
-    static uint32_t base_lsl_shifted(gpr_t dest, gpr_t src1, gpr_t src2, uint32_t shift_type, uint32_t shift_amount);
+    static uint32_t base_lsl_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm);
 
     /**
-     * @brief Generates a RET instruction.
-     *
+     * @brief Generates a RET (Return from Subroutine) instruction.
      */
-    static uint32_t base_ret(gpr_t link_reg);
+    static uint32_t base_ret(gpr_t Xn);
 
     /**
      * @brief Generates an FMLA (vector) instruction.
