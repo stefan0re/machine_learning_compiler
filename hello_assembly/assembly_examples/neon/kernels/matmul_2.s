@@ -24,83 +24,80 @@ matmul_14_6_64:
     // K loop counter
     mov x10, #64
 
-    // jump amount for rest lda
-    sub x16, x15, #12, lsl #2
-
     // load C 
     // load column 1
     ld1 {v0.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v1.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v2.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v3.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
 
     // load column 2
     ld1 {v4.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v5.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v6.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v7.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
     
     // load column 3
     ld1 {v8.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v9.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v10.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v11.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
     
     // load column 4
     ld1 {v12.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v13.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v14.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v15.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
 
     // load column 5
     ld1 {v16.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v17.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v18.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v19.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
     
     // load column 6
     ld1 {v20.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v21.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v22.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     ld1 {v23.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
 
 
 k_loop:
     sub x10, x10, #1
 
     // load A
-    ld1 {v24.4s}, [x0]
-    add x0, x0, #4, lsl #2
+    ld1 {v24.4s}, [x0] 
+    add x0, x0, #16
     ld1 {v25.4s}, [x0]
-    add x0, x0, #4, lsl #2
+    add x0, x0, #16
     ld1 {v26.4s}, [x0]
-    add x0, x0, #4, lsl #2
+    add x0, x0, #16
     ld1 {v27.2s}, [x0]
-    add x0, x0, #2, lsl #2
+    add x0, x0, #8
 
     // load first 4 numbers of B
     ldr s28, [x1]
@@ -161,63 +158,63 @@ k_loop:
  
     // store column 1
     st1 {v0.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v1.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v2.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v3.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
 
     // store column 2
     st1 {v4.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v5.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v6.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v7.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
     
     // store column 3
     st1 {v8.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v9.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v10.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v11.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
     
     // store column 4
     st1 {v12.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v13.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v14.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v15.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
 
     // store column 5
     st1 {v16.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v17.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v18.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v19.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
     
     // store column 6
     st1 {v20.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v21.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v22.4s}, [x9]
-    add x9, x9, #4, lsl #2
+    add x9, x9, #16
     st1 {v23.2s}, [x9]
-    add x9, x9, x16
+    add x9, x9, #8
 
 
     ldp d14, d15, [sp], #16
