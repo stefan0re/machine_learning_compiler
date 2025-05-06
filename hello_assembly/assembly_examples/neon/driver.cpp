@@ -62,6 +62,21 @@ void matmul_64_48_64(float const* a,
                      int64_t lda,
                      int64_t ldb,
                      int64_t ldc);
+
+/**
+ * @param a pointer to column-major matrix A.
+ * @param b pointer to column-major matrix B.
+ * @param c pointer to column-major matrix C.
+ * @param lda leading dimension of A.
+ * @param ldb leading dimension of B.
+ * @param ldc leading dimension of C.
+ **/
+void matmul_14_6_64(float const* a,
+                    float const* b,
+                    float* c,
+                    int64_t lda,
+                    int64_t ldb,
+                    int64_t ldc);
 }
 
 void reference_mat_mul(float const* a,
@@ -73,13 +88,15 @@ void reference_mat_mul(float const* a,
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
             for (int l = 0; l < k; l++) {
+                // std::cout << "Element " << (j * m) + i << ": " << c[(j * m) + i] << " + " << a[(l * m) + i] << " (" << i << ", " << l << ") " << " * " << b[(j * k) + l] << " (" << l << ", " << j << ") ";
                 c[(j * m) + i] += a[(l * m) + i] * b[(j * k) + l];
+                // std::cout << " = " << c[(j * m) + i] << std::endl;
             }
         }
     }
 }
 
-void visualize_matix(float* c,
+void visualize_matix(float const* c,
                      int64_t height,
                      int64_t width) {
     for (int i = 0; i < height; i++) {
@@ -144,8 +161,11 @@ int test_matmul(int64_t n,
 
     get_matrices(a, b, c, c_ref, n, m, k, true);
 
-    matmul_func(a, b, c, m, k, m);
     reference_mat_mul(a, b, c_ref, n, m, k);
+    matmul_func(a, b, c, m, k, m);
+    visualize_matix(c, m, n);
+    std::cout << std::endl;
+    visualize_matix(c_ref, m, n);
 
     double epsilon = 1e-3;
     for (int i = 0; i < m; i++) {
@@ -188,6 +208,9 @@ int main() {
         return 1;
     }
     if (!test_matmul(48, 64, 64, 192 * 64 * 4 * 8, 250000, matmul_64_48_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 14, 64, 192, 10000000, matmul_14_6_64)) {
         return 1;
     }
     return 0;
