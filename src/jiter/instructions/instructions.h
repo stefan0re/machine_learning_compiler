@@ -142,7 +142,7 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates a MOV (Move Immediate) instruction using an immediate value.
      */
-    static uint32_t base_mov_imm(gpr_t Wd_WSP, int32_t imm12);
+    static uint32_t base_mov_imm(gpr_t Wd, uint16_t imm16, uint8_t shift);
 
     /**
      * @brief Generates a MOV (Move Register) instruction using a source register.

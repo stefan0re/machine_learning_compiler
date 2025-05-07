@@ -59,27 +59,27 @@ int main(int argc, char const* argv[]) {
 
     // -------------------------------------------------------------
 
-    mc1 = l_gen.base_ldp(gpr_t::x1, gpr_t::x2, gpr_t::x3, 0);
-    mc2 = as("ldp x0, x1, [x2]");
+    mc1 = l_gen.base_ldp(gpr_t::w1, gpr_t::w2, gpr_t::x3, 0);
+    mc2 = as("ldp w1, w2, [x3], #0");
     match = mc1 == mc2;
 
-    cout << "ldp x0, x1, [x2]: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+    cout << "ldp w1, w2, [x3]: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
 
     // -------------------------------------------------------------
 
-    mc1 = l_gen.base_stp(gpr_t::x1, gpr_t::x2, gpr_t::x3, 2);
-    mc2 = as("stp x0, x1, [x2]");
+    mc1 = l_gen.base_stp(gpr_t::w1, gpr_t::w2, gpr_t::x3, 0);
+    mc2 = as("stp w1, w2, [x3], #0");
     match = mc1 == mc2;
 
-    cout << "stp x0, x1, [x2]: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+    cout << "stp w1, w2, [x3]: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
 
     // -------------------------------------------------------------
 
-    mc1 = l_gen.base_mov_imm(gpr_t::w1, 1);
+    mc1 = l_gen.base_mov_imm(gpr_t::w1, 1, 0);
     mc2 = as("mov w1, #1");
     match = mc1 == mc2;
 
-    cout << "mov w1, #1" << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+    cout << "mov w1, #1: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
 
     // -------------------------------------------------------------
 
@@ -87,7 +87,7 @@ int main(int argc, char const* argv[]) {
     mc2 = as("mov w1, w2");
     match = mc1 == mc2;
 
-    cout << "mov w1, w2" << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+    cout << "mov w1, w2: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
 
     // -------------------------------------------------------------
 
@@ -129,9 +129,13 @@ int main(int argc, char const* argv[]) {
 
     cout << "lsl w1, w2, 0: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
 
+    // -------------------------------------------------------------
+
     mc1 = l_gen.base_lsl_register(gpr_t::w1, gpr_t::w2, gpr_t::w3);
     mc2 = as("lsl w1, w2, w3");
     match = mc1 == mc2;
+
+    cout << "lsl w1, w2, w3: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
 
     // mc1 = l_gen.base_ret(gpr_t Xn);
 
