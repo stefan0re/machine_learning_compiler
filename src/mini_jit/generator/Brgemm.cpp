@@ -16,19 +16,12 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                            dtype_t dtype) {
     // m_kernel.add_instr(0);
     // procedure call standard (store to stack)
-    /*
-    m_kernel.add_instr(0xA9BF53F3);
-    m_kernel.add_instr(0xA9BF5BF5);
-    m_kernel.add_instr(0xA9BF63F7);
-    m_kernel.add_instr(0xA9BF6BF9);
-    m_kernel.add_instr(0xA9BF73FB);
-    m_kernel.add_instr(0xA9BF7BFD);
 
     m_kernel.add_instr(0x6DBF27E8);
     m_kernel.add_instr(0x6DBF2FEA);
     m_kernel.add_instr(0x6DBF37EC);
     m_kernel.add_instr(0x6DBF3FEE);
-    */
+
     /* Store pointers of A, B and C to x7, x8, x9 */
     m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x7,
                                                         inst::InstGen::x0));
@@ -131,19 +124,12 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
      */
 
     // procedure call standard (load from stack)
-    /*
+
     m_kernel.add_instr(0x6CC13FEE);
     m_kernel.add_instr(0x6CC137EC);
     m_kernel.add_instr(0x6CC12FEA);
     m_kernel.add_instr(0x6CC127E8);
 
-    m_kernel.add_instr(0xA8C17BFD);
-    m_kernel.add_instr(0xA8C173FB);
-    m_kernel.add_instr(0xA8C16BF9);
-    m_kernel.add_instr(0xA8C163F7);
-    m_kernel.add_instr(0xA8C15BF5);
-    m_kernel.add_instr(0xA8C153F3);
-    */
     // ret
     m_kernel.add_instr(mini_jit::instructions::InstGen::base_ret());
 
