@@ -8,7 +8,7 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 include(CTest)
 
-add_subdirectory(./src/jiter)
+add_subdirectory(./src/mini_jit)
 
 enable_testing()
 add_subdirectory(./test)
