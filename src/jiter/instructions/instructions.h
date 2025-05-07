@@ -124,6 +124,17 @@ class jiter::instructions::InstGen {
         d2 = 0x40400000
     } arr_spec_t;
 
+    typedef enum : uint32_t {
+        h_0 = 0x0,
+        h_1 = 0x100000,
+        h_2 = 0x200000,
+        h_3 = 0x300000,
+        s_0 = 0x400000,
+        s_1 = 0x500000,
+        s_2 = 0x600000,
+        s_3 = 0x700000
+    } element_spec_t;
+
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
      */
@@ -198,6 +209,21 @@ class jiter::instructions::InstGen {
                                      simd_fp_t reg_src1,
                                      simd_fp_t reg_src2,
                                      arr_spec_t arr_spec);
+
+    /**
+     * @brief Generates an FMLA (element) instruction.
+     *
+     * @param reg_dest destination register.
+     * @param reg_src1 first source register.
+     * @param reg_src2 second source register.
+     * @param element_spec precision and element specifier.
+     *
+     * @return instruction.
+     **/
+    static uint32_t neon_fmla_element(simd_fp_t reg_dest,
+                                      simd_fp_t reg_src1,
+                                      simd_fp_t reg_src2,
+                                      element_spec_t element_spec);
 };
 
 #endif
