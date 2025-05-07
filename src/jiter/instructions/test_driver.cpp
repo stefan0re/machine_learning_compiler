@@ -59,11 +59,81 @@ int main(int argc, char const* argv[]) {
 
     // -------------------------------------------------------------
 
-    mc1 = l_gen.base_br_cbnz(gpr_t::w1, 1);
-    mc2 = as("cbnz w1, 0x00000004");
+    mc1 = l_gen.base_ldp(gpr_t::x1, gpr_t::x2, gpr_t::x3, 0);
+    mc2 = as("ldp x0, x1, [x2]");
     match = mc1 == mc2;
 
-    cout << "cbnz w1, 0x00000001: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+    cout << "ldp x0, x1, [x2]: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_stp(gpr_t::x1, gpr_t::x2, gpr_t::x3, 2);
+    mc2 = as("stp x0, x1, [x2]");
+    match = mc1 == mc2;
+
+    cout << "stp x0, x1, [x2]: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_mov_imm(gpr_t::w1, 1);
+    mc2 = as("mov w1, #1");
+    match = mc1 == mc2;
+
+    cout << "mov w1, #1" << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_mov_register(gpr_t::w1, gpr_t::w2);
+    mc2 = as("mov w1, w2");
+    match = mc1 == mc2;
+
+    cout << "mov w1, w2" << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_add_imm(gpr_t::w1, gpr_t::w2, 1, 0);
+    mc2 = as("add w1, w2, #1");
+    match = mc1 == mc2;
+
+    cout << "add w1, w2, #1: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_add_shifted_register(gpr_t::w1, gpr_t::w2, gpr_t::w3, 0, 0);
+    mc2 = as("add w1, w2, w3");
+    match = mc1 == mc2;
+
+    cout << "add w1, w2, w3: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_sub_imm(gpr_t::w1, gpr_t::w2, 1, 0);
+    mc2 = as("sub w1, w2, #1");
+    match = mc1 == mc2;
+
+    cout << "sub w1, w2, #1: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_sub_shifted_register(gpr_t::w1, gpr_t::w2, gpr_t::w3, 0, 0);
+    mc2 = as("sub w1, w2, w3");
+    match = mc1 == mc2;
+
+    cout << "sub w1, w2, w3: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_lsl_imm(gpr_t::w1, gpr_t::w2, 0);
+    mc2 = as("lsl w1, w2, #0");
+    match = mc1 == mc2;
+
+    cout << "lsl w1, w2, 0: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    mc1 = l_gen.base_lsl_register(gpr_t::w1, gpr_t::w2, gpr_t::w3);
+    mc2 = as("lsl w1, w2, w3");
+    match = mc1 == mc2;
+
+    // mc1 = l_gen.base_ret(gpr_t Xn);
 
     // -------------------------------------------------------------
 

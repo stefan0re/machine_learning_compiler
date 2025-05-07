@@ -64,7 +64,7 @@ uint32_t jiter::instructions::InstGen::base_stp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_S
     return l_ins;
 }
 
-uint32_t jiter::instructions::InstGen::base_mov_imm(gpr_t Wd_WSP, gpr_t imm) {
+uint32_t jiter::instructions::InstGen::base_mov_imm(gpr_t Wd_WSP, int32_t imm12) {
     // here the opc AND the Rn field is encoded
     uint32_t l_ins = 0x288003E0;
 
@@ -107,7 +107,7 @@ uint32_t jiter::instructions::InstGen::base_add_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, 
     return l_ins;
 }
 
-uint32_t jiter::instructions::InstGen::base_add_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+uint32_t jiter::instructions::InstGen::base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
     uint32_t l_ins = 0x0B000000;
 
     // extract lower 5 bits from each and shift them to correct position
@@ -146,7 +146,7 @@ uint32_t jiter::instructions::InstGen::base_sub_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, 
     return l_ins;
 }
 
-uint32_t jiter::instructions::InstGen::base_sub_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+uint32_t jiter::instructions::InstGen::base_sub_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
     uint32_t l_ins = 0x4B000000;
 
     // extract lower 5 bits from each and shift them to correct position
@@ -166,7 +166,7 @@ uint32_t jiter::instructions::InstGen::base_sub_shifted(gpr_t Wd, gpr_t Wn, gpr_
     return l_ins;
 }
 
-uint32_t jiter::instructions::InstGen::base_lsl(gpr_t Wd, gpr_t Wn, uint32_t shift) {
+uint32_t jiter::instructions::InstGen::base_lsl_imm(gpr_t Wd, gpr_t Wn, uint32_t shift) {
     uint32_t l_ins = 0x53000000;
 
     // extract lower 5 bits from each and shift them to correct position
@@ -184,7 +184,7 @@ uint32_t jiter::instructions::InstGen::base_lsl(gpr_t Wd, gpr_t Wn, uint32_t shi
     return l_ins;
 }
 
-uint32_t jiter::instructions::InstGen::base_lsl_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm) {
+uint32_t jiter::instructions::InstGen::base_lsl_register(gpr_t Wd, gpr_t Wn, gpr_t Wm) {
     uint32_t l_ins = 0x1AC02000;
 
     // extract lower 5 bits from each and shift them to correct position

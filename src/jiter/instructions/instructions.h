@@ -142,7 +142,7 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates a MOV (Move Immediate) instruction using an immediate value.
      */
-    static uint32_t base_mov_imm(gpr_t Wd_WSP, gpr_t imm);
+    static uint32_t base_mov_imm(gpr_t Wd_WSP, int32_t imm12);
 
     /**
      * @brief Generates a MOV (Move Register) instruction using a source register.
@@ -157,7 +157,7 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates an ADD (Add Shifted Register) instruction.
      */
-    static uint32_t base_add_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
+    static uint32_t base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
 
     /**
      * @brief Generates a SUB (Subtract Immediate) instruction.
@@ -167,17 +167,17 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates a SUB (Subtract Shifted Register) instruction.
      */
-    static uint32_t base_sub_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
+    static uint32_t base_sub_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
 
     /**
      * @brief Generates a LSL (Logical Shift Left Immediate) instruction.
      */
-    static uint32_t base_lsl(gpr_t Wd, gpr_t Wn, uint32_t shift);
+    static uint32_t base_lsl_imm(gpr_t Wd, gpr_t Wn, uint32_t shift);
 
     /**
      * @brief Generates a LSL (Logical Shift Left Shifted Register) instruction.
      */
-    static uint32_t base_lsl_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm);
+    static uint32_t base_lsl_register(gpr_t Wd, gpr_t Wn, gpr_t Wm);
 
     /**
      * @brief Generates a RET (Return from Subroutine) instruction.
