@@ -241,7 +241,7 @@ int main() {
     if (!test_matmul(6, 15, 64, 192 * 64, 10000000, matmul_15_6_64)) {
         return 1;
     }
-    if (!test_matmul(64, 64, 64, 192 * 64 * 8 * 8, 150000, matmul_64_64_64)) {
+    if (!test_matmul(64, 64, 64, 128 * 64 * 8 * 8, 150000, matmul_64_64_64)) {
         return 1;
     }
     return 0;
