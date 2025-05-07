@@ -18,10 +18,14 @@ uint32_t as(const string& instruction) {
     asmFile.close();
 
     // assemble it to an object file
-    system("as temp.s -o temp.o");
+    if (system("as temp.s -o temp.o") != 0) {
+        throw runtime_error("Assembly failed");
+    }
 
     // extract raw binary
-    system("objcopy -O binary temp.o temp.bin");
+    if (system("objcopy -O binary temp.o temp.bin") != 0) {
+        throw runtime_error("Objcopy failed");
+    }
 
     // read first 4 bytes of binary output
     ifstream binFile("temp.bin", ios::binary);
@@ -39,11 +43,29 @@ uint32_t as(const string& instruction) {
 
 int main(int argc, char const* argv[]) {
     jiter::instructions::InstGen l_gen;
+    uint32_t mc1;
+    uint32_t mc2;
+    bool match;
 
-    cout << "Tests:" << endl;
+    cout << "Tests:\n------" << endl;
 
-    bool match = l_gen.base_br_cbnz(gpr_t::w1, 10) == as("cbnz w1, #10");
-    cout << "cbnz w1, #10: " << std::boolalpha << match << endl;
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_br_cbnz(gpr_t::w1, 1);
+    mc2 = as("cbnz w1, 0x00000004");
+    match = mc1 == mc2;
+
+    cout << "cbnz w1, 0x00000001: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
+
+    mc1 = l_gen.base_br_cbnz(gpr_t::w1, 1);
+    mc2 = as("cbnz w1, 0x00000004");
+    match = mc1 == mc2;
+
+    cout << "cbnz w1, 0x00000001: " << mc1 << " | " << mc2 << " : " << boolalpha << match << endl;
+
+    // -------------------------------------------------------------
 
     return 0;
 }
