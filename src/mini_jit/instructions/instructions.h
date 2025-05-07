@@ -1,14 +1,14 @@
-#ifndef JITER_INSTRUCTIONS_INSTRUCTIONS_H
-#define JITER_INSTRUCTIONS_INSTRUCTIONS_H
+#ifndef MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
+#define MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 
 #include <cstdint>
 #include <string>
 
-namespace jiter::instructions {
+namespace mini_jit::instructions {
     class InstGen;
 }
 
-class jiter::instructions::InstGen {
+class mini_jit::instructions::InstGen {
    public:
     //! general-purpose registers
     typedef enum : uint32_t {
@@ -153,12 +153,14 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates a MOV (Move Immediate) instruction using an immediate value.
      */
-    static uint32_t base_mov_imm(gpr_t Wd_WSP, gpr_t imm);
+    static uint32_t base_mov_imm(gpr_t Wd_WSP, int32_t imm);
 
     /**
      * @brief Generates a MOV (Move Register) instruction using a source register.
+     * @param Wd  -> DST
+     * @param Wm  -> SRC
      */
-    static uint32_t base_mov_register(gpr_t Wd, gpr_t Wm);
+    static uint32_t base_mov_register(gpr_t dst_reg, gpr_t src_reg);
 
     /**
      * @brief Generates an ADD (Add Immediate) instruction.
@@ -191,9 +193,14 @@ class jiter::instructions::InstGen {
     static uint32_t base_lsl_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm);
 
     /**
+     * @brief Generates a Mul instruction ( Rd = Rn * Rm )
+     */
+    static uint32_t base_mul_reg(gpr_t dst, gpr_t src_1, gpr_t src_0);
+
+    /**
      * @brief Generates a RET (Return from Subroutine) instruction.
      */
-    static uint32_t base_ret(gpr_t Xn);
+    static uint32_t base_ret();
 
     /**
      * @brief Generates an FMLA (vector) instruction.
@@ -224,6 +231,10 @@ class jiter::instructions::InstGen {
                                       simd_fp_t reg_src1,
                                       simd_fp_t reg_src2,
                                       element_spec_t element_spec);
+
+    static uint32_t neon_ldr(simd_fp_t reg_dst,
+                             gpr_t add_src,
+                             int32_t imm9);
 };
 
 #endif
