@@ -89,3 +89,27 @@ Our throughput test shows that this has an significant influence on the throughp
     Throughput:     59.7796 GFLOPS
 
 
+Task 2: Code Generation
+-----------------------
+
+We are finally getting started and preparing the first steps for the machine learning compiler. But to stay low level, we first write a just-in-time compiler for matrix multiplication.
+Just-in-time compilation works by generating the code you want to execute at runtime, allowing you to create perfectly tuned assembly code.
+The code that makes memory executable and returns a function pointer from it can be seen `here <https://github.com/stefan0re/machine_learning_compiler/tree/main/src/mini_jit/backend>`_.
+
+We started with a very simple variant, a kernel where M = 16 and N = 6 are fixed.
+The implementation of this can also be seen on `GitHub <https://github.com/stefan0re/machine_learning_compiler/blob/main/src/mini_jit/generator/Brgemm.cpp>`_.
+
+.. code-block:: C++
+
+    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x7,
+                                                        inst::InstGen::x0));
+                                
+
+Basically, we call our instruction generator for each instruction that we want to have and write them one after the other into an array. 
+You can see this for example in the code above for a :code:`mov x7, x0` instruction.
+
+Our JITer is now able to generate code for matrix multiplication with any K and with free leading dimensions. The performance results can be seen in the plot.
+
+TODO: insert plot
+
+TODO: add github tag

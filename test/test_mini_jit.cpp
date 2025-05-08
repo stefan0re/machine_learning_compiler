@@ -35,13 +35,13 @@ int test_gemm_16_6_k(int64_t i_k,
     // compute reference
     gemm_ref(l_a, l_b, l_c_1,
              16, 6, i_k,
-             i_lda, i_ldb, i_ldb);
+             i_lda, i_ldb, i_ldc);
 
     // compute jiter
     mini_jit::generator::Brgemm::kernel_t l_kernel = l_brgemm.get_kernel();
 
     l_kernel(l_a, l_b, l_c_2,
-             i_lda, i_ldb, i_ldb,
+             i_lda, i_ldb, i_ldc,
              0, 0);
 
     // compare results
