@@ -33,3 +33,13 @@ jobs:
       - name: Verify CMake Installation
         run: cmake --version
 
+      - name: Build Unit Tests
+        run: |
+          mkdir build
+          cd build
+          cmake ..
+          make
+
+      - name: Run Unit Tests
+        run: |
+          ctest
