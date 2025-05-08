@@ -80,40 +80,19 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     }
 
     // issue fmla
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v0,
-                                                           inst::InstGen::v24,
-                                                           inst::InstGen::v28,
-                                                           0));
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v1,
-                                                           inst::InstGen::v25,
-                                                           inst::InstGen::v28,
-                                                           0));
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v2,
-                                                           inst::InstGen::v26,
-                                                           inst::InstGen::v28,
-                                                           0));
+    for (size_t i = 0; i < 4; i++) {
+        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(0 + i),
+                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
+                                                               inst::InstGen::v28,
+                                                               0));
+    }
 
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v3,
-                                                           inst::InstGen::v27,
-                                                           inst::InstGen::v28,
-                                                           0));
-
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v4,
-                                                           inst::InstGen::v24,
-                                                           inst::InstGen::v29,
-                                                           0));
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v5,
-                                                           inst::InstGen::v25,
-                                                           inst::InstGen::v29,
-                                                           0));
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v6,
-                                                           inst::InstGen::v26,
-                                                           inst::InstGen::v29,
-                                                           0));
-    m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(inst::InstGen::v7,
-                                                           inst::InstGen::v27,
-                                                           inst::InstGen::v29,
-                                                           0));
+    for (size_t i = 0; i < 4; i++) {
+        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(4 + i),
+                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
+                                                               inst::InstGen::v29,
+                                                               0));
+    }
     // load rest of B
 
     m_kernel.add_instr(inst::InstGen::neon_ldr(inst::InstGen::v28,
