@@ -110,11 +110,6 @@ void mini_jit::backend::Kernel::write(char const* path) const {
         throw std::runtime_error("Failed to open file: " + std::string(path));
     }
 
-    for (size_t i = 0; i < m_buffer.size(); i++) {
-        std::cout << i << ": ";
-        std::cout << std::hex << std::showbase << std::setw(10) << std::setfill('0') << m_buffer[i] << std::endl;
-    }
-
     l_out.write(reinterpret_cast<char const*>(m_buffer.data()),
                 m_buffer.size() * 4);
 }

@@ -139,10 +139,12 @@ class mini_jit::instructions::InstGen {
         s_3 = 0x700000
     } element_spec_t;
 
+
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
      */
-    static uint32_t base_br_cbnz(gpr_t reg, int32_t imm19);
+    static uint32_t
+    base_br_cbnz(gpr_t reg, int32_t imm19);
 
     /**
      * @brief Generates a LDP (Load Pair) instruction.
@@ -239,6 +241,19 @@ class mini_jit::instructions::InstGen {
     static uint32_t neon_ldr(simd_fp_t reg_dst,
                              gpr_t add_src,
                              int32_t imm9);
+
+    static uint32_t neon_ld1_no_offset(simd_fp_t reg_dst,
+                                       gpr_t add_src,
+                                       vector_count_t reg_count);
+
+    static uint32_t neon_fmla_by_element(simd_fp_t reg_dest,
+                                         simd_fp_t reg_src1,
+                                         simd_fp_t reg_src2,
+                                         uint32_t arr_index);
+
+    static uint32_t neon_st1_no_offset(simd_fp_t reg_dst,
+                                       gpr_t add_src,
+                                       vector_count_t reg_count);
 };
 
 #endif

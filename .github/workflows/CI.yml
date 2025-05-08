@@ -33,7 +33,8 @@ jobs:
       - name: Verify CMake Installation
         run: cmake --version
 
-      - name: Build Unit Tests
+
+      - name: Build Project
         run: |
           mkdir build
           cd build
