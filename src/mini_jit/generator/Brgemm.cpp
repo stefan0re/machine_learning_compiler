@@ -135,25 +135,25 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     }
 
     /* set new B address */
-    m_kernel.add_instr( inst::InstGen::base_sub_shifted(inst::InstGen::x1,
-                                                        inst::InstGen::x1,
-                                                        inst::InstGen::x15,
-                                                        0,
-                                                        0));
-    m_kernel.add_instr( inst::InstGen::base_add_imm(inst::InstGen::x1,
-                                                        inst::InstGen::x1,
-                                                        0x4,
-                                                        0));
+    m_kernel.add_instr(inst::InstGen::base_sub_shifted(inst::InstGen::x1,
+                                                       inst::InstGen::x1,
+                                                       inst::InstGen::x15,
+                                                       0,
+                                                       0));
+    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x1,
+                                                   inst::InstGen::x1,
+                                                   0x4,
+                                                   0));
 
     /* cbnz K loop */
-    m_kernel.add_instr( inst::InstGen::base_br_cbnz( inst::InstGen::x10,
-                                                     (k_loop_count - m_kernel.get_size())/4 - 1));
+    m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x10,
+                                                   (k_loop_count - m_kernel.get_size()) / 4 - 1));
 
     /* Store C */
     m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x9,
                                                         inst::InstGen::x2));
 
-    for( size_t i = 0; i < 6; i++){
+    for (size_t i = 0; i < 6; i++) {
         m_kernel.add_instr(inst::InstGen::neon_st1_no_offset(static_cast<inst::InstGen::simd_fp_t>(4 * i),
                                                              inst::InstGen::x9,
                                                              inst::InstGen::vc4));
