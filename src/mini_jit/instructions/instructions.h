@@ -125,10 +125,14 @@ class mini_jit::instructions::InstGen {
     } arr_spec_t;
 
     typedef enum : uint32_t {
-        h_0 = 0x0,
+        h_0 = 0x000000,
         h_1 = 0x100000,
         h_2 = 0x200000,
         h_3 = 0x300000,
+        h_4 = 0x000400,
+        h_5 = 0x100400,
+        h_6 = 0x200400,
+        h_7 = 0x300400,
         s_0 = 0x400000,
         s_1 = 0x500000,
         s_2 = 0x600000,
