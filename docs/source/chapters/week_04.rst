@@ -110,10 +110,10 @@ You can see this for example in the code above for a :code:`mov x7, x0` instruct
 
 Our JITer is now able to generate code for matrix multiplication with any K and with free leading dimensions. The performance results can be seen in the plot.
 
-insert plot
-
 .. image:: ../_static/plot_week4.png
     :alt: Plot of GEMM 16x6xK
 
+Our tests ran for quite a long time, so we suspect that the results got worse the longer they ran. 
+Although the bigger kernels still reached 120 GFLOPS when tested individually.
 
 This week's work is available under this commit on GitHub: b7ce234.
