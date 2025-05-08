@@ -29,7 +29,7 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_element(simd_fp_t reg_dest,
                                                             simd_fp_t reg_src1,
                                                             simd_fp_t reg_src2,
                                                             element_spec_t element_spec) {
-    uint32_t l_ins = 0xBF001000;
+    uint32_t l_ins = 0x5F001000;
 
     // set destination register id
     uint32_t l_reg_id = reg_dest & 0x1f;
@@ -44,7 +44,7 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_element(simd_fp_t reg_dest,
     l_ins |= l_reg_id << 16;
 
     // set arrangement specifier
-    uint32_t l_arr_spec = element_spec & 0x00700000;
+    uint32_t l_arr_spec = element_spec & 0x00700400;
     l_ins |= l_arr_spec;
 
     return l_ins;
