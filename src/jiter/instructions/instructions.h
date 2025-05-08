@@ -127,17 +127,17 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
      */
-    static uint32_t base_br_cbnz(gpr_t reg, int32_t imm19);
+    static uint32_t base_br_cbnz(gpr_t reg, uint32_t imm19);
 
     /**
      * @brief Generates a LDP (Load Pair) instruction.
      */
-    static uint32_t base_ldp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, int32_t imm7);
+    static uint32_t base_ldp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, uint32_t imm7);
 
     /**
      * @brief Generates a STP (Store Pair) instruction.
      */
-    static uint32_t base_stp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, int32_t imm7);
+    static uint32_t base_stp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, uint32_t imm7);
 
     /**
      * @brief Generates a MOV (Move Immediate) instruction using an immediate value.
@@ -152,7 +152,7 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates an ADD (Add Immediate) instruction.
      */
-    static uint32_t base_add_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift);
+    static uint32_t base_add_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, uint32_t imm12, uint32_t shift);
 
     /**
      * @brief Generates an ADD (Add Shifted Register) instruction.
@@ -162,7 +162,7 @@ class jiter::instructions::InstGen {
     /**
      * @brief Generates a SUB (Subtract Immediate) instruction.
      */
-    static uint32_t base_sub_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift);
+    static uint32_t base_sub_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, uint32_t imm12, uint32_t shift);
 
     /**
      * @brief Generates a SUB (Subtract Shifted Register) instruction.

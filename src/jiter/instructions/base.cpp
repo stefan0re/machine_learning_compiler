@@ -4,16 +4,16 @@ namespace jiter {
     namespace instructions {
 
         // cbnz  <W/X><Rt>, #+imm19
-        uint32_t InstGen::base_br_cbnz(gpr_t Rt, int32_t imm19) {
+        uint32_t InstGen::base_br_cbnz(gpr_t Rt, uint32_t imm19) {
             uint32_t ins = 0x35000000u;
-            ins |= (Rt & 0x1Fu);                       // Rt → bits [4:0]
-            ins |= (((Rt >> 5) & 0x1u) << 31);         // sf → bit 31
-            ins |= ((uint32_t)imm19 & 0x7FFFFu) << 5;  // imm19 → bits [23:5]
+            ins |= (Rt & 0x1Fu);                // Rt → bits [4:0]
+            ins |= (((Rt >> 5) & 0x1u) << 31);  // sf → bit 31
+            ins |= (imm19 & 0x7FFFFu) << 5;     // imm19 → bits [23:5]
             return ins;
         }
 
         // ldp  <W/X>t1, <W/X>t2, [<Xn|SP>], #+imm7
-        uint32_t InstGen::base_ldp(gpr_t t1, gpr_t t2, gpr_t Xn_SP, int32_t imm7) {
+        uint32_t InstGen::base_ldp(gpr_t t1, gpr_t t2, gpr_t Xn_SP, uint32_t imm7) {
             uint32_t ins = 0x28C00000u;
             ins |= (t1 & 0x1Fu) << 0;           // Rt1 → [4:0]
             ins |= (Xn_SP & 0x1Fu) << 5;        // Rn  → [9:5]
@@ -24,7 +24,7 @@ namespace jiter {
         }
 
         // stp  <W/X>t1, <W/X>t2, [<Xn|SP>], #+imm7
-        uint32_t InstGen::base_stp(gpr_t t1, gpr_t t2, gpr_t Xn_SP, int32_t imm7) {
+        uint32_t InstGen::base_stp(gpr_t t1, gpr_t t2, gpr_t Xn_SP, uint32_t imm7) {
             uint32_t ins = 0x28800000u;
             ins |= (t1 & 0x1Fu) << 0;
             ins |= (Xn_SP & 0x1Fu) << 5;
@@ -54,11 +54,11 @@ namespace jiter {
         }
 
         // add  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
-        uint32_t InstGen::base_add_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
+        uint32_t InstGen::base_add_imm(gpr_t Wd, gpr_t Wn, uint32_t imm12, uint32_t shift) {
             uint32_t ins = 0x11000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
-            ins |= ((uint32_t)(shift & 1u) << 22);  // LSL #shift? only 0 or 1
-            ins |= ((uint32_t)imm12 & 0xFFFu) << 10;
+            ins |= ((shift & 1u) << 22);  // LSL #shift? only 0 or 1
+            ins |= (imm12 & 0xFFFu) << 10;
             ins |= ((Wn & 0x1Fu) << 5);
             ins |= (Wd & 0x1Fu);
             return ins;
@@ -78,11 +78,11 @@ namespace jiter {
         }
 
         // sub  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
-        uint32_t InstGen::base_sub_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
+        uint32_t InstGen::base_sub_imm(gpr_t Wd, gpr_t Wn, uint32_t imm12, uint32_t shift) {
             uint32_t ins = 0x51000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
-            ins |= ((uint32_t)(shift & 1u) << 22);
-            ins |= ((uint32_t)imm12 & 0xFFFu) << 10;
+            ins |= ((shift & 1u) << 22);
+            ins |= (imm12 & 0xFFFu) << 10;
             ins |= ((Wn & 0x1Fu) << 5);
             ins |= (Wd & 0x1Fu);
             return ins;
@@ -102,12 +102,16 @@ namespace jiter {
         }
 
         // lsl  <W/X>d, <W/X>n, #imm6
-        uint32_t InstGen::base_lsl_imm(gpr_t Wd, gpr_t Wn, uint32_t imm6) {
+        uint32_t InstGen::base_lsl_imm(gpr_t Wd, gpr_t Wn, uint32_t shift) {
+            // LSL #n is an alias for UBFM Rd, Rn, #(-n & 31), #(31 - n)
+            uint32_t immr = (-shift) & 0x1F;
+            uint32_t imms = 31 - shift;
+
             uint32_t ins = 0x53000000u;
-            ins |= (((Wd >> 5) & 0x1u) << 31);
-            ins |= ((imm6 & 0x3Fu) << 10);
-            ins |= ((Wn & 0x1Fu) << 5);
-            ins |= (Wd & 0x1Fu);
+            ins |= (immr & 0x3F) << 16;
+            ins |= (imms & 0x3F) << 10;
+            ins |= (Wn & 0x1F) << 5;
+            ins |= (Wd & 0x1F);
             return ins;
         }
 
