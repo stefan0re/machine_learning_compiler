@@ -35,29 +35,13 @@ jobs:
 
       - name: Build Project
         run: |
-          mkdir -p build
-          cd build 
+          mkdir build
+          cd build
           cmake ..
-          cmake --build .
-
-      - name: Run Microbenchmarks
+          make
+      
+      - name: Run Tests
         run: |
-          cd ./build/bin/
-          ./throughput_microbenchmark
-          ./latency_microbenchmark
-          ./neon_microbenchmark
+          cd build
+          ctest
 
-      - name: Run copy_driver
-        run: |
-          cd ./build/bin/
-          ./copy_driver
-
-      - name: Run matmul_driver
-        run: |
-          cd ./build/bin/
-          ./matmul_driver
-
-      - name: Run Unittests
-        run: |
-          cd ./build/
-          ctest --verbose

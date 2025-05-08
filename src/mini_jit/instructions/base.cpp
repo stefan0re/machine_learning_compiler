@@ -1,5 +1,6 @@
 #include "instructions.h"
 
+
 namespace mini_jit {
     namespace instructions {
 
@@ -125,12 +126,23 @@ namespace mini_jit {
             return ins;
         }
 
-        // ret  <Xn>
-        uint32_t InstGen::base_ret(gpr_t Xn) {
-            uint32_t ins = 0xD65F0000u;
-            ins |= ((Xn & 0x1Fu) << 5);
-            return ins;
+        uint32_t InstGen::base_ret() {
+            return 0xd65f03c0;
         }
+
+        uint32_t InstGen::base_mul_reg(gpr_t dst,
+                                       gpr_t src_1,
+                                       gpr_t src_0) {
+            uint32_t l_ins = 0x1b007c00;
+
+            l_ins |= (0x1f & dst);
+            l_ins |= (0x1f & src_1) << 5;
+            l_ins |= (0x1f & src_0) << 16;
+            l_ins |= (0x20 & dst) << 26;
+
+            return l_ins;
+        }
+
 
     }  // namespace instructions
 }  // namespace mini_jit

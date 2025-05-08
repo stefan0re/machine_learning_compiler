@@ -62,6 +62,51 @@ void matmul_64_48_64(float const* a,
                      int64_t lda,
                      int64_t ldb,
                      int64_t ldc);
+
+/**
+ * @param a pointer to column-major matrix A.
+ * @param b pointer to column-major matrix B.
+ * @param c pointer to column-major matrix C.
+ * @param lda leading dimension of A.
+ * @param ldb leading dimension of B.
+ * @param ldc leading dimension of C.
+ **/
+void matmul_14_6_64(float const* a,
+                    float const* b,
+                    float* c,
+                    int64_t lda,
+                    int64_t ldb,
+                    int64_t ldc);
+
+/**
+ * @param a pointer to column-major matrix A.
+ * @param b pointer to column-major matrix B.
+ * @param c pointer to column-major matrix C.
+ * @param lda leading dimension of A.
+ * @param ldb leading dimension of B.
+ * @param ldc leading dimension of C.
+ **/
+void matmul_15_6_64(float const* a,
+                    float const* b,
+                    float* c,
+                    int64_t lda,
+                    int64_t ldb,
+                    int64_t ldc);
+
+/**
+ * @param a pointer to column-major matrix A.
+ * @param b pointer to column-major matrix B.
+ * @param c pointer to column-major matrix C.
+ * @param lda leading dimension of A.
+ * @param ldb leading dimension of B.
+ * @param ldc leading dimension of C.
+ **/
+void matmul_64_64_64(float const* a,
+                     float const* b,
+                     float* c,
+                     int64_t lda,
+                     int64_t ldb,
+                     int64_t ldc);
 }
 
 void reference_mat_mul(float const* a,
@@ -79,7 +124,7 @@ void reference_mat_mul(float const* a,
     }
 }
 
-void visualize_matix(float* c,
+void visualize_matix(float const* c,
                      int64_t height,
                      int64_t width) {
     for (int i = 0; i < height; i++) {
@@ -142,10 +187,10 @@ int test_matmul(int64_t n,
     std::chrono::_V2::system_clock::time_point start, end;
     bool is_correct = true;
 
-    get_matrices(a, b, c, c_ref, n, m, k, true);
+    get_matrices(a, b, c, c_ref, n, m, k);
 
-    matmul_func(a, b, c, m, k, m);
     reference_mat_mul(a, b, c_ref, n, m, k);
+    matmul_func(a, b, c, m, k, m);
 
     double epsilon = 1e-3;
     for (int i = 0; i < m; i++) {
@@ -154,7 +199,7 @@ int test_matmul(int64_t n,
             if (std::fabs(c[c_index] - c_ref[c_index]) > (epsilon * std::fabs(c_ref[c_index]))) {
                 std::cout << "Failed in: i=" << i << ", j=" << j << std::endl;
                 std::cout << c[c_index] << " != " << c_ref[c_index] << ", Diff=" << (std::fabs(c[c_index] - c_ref[c_index])) << std::endl;
-                return 0;  // is_correct = false;
+                return 0;
             }
         }
     }
@@ -188,6 +233,15 @@ int main() {
         return 1;
     }
     if (!test_matmul(48, 64, 64, 192 * 64 * 4 * 8, 250000, matmul_64_48_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 14, 64, 192 * 64, 10000000, matmul_14_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 15, 64, 192 * 64, 10000000, matmul_15_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(64, 64, 64, 128 * 64 * 8 * 8, 150000, matmul_64_64_64)) {
         return 1;
     }
     return 0;
