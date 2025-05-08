@@ -166,12 +166,7 @@ class mini_jit::instructions::InstGen {
     /** @brief
      *
      */
-    static uint32_t base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
-
-    /**
-     * @brief Generates an ADD (Add Shifted Register) instruction.
-     */
-    static uint32_t base_add_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
+    static uint32_t base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, int32_t shift_type, uint32_t imm6);
 
     /**
      * @brief Generates a SUB (Subtract Immediate) instruction.

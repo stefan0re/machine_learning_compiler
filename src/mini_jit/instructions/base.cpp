@@ -65,7 +65,7 @@ namespace mini_jit {
         }
 
         // add  <W/X>d, <W/X>n, <W/X>m, {LSL|LSR|ASR} #imm6
-        uint32_t InstGen::base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+        uint32_t InstGen::base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, int32_t shift_type, uint32_t imm6) {
             uint32_t ins = 0x0B000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
             ins |= ((shift_type & 0x3u) << 22);
