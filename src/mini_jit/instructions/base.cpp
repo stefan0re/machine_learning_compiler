@@ -1,11 +1,10 @@
 #include "instructions.h"
 
-
 namespace mini_jit {
     namespace instructions {
 
         // cbnz  <W/X><Rt>, #+imm19
-        uint32_t InstGen::base_br_cbnz(gpr_t Rt, uint32_t imm19) {
+        uint32_t InstGen::base_br_cbnz(gpr_t Rt, int32_t imm19) {
             uint32_t ins = 0x35000000u;
             ins |= (Rt & 0x1Fu);                // Rt → bits [4:0]
             ins |= (((Rt >> 5) & 0x1u) << 31);  // sf → bit 31
@@ -36,7 +35,7 @@ namespace mini_jit {
         }
 
         // mov  <W/X>d, #imm12   (alias of ORR Wd, WZR, #imm12)
-        uint32_t InstGen::base_mov_imm(gpr_t Wd, uint16_t imm16, uint8_t shift /*= 0*/) {
+        uint32_t InstGen::base_mov_imm(gpr_t Wd, int16_t imm16, uint8_t shift /*= 0*/) {
             uint32_t ins = 0x52800000u;       // MOVZ base for 32-bit (sf = 0)
             ins |= ((imm16 & 0xFFFFu) << 5);  // imm16 → bits [20:5]
             ins |= ((shift & 0x3u) << 21);    // shift amount (0, 16, 32, 48) → bits [22:21]
@@ -55,7 +54,7 @@ namespace mini_jit {
         }
 
         // add  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
-        uint32_t InstGen::base_add_imm(gpr_t Wd, gpr_t Wn, uint32_t imm12, uint32_t shift) {
+        uint32_t InstGen::base_add_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
             uint32_t ins = 0x11000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
             ins |= ((shift & 1u) << 22);  // LSL #shift? only 0 or 1
@@ -66,8 +65,7 @@ namespace mini_jit {
         }
 
         // add  <W/X>d, <W/X>n, <W/X>m, {LSL|LSR|ASR} #imm6
-        uint32_t InstGen::base_add_shifted_register(
-            gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+        uint32_t InstGen::base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
             uint32_t ins = 0x0B000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
             ins |= ((shift_type & 0x3u) << 22);
@@ -79,7 +77,7 @@ namespace mini_jit {
         }
 
         // sub  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
-        uint32_t InstGen::base_sub_imm(gpr_t Wd, gpr_t Wn, uint32_t imm12, uint32_t shift) {
+        uint32_t InstGen::base_sub_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
             uint32_t ins = 0x51000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
             ins |= ((shift & 1u) << 22);
@@ -90,8 +88,7 @@ namespace mini_jit {
         }
 
         // sub  <W/X>d, <W/X>n, <W/X>m, {LSL|LSR|ASR} #imm6
-        uint32_t InstGen::base_sub_shifted_register(
-            gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+        uint32_t InstGen::base_sub_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
             uint32_t ins = 0x4B000000u;
             ins |= (((Wd >> 5) & 0x1u) << 31);
             ins |= ((shift_type & 0x3u) << 22);
@@ -142,7 +139,6 @@ namespace mini_jit {
 
             return l_ins;
         }
-
 
     }  // namespace instructions
 }  // namespace mini_jit

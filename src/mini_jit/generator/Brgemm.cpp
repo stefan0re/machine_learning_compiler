@@ -33,13 +33,15 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
     // set register to reset B in the K loop:
     m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x15,
-                                                   5));
+                                                   5,
+                                                   0));
     m_kernel.add_instr(inst::InstGen::base_mul_reg(inst::InstGen::x15,
                                                    inst::InstGen::x15,
                                                    inst::InstGen::x4));
     // set K loop register
     m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x10,
-                                                   k));
+                                                   k,
+                                                   0));
 
     for (size_t i = 0; i < 6; i++) {
         m_kernel.add_instr(inst::InstGen::neon_ld1_no_offset(static_cast<inst::InstGen::simd_fp_t>(4 * i),
@@ -135,11 +137,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     }
 
     /* set new B address */
-    m_kernel.add_instr(inst::InstGen::base_sub_shifted(inst::InstGen::x1,
-                                                       inst::InstGen::x1,
-                                                       inst::InstGen::x15,
-                                                       0,
-                                                       0));
+    m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x1,
+                                                                inst::InstGen::x1,
+                                                                inst::InstGen::x15,
+                                                                0,
+                                                                0));
     m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x1,
                                                    inst::InstGen::x1,
                                                    0x4,

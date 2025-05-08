@@ -1,7 +1,6 @@
 #ifndef MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 #define MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 
-
 #include <cstdint>
 #include <string>
 
@@ -125,7 +124,6 @@ class mini_jit::instructions::InstGen {
         d2 = 0x40400000
     } arr_spec_t;
 
-
     typedef enum : uint32_t {
         vc1 = 0xc00,
         vc2 = 0x4800,
@@ -136,14 +134,12 @@ class mini_jit::instructions::InstGen {
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
      */
-    static uint32_t
-    base_br_cbnz(gpr_t reg, int32_t imm19);
+    static uint32_t base_br_cbnz(gpr_t reg, int32_t imm19);
 
     /**
      * @brief Generates a LDP (Load Pair) instruction.
      */
     static uint32_t base_ldp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, uint32_t imm7);
-
 
     /**
      * @brief Generates a STP (Store Pair) instruction.
@@ -153,7 +149,7 @@ class mini_jit::instructions::InstGen {
     /**
      * @brief Generates a MOV (Move Immediate) instruction using an immediate value.
      */
-    static uint32_t base_mov_imm(gpr_t Wd_WSP, int32_t imm);
+    static uint32_t base_mov_imm(gpr_t Wd, int16_t imm16, uint8_t shift /*= 0*/);
 
     /**
      * @brief Generates a MOV (Move Register) instruction using a source register.
@@ -166,6 +162,11 @@ class mini_jit::instructions::InstGen {
      * @brief Generates an ADD (Add Immediate) instruction.
      */
     static uint32_t base_add_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift);
+
+    /** @brief
+     *
+     */
+    static uint32_t base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6);
 
     /**
      * @brief Generates an ADD (Add Shifted Register) instruction.
@@ -196,7 +197,6 @@ class mini_jit::instructions::InstGen {
      * @brief Generates a Mul instruction ( Rd = Rn * Rm )
      */
     static uint32_t base_mul_reg(gpr_t dst, gpr_t src_1, gpr_t src_0);
-
 
     /**
      * @brief Generates a RET (Return from Subroutine) instruction.
