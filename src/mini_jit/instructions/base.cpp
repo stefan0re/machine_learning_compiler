@@ -1,221 +1,144 @@
 #include "instructions.h"
 
-uint32_t mini_jit::instructions::InstGen::base_br_cbnz(gpr_t reg, int32_t imm19) {
-    // 32 bit optcode for cbnz without variables
-    uint32_t l_ins = 0x35000000;  // 00110101000000000000000000000000
+namespace mini_jit {
+    namespace instructions {
 
-    // keeping only the lowest 5 bits of reg, which represent the register number (0–31).
-    uint32_t l_reg_id = reg & 0x1f;  // reg &  00011111 (rest is leading zeros, so 8 bit are enough)
-    l_ins |= l_reg_id;
+        // cbnz  <W/X><Rt>, #+imm19
+        uint32_t InstGen::base_br_cbnz(gpr_t Rt, int32_t imm19) {
+            uint32_t ins = 0x35000000u;
+            ins |= (Rt & 0x1Fu);                // Rt → bits [4:0]
+            ins |= (((Rt >> 5) & 0x1u) << 31);  // sf → bit 31
+            ins |= (imm19 & 0x7FFFFu) << 5;     // imm19 → bits [23:5]
+            return ins;
+        }
 
-    // determin w or x view:
-    // shifting 26 places left (from bit 5 → bit 31), so it ends up in the
-    // correct size field of the instruction (bit 31):
-    // If reg = 0x21 (binary: 00100001), then:
-    //      l_reg_id = 0x01 → Register 1
-    //      l_reg_size = 0x20 → This gets shifted into bit 31 → sets size = 1 (64-bit register)
-    uint32_t l_reg_size = reg & 0x20;  // reg & 00100000
-    l_ins |= l_reg_size << (32 - 6);
+        // ldp  <W/X>t1, <W/X>t2, [<Xn|SP>], #+imm7
+        uint32_t InstGen::base_ldp(gpr_t t1, gpr_t t2, gpr_t Xn_SP, uint32_t imm7) {
+            uint32_t ins = 0x28C00000u;
+            ins |= (t1 & 0x1Fu) << 0;           // Rt1 → [4:0]
+            ins |= (Xn_SP & 0x1Fu) << 5;        // Rn  → [9:5]
+            ins |= (t2 & 0x1Fu) << 10;          // Rt2 → [14:10]
+            ins |= ((imm7 & 0x7Fu) << 15);      // imm7→ [21:15]
+            ins |= (((t1 >> 5) & 0x1u) << 31);  // sf → bit 31
+            return ins;
+        }
 
-    // set immediate (address of the jmp):
-    // cast the 19 bit address to 32 bit
-    uint32_t l_imm = imm19 & 0x7ffff;  // 01111111111111111111
-    // 19-bit immediate goes into bits [23:5] of the 32-bit instruction
-    l_ins |= l_imm << 5;
+        // stp  <W/X>t1, <W/X>t2, [<Xn|SP>], #+imm7
+        uint32_t InstGen::base_stp(gpr_t t1, gpr_t t2, gpr_t Xn_SP, uint32_t imm7) {
+            uint32_t ins = 0x28800000u;
+            ins |= (t1 & 0x1Fu) << 0;
+            ins |= (Xn_SP & 0x1Fu) << 5;
+            ins |= (t2 & 0x1Fu) << 10;
+            ins |= ((imm7 & 0x7Fu) << 15);
+            ins |= (((t1 >> 5) & 0x1u) << 31);
+            return ins;
+        }
 
-    return l_ins;
-}
+        // mov  <W/X>d, #imm12   (alias of ORR Wd, WZR, #imm12)
+        uint32_t InstGen::base_mov_imm(gpr_t Wd, int16_t imm16, uint8_t shift /*= 0*/) {
+            uint32_t ins = 0x52800000u;       // MOVZ base for 32-bit (sf = 0)
+            ins |= ((imm16 & 0xFFFFu) << 5);  // imm16 → bits [20:5]
+            ins |= ((shift & 0x3u) << 21);    // shift amount (0, 16, 32, 48) → bits [22:21]
+            ins |= (Wd & 0x1Fu);              // Rd → bits [4:0]
+            ins |= ((Wd >> 5) & 0x1u) << 31;  // sf (bit 31): 0 = 32-bit, 1 = 64-bit
+            return ins;
+        }
 
-uint32_t mini_jit::instructions::InstGen::base_ldp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, int32_t imm7) {
-    uint32_t l_ins = 0x28C00000;
+        // mov  <W/X>d, <W/X>m
+        uint32_t InstGen::base_mov_register(gpr_t Wd, gpr_t Wm) {
+            uint32_t ins = 0x2A0003E0u;  // ORR (reg) base
+            ins |= (((Wd >> 5) & 0x1u) << 31);
+            ins |= ((Wm & 0x1Fu) << 16);  // Rm → bits [20:16]
+            ins |= (Wd & 0x1Fu);          // Rd → bits [4:0]
+            return ins;
+        }
 
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wt1_bits = (Wt1 & 0x1F) << 0;
-    uint32_t xnsp_bits = (Xn_SP & 0x1F) << 5;
-    uint32_t wt2_bits = (Wt2 & 0x1F) << 10;
-    uint32_t imm7_bits = ((imm7 & 0x7F) << 15);
+        // add  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
+        uint32_t InstGen::base_add_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
+            uint32_t ins = 0x11000000u;
+            ins |= (((Wd >> 5) & 0x1u) << 31);
+            ins |= ((shift & 1u) << 22);  // LSL #shift? only 0 or 1
+            ins |= (imm12 & 0xFFFu) << 10;
+            ins |= ((Wn & 0x1Fu) << 5);
+            ins |= (Wd & 0x1Fu);
+            return ins;
+        }
 
-    // insert the new bits
-    l_ins |= wt1_bits | xnsp_bits | wt2_bits | imm7_bits;
+        // add  <W/X>d, <W/X>n, <W/X>m, {LSL|LSR|ASR} #imm6
+        uint32_t InstGen::base_add_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+            uint32_t ins = 0x0B000000u;
+            ins |= (((Wd >> 5) & 0x1u) << 31);
+            ins |= ((shift_type & 0x3u) << 22);
+            ins |= ((imm6 & 0x3Fu) << 10);
+            ins |= ((Wm & 0x1Fu) << 16);
+            ins |= ((Wn & 0x1Fu) << 5);
+            ins |= (Wd & 0x1Fu);
+            return ins;
+        }
 
-    // determin w or x view:
-    uint32_t l_reg_size = Wt1 & 0x20;  // reg & 00100000
-    l_ins |= l_reg_size << (32 - 6);
+        // sub  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
+        uint32_t InstGen::base_sub_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
+            uint32_t ins = 0x51000000u;
+            ins |= (((Wd >> 5) & 0x1u) << 31);
+            ins |= ((shift & 1u) << 22);
+            ins |= (imm12 & 0xFFFu) << 10;
+            ins |= ((Wn & 0x1Fu) << 5);
+            ins |= (Wd & 0x1Fu);
+            return ins;
+        }
 
-    return l_ins;
-}
+        // sub  <W/X>d, <W/X>n, <W/X>m, {LSL|LSR|ASR} #imm6
+        uint32_t InstGen::base_sub_shifted_register(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
+            uint32_t ins = 0x4B000000u;
+            ins |= (((Wd >> 5) & 0x1u) << 31);
+            ins |= ((shift_type & 0x3u) << 22);
+            ins |= ((imm6 & 0x3Fu) << 10);
+            ins |= ((Wm & 0x1Fu) << 16);
+            ins |= ((Wn & 0x1Fu) << 5);
+            ins |= (Wd & 0x1Fu);
+            return ins;
+        }
 
-uint32_t mini_jit::instructions::InstGen::base_stp(gpr_t Wt1, gpr_t Wt2, gpr_t Xn_SP, int32_t imm7) {
-    uint32_t l_ins = 0x28800000;
+        // lsl  <W/X>d, <W/X>n, #imm6
+        uint32_t InstGen::base_lsl_imm(gpr_t Wd, gpr_t Wn, uint32_t shift) {
+            // LSL #n is an alias for UBFM Rd, Rn, #(-n & 31), #(31 - n)
+            uint32_t immr = (-shift) & 0x1F;
+            uint32_t imms = 31 - shift;
 
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wt1_bits = (Wt1 & 0x1F) << 0;
-    uint32_t xnsp_bits = (Xn_SP & 0x1F) << 5;
-    uint32_t wt2_bits = (Wt2 & 0x1F) << 10;
-    uint32_t imm7_bits = ((imm7 & 0x7F) << 15);
+            uint32_t ins = 0x53000000u;
+            ins |= (immr & 0x3F) << 16;
+            ins |= (imms & 0x3F) << 10;
+            ins |= (Wn & 0x1F) << 5;
+            ins |= (Wd & 0x1F);
+            return ins;
+        }
 
-    // insert the new bits
-    l_ins |= wt1_bits | xnsp_bits | wt2_bits | imm7_bits;
+        // lsl  <W/X>d, <W/X>n, <W/X>m
+        uint32_t InstGen::base_lsl_register(gpr_t Wd, gpr_t Wn, gpr_t Wm) {
+            uint32_t ins = 0x1AC02000u;
+            ins |= (((Wd >> 5) & 0x1u) << 31);
+            ins |= ((Wm & 0x1Fu) << 16);
+            ins |= ((Wn & 0x1Fu) << 5);
+            ins |= (Wd & 0x1Fu);
+            return ins;
+        }
 
-    // determin w or x view:
-    uint32_t l_reg_size = Wt1 & 0x20;  // reg & 00100000
-    l_ins |= l_reg_size << (32 - 6);
+        uint32_t InstGen::base_ret() {
+            return 0xd65f03c0;
+        }
 
-    return l_ins;
-}
+        uint32_t InstGen::base_mul_reg(gpr_t dst,
+                                       gpr_t src_1,
+                                       gpr_t src_0) {
+            uint32_t l_ins = 0x1b007c00;
 
-uint32_t mini_jit::instructions::InstGen::base_mov_imm(gpr_t dst_reg, int32_t imm16) {
-    // here the opc AND the Rn field is encoded
-    uint32_t l_ins = 0x52800000;
+            l_ins |= (0x1f & dst);
+            l_ins |= (0x1f & src_1) << 5;
+            l_ins |= (0x1f & src_0) << 16;
+            l_ins |= (0x20 & dst) << 26;
 
-    l_ins |= 0x1f & dst_reg;
-    l_ins |= (0x20 & dst_reg) << 26;
-    l_ins |= (0xffff & imm16) << 5;
+            return l_ins;
+        }
 
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_mov_register(gpr_t dst_reg, gpr_t src_reg) {
-    uint32_t l_ins = 0x2A0003E0;
-
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wd_bits = (dst_reg & 0x1F) << 0;
-    uint32_t wm_bits = (src_reg & 0x1F) << 16;
-
-    // insert the new bits
-    l_ins |= wm_bits | wd_bits;
-
-    // determin w or x view:
-    uint32_t l_reg_size = dst_reg & 0x20;
-    l_ins |= l_reg_size << (32 - 6);
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_add_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift) {
-    uint32_t l_ins = 0x11000000;
-
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wd_wsp_bits = (Wd_WSP & 0x1F) << 0;
-    uint32_t wn_wsp_bits = (Wn_WSP & 0x1F) << 5;
-    uint32_t imm12_bits = (imm12 & 0xFFF) << 10;
-    uint32_t sh_bit = (shift & 0x01) << 22;
-
-    // insert the new bits
-    l_ins |= sh_bit | imm12_bits | wn_wsp_bits | wd_wsp_bits;
-
-    // determin w or x view:
-    uint32_t l_reg_size = Wd_WSP & 0x20;
-    l_ins |= l_reg_size << (32 - 6);
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_add_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
-    uint32_t l_ins = 0x0B000000;
-
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wd_bits = (Wd & 0x1F) << 0;
-    uint32_t wn_bits = (Wn & 0x1F) << 5;
-    uint32_t imm6_bits = (imm6 & 0x3F) << 10;
-    uint32_t wm_bits = (Wm & 0x1F) << 16;
-    uint32_t sh_bit = (shift_type & 0x03) << 22;
-
-    // insert the new bits
-    l_ins |= sh_bit | wm_bits | imm6_bits | wn_bits | wd_bits;
-
-    // determin w or x view:
-    uint32_t l_reg_size = Wd & 0x20;
-    l_ins |= l_reg_size << (32 - 6);
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_sub_imm(gpr_t Wd_WSP, gpr_t Wn_WSP, int32_t imm12, int32_t shift) {
-    uint32_t l_ins = 0x51000000;
-
-    // extract lower 5 bits from each and shift them to correct position
-    l_ins |= (Wd_WSP & 0x1F) << 0;
-    l_ins |= (Wn_WSP & 0x1F) << 5;
-    l_ins |= (imm12 & 0xFFF) << 10;
-    l_ins |= (shift & 0x1) << 22;
-
-    // determin w or x view:
-    l_ins |= (Wd_WSP & 0x20) << 26;
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_sub_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm, uint32_t shift_type, uint32_t imm6) {
-    uint32_t l_ins = 0x4B000000;
-
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wd_bits = (Wd & 0x1F) << 0;
-    uint32_t wn_bits = (Wn & 0x1F) << 5;
-    uint32_t imm6_bits = (imm6 & 0x3F) << 10;
-    uint32_t wm_bits = (Wm & 0x1F) << 16;
-    uint32_t sh_bit = (shift_type & 0x03) << 22;
-
-    // insert the new bits
-    l_ins |= sh_bit | wm_bits | imm6_bits | wn_bits | wd_bits;
-
-    // determin w or x view:
-    uint32_t l_reg_size = Wd & 0x20;
-    l_ins |= l_reg_size << (32 - 6);
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_lsl(gpr_t dst_reg, gpr_t src_reg, uint32_t shift) {
-    uint32_t l_ins = 0x53400000;
-    // TODO: check implementation
-
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wd_bits = (dst_reg & 0x1F);
-    uint32_t wn_bits = (src_reg & 0x1F) << 5;
-    uint32_t shift_bits = (shift & 0x3F) << 10;
-
-    // insert the new bits
-    l_ins |= shift_bits | wn_bits | wd_bits;
-
-    // determin w or x view:
-    uint32_t l_reg_size = dst_reg & 0x20;
-    l_ins |= l_reg_size << 25 | l_reg_size << 22;
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_lsl_shifted(gpr_t Wd, gpr_t Wn, gpr_t Wm) {
-    uint32_t l_ins = 0x1AC02000;
-
-    // extract lower 5 bits from each and shift them to correct position
-    uint32_t wd_bits = (Wd & 0x1F) << 0;
-    uint32_t wn_bits = (Wn & 0x1F) << 5;
-    uint32_t wm_bits = (Wm & 0x1F) << 16;
-
-    // insert the new bits
-    l_ins |= wm_bits | wn_bits | wd_bits;
-
-    // determin w or x view:
-    uint32_t l_reg_size = Wd & 0x20;
-    l_ins |= l_reg_size << 26 | l_reg_size << 22;
-
-    return l_ins;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_ret() {
-    return 0xd65f03c0;
-}
-
-uint32_t mini_jit::instructions::InstGen::base_mul_reg(gpr_t dst,
-                                                       gpr_t src_1,
-                                                       gpr_t src_0) {
-    uint32_t l_ins = 0x1b007c00;
-
-    l_ins |= (0x1f & dst);
-    l_ins |= (0x1f & src_1) << 5;
-    l_ins |= (0x1f & src_0) << 16;
-    l_ins |= (0x20 & dst) << 26;
-
-    return l_ins;
-}
+    }  // namespace instructions
+}  // namespace mini_jit

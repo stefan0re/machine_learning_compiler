@@ -1,5 +1,6 @@
 #include "instructions.h"
 
+
 uint32_t mini_jit::instructions::InstGen::neon_fmla_vector(simd_fp_t reg_dest,
                                                            simd_fp_t reg_src1,
                                                            simd_fp_t reg_src2,
@@ -23,6 +24,7 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_vector(simd_fp_t reg_dest,
     l_ins |= l_arr_spec;
 
     return l_ins;
+
 }
 
 uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
