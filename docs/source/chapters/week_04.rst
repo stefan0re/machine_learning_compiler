@@ -110,6 +110,10 @@ You can see this for example in the code above for a :code:`mov x7, x0` instruct
 
 Our JITer is now able to generate code for matrix multiplication with any K and with free leading dimensions. The performance results can be seen in the plot.
 
-TODO: insert plot
+insert plot
 
-TODO: add github tag
+.. image:: ../_static/plot_week4.png
+    :alt: Plot of GEMM 16x6xK
+
+
+This week's work is available under this tag on GitHub: .
