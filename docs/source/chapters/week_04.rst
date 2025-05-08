@@ -116,4 +116,4 @@ insert plot
     :alt: Plot of GEMM 16x6xK
 
 
-This week's work is available under this tag on GitHub: .
+This week's work is available under this commit on GitHub: b7ce234.
