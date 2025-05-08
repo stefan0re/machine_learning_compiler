@@ -1,7 +1,7 @@
-#include "../src/jiter/instructions/instructions.h"
+#include "../src/mini_jit/instructions/instructions.h"
 
 int test_base_br_cbnz() {
-    using namespace jiter::instructions;
+    using namespace mini_jit::instructions;
 
     uint32_t instruction = InstGen::base_br_cbnz(InstGen::w0, 0x12345);
     uint32_t expected = 0x35000000 | (0x0 & 0x1f) | ((0x0 & 0x20) << (32 - 6)) | (0x12345 << 5);

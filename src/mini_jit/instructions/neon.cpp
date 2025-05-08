@@ -36,3 +36,43 @@ uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
 
     return l_inst;
 }
+
+uint32_t mini_jit::instructions::InstGen::neon_ld1_no_offset(simd_fp_t reg_dst,
+                                                             gpr_t add_src,
+                                                             vector_count_t reg_count) {
+    uint32_t l_inst = 0x4c402000;
+
+    l_inst |= (reg_dst & 0x1f);
+    l_inst |= (add_src & 0x1f) << 5;
+    l_inst |= reg_count;
+
+    return l_inst;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_fmla_by_element(simd_fp_t reg_dest,
+                                                               simd_fp_t reg_src1,
+                                                               simd_fp_t reg_src2,
+                                                               uint32_t arr_index) {
+    uint32_t l_ins = 0x4f801000;
+
+    l_ins |= (reg_dest & 0x1f);
+    l_ins |= (reg_src1 & 0x1f) << 5;
+    l_ins |= (reg_src2 & 0x1f) << 16;
+
+    l_ins |= (arr_index & 0x1) << 11;
+    l_ins |= (arr_index & 0x2) << 21;
+
+    return l_ins;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_st1_no_offset(simd_fp_t reg_dst,
+                                                             gpr_t add_src,
+                                                             vector_count_t reg_count) {
+    uint32_t l_inst = 0x4c002000;
+
+    l_inst |= (reg_dst & 0x1f);
+    l_inst |= (add_src & 0x1f) << 5;
+    l_inst |= reg_count;
+
+    return l_inst;
+}
