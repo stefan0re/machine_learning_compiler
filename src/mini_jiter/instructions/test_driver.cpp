@@ -9,7 +9,7 @@
 #include "instructions.h"
 
 using namespace std;
-using gpr_t = jiter::instructions::InstGen::gpr_t;
+using gpr_t = mini_jiter::instructions::InstGen::gpr_t;
 
 uint32_t as(const string& instruction) {
     // write the instruction to a temporary assembly file
@@ -42,7 +42,7 @@ uint32_t as(const string& instruction) {
 }
 
 int main(int argc, char const* argv[]) {
-    jiter::instructions::InstGen l_gen;
+    mini_jiter::instructions::InstGen l_gen;
     uint32_t mc1;
     uint32_t mc2;
     bool match;

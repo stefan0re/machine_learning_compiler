@@ -4,11 +4,11 @@
 #include <cstdint>
 #include <string>
 
-namespace jiter::instructions {
+namespace mini_jiter::instructions {
     class InstGen;
 }
 
-class jiter::instructions::InstGen {
+class mini_jiter::instructions::InstGen {
    public:
     //! general-purpose registers
     typedef enum : uint32_t {

@@ -1,6 +1,6 @@
 #include "instructions.h"
 
-namespace jiter {
+namespace mini_jiter {
     namespace instructions {
 
         // cbnz  <W/X><Rt>, #+imm19
@@ -133,4 +133,4 @@ namespace jiter {
         }
 
     }  // namespace instructions
-}  // namespace jiter
+}  // namespace mini_jiter
