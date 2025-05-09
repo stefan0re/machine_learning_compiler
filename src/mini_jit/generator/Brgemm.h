@@ -5,6 +5,11 @@
 
 #include "../backend/Kernel.h"
 
+#define BRGEMM_EXPECT(cond)                     \
+    do {                                        \
+        if (!(cond)) return error_t::bad_param; \
+    } while (0)
+
 namespace mini_jit {
     namespace generator {
         class Brgemm;
@@ -25,7 +30,8 @@ class mini_jit::generator::Brgemm {
 
     /// error codes
     enum class error_t : int32_t {
-        success = 0
+        success = 0,
+        bad_param = -1
     };
 
     /**

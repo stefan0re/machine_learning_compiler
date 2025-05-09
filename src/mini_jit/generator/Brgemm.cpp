@@ -12,6 +12,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                            uint32_t trans_b,
                                                                            uint32_t trans_c,
                                                                            dtype_t dtype) {
+    BRGEMM_EXPECT(m == 16);
+    BRGEMM_EXPECT(n == 6);
+    BRGEMM_EXPECT((trans_a | trans_b | trans_c) == 0);
+    BRGEMM_EXPECT(dtype == dtype_t::fp32);
+
     // procedure call standard (store to stack)
     m_kernel.add_instr(0x6DBF27E8);
     m_kernel.add_instr(0x6DBF2FEA);

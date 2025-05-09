@@ -103,6 +103,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Diff: " << l_diff << std::endl;
     std::cout << "GFLOPS: " << l_gflops << std::endl;
     std::cout << "Duration: " << l_duration << "s" << std::endl;
+    std::cout << "CSV: " << m << "," << n << "," << k << "," << l_interations << "," << l_gflops << std::endl;
     std::cout << "===================" << std::endl;
 
     free(l_a);
