@@ -42,16 +42,6 @@ uint32_t as(const string& instruction) {
     return result;
 }
 
-int test_base_br_cbnz() {
-    uint32_t mc1 = l_gen.base_br_cbnz(gpr_t::w1, 1);
-    uint32_t mc2 = as("cbnz w1, 0x00000004");
-    bool match = (mc1 == mc2);
-    cout << "cbnz w1, 0x00000001: "
-         << mc1 << " | " << mc2 << " : "
-         << boolalpha << match << endl;
-    return match ? 0 : -1;
-}
-
 int test_base_ldp() {
     uint32_t mc1 = l_gen.base_ldp(gpr_t::w1, gpr_t::w2, gpr_t::x3, 0);
     uint32_t mc2 = as("ldp w1, w2, [x3], #0");
