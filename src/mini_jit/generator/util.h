@@ -37,15 +37,38 @@ class mini_jit::generator::Util {
 
     } user_reg_t;
 
-    static void get_kernel_sizes(int32_t i_m,
-                                 int32_t i_n,
-                                 int32_t o_kernel_1[2],
-                                 int32_t o_kernel_2[2]);
+    /**
+     * @brief Get the two kernel sizes for the microkernels.
+     *
+     * @return used vector register count
+     * @param i_m The number of rows in the matrix A.
+     * @param i_n The number of columns in the matrix B.
+     * @param o_kernel_1 The first kernel size.
+     * @param o_kernel_2 The second kernel size
+     */
+    static int32_t get_kernel_sizes(int32_t i_m,
+                                    int32_t i_n,
+                                    int32_t o_kernel_1[2],
+                                    int32_t o_kernel_2[2]);
 
-    static void gen_microkernel(int32_t i_kernel_sizes[2]);
+    /**
+     * @brief Generate microkernels.
+     * @param i_kernel_sizes The kernel sizes.
+     * @param i_used_vector_reg_count The number of used vector registers.
+     */
+    static void gen_microkernel(int32_t i_kernel_sizes[2],
+                                int32_t i_used_vector_reg_count);
 
+    /**
+     * @brief Load C block for the given kernel sizes.
+     * @param i_kernel_sizes The kernel sizes.
+     */
     static void gen_c_load(int32_t i_kernel_sizes[2]);
 
+    /**
+     * @brief Store C block for the given kernel sizes.
+     * @param i_kernel_sizes The kernel sizes.
+     */
     static void gen_c_store(int32_t i_kernel_sizes[2]);
 };
 #endif
