@@ -1,16 +1,39 @@
-#include <Kernel.h>
-#include <utils.h>
+#include <util.h>
 
 #include "src/mini_jit/instructions/instructions.h"
+
+using mini_jit::instructions::InstGen;
 
 namespace mini_jit::generator {
 
     void Util::get_kernel_sizes(int32_t i_m, int32_t i_n, Util::KernelSizes kernelsizes) {
-        // Your implementation
     }
 
     void Util::gen_microkernel(Util::KernelSize kernelsize, int32_t i_used_vector_reg_count) {
-        // Your implementation
+        // shift leading dimensions to 4 bytes
+        m_kernel.add_instr(InstGen::base_lsl_imm(InstGen::x3, InstGen::x3, 2));
+        m_kernel.add_instr(InstGen::base_lsl_imm(InstGen::x4, InstGen::x4, 2));
+        m_kernel.add_instr(InstGen::base_lsl_imm(InstGen::x5, InstGen::x5, 2));
+
+        // set register to reset B in the K loop:
+        m_kernel.add_instr(InstGen::base_mov_imm(InstGen::x15,
+                                                 5,
+                                                 0));
+        m_kernel.add_instr(InstGen::base_mul_reg(InstGen::x15,
+                                                 InstGen::x15,
+                                                 InstGen::x4));
+        // set K loop register
+        m_kernel.add_instr(InstGen::base_mov_imm(InstGen::x10,
+                                                 0,
+                                                 0));
+
+        // start k loop remember instruction count
+        size_t k_loop_count = m_kernel.get_size();
+        // sub k loop counter
+        m_kernel.add_instr(InstGen::base_sub_imm(InstGen::x10,
+                                                 InstGen::x10,
+                                                 1,
+                                                 0));
     }
 
     // I assume that get_kernel_size only return valid kernels, so there must be enough registers
@@ -20,32 +43,30 @@ namespace mini_jit::generator {
         int i = 0;
         int vector_count_case = 0;
 
-        wihle(remaining_elements >= 0) {
-            if (remaining_elements - 4 >= 0) {
+        while (remaining_elements > 0) {
+            if (remaining_elements >= 4) {
                 remaining_elements -= 4;
                 vector_count_case = 4;
-            }
-            elif (remaining_elements - 3 >= 0) {
+            } else if (remaining_elements >= 3) {
                 remaining_elements -= 3;
                 vector_count_case = 3;
-            }
-            elif (remaining_elements - 2 >= 0) {
+            } else if (remaining_elements >= 2) {
                 remaining_elements -= 2;
                 vector_count_case = 2;
-            }
-            elif (remaining_elements - 1 >= 0) {
+            } else if (remaining_elements >= 1) {
                 remaining_elements -= 1;
                 vector_count_case = 1;
             }
 
-            m_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<inst::InstGen::simd_fp_t>(i),
-                                                           Util::user_reg_t::WORKING_ADDRESS_C_REG,
-                                                           static_cast<inst::InstGen::vector_count_t>(vector_count_case)));
+            m_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(i),
+                                                           Util::WORKING_ADDRESS_C_REG,
+                                                           static_cast<InstGen::vector_count_t>(vector_count_case)));
             i++;
-            m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x9,
-                                                           inst::InstGen::x9,
-                                                           vector_count_case,
-                                                           0));
+
+            m_kernel.add_instr(InstGen::base_add_imm(Util::WORKING_ADDRESS_C_REG,
+                                                     Util::WORKING_ADDRESS_C_REG,
+                                                     vector_count_case,
+                                                     0));
         }
 
         return i;
@@ -56,32 +77,29 @@ namespace mini_jit::generator {
         int i = 0;
         int vector_count_case = 0;
 
-        wihle(remaining_elements >= 0) {
-            if (remaining_elements - 4 >= 0) {
+        while (remaining_elements > 0) {
+            if (remaining_elements >= 4) {
                 remaining_elements -= 4;
                 vector_count_case = 4;
-            }
-            elif (remaining_elements - 3 >= 0) {
+            } else if (remaining_elements >= 3) {
                 remaining_elements -= 3;
                 vector_count_case = 3;
-            }
-            elif (remaining_elements - 2 >= 0) {
+            } else if (remaining_elements >= 2) {
                 remaining_elements -= 2;
                 vector_count_case = 2;
-            }
-            elif (remaining_elements - 1 >= 0) {
+            } else if (remaining_elements >= 1) {
                 remaining_elements -= 1;
                 vector_count_case = 1;
             }
 
-            m_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<inst::InstGen::simd_fp_t>(i),
-                                                           Util::user_reg_t::WORKING_ADDRESS_C_REG,
-                                                           static_cast<inst::InstGen::vector_count_t>(vector_count_case)));
+            m_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(i),
+                                                           Util::WORKING_ADDRESS_C_REG,
+                                                           static_cast<InstGen::vector_count_t>(vector_count_case)));
             i++;
-            m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x9,
-                                                           inst::InstGen::x9,
-                                                           vector_count_case,
-                                                           0));
+            m_kernel.add_instr(InstGen::base_add_imm(Util::WORKING_ADDRESS_C_REG,
+                                                     Util::WORKING_ADDRESS_C_REG,
+                                                     vector_count_case,
+                                                     0));
         }
     }
 }  // namespace mini_jit::generator
