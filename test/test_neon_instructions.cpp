@@ -3,17 +3,15 @@
 
 int test_neon_fmla_element() {
     using namespace mini_jit::instructions;
+
     uint32_t mc1 = InstGen::neon_fmla_element(InstGen::simd_fp_t::v8,
                                               InstGen::simd_fp_t::v8,
                                               InstGen::simd_fp_t::v9,
-                                              InstGen::element_spec_t::S4_1);
-    uint32_t mc2 = test_utils::as("fmla v8.4s, v8.4s, v9.s[1]");
+                                              InstGen::element_spec_t::D2_1);
+    std::string call = "fmla v8.2d, v8.2d, v9.d[1]";
+    uint32_t mc2 = test_utils::as(call);
 
-    bool match = (mc1 == mc2);
-    std::cout << "stp w1, w2, [x3], #0: "
-              << test_utils::get_binary(mc1) << " | " << test_utils::get_binary(mc2) << " : "
-              << std::boolalpha << match << std::endl;
-    return match ? 0 : -1;
+    return test_utils::is_correct(call, mc1, mc2);
 }
 
 int main() {

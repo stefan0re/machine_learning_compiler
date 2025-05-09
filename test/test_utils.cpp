@@ -34,3 +34,12 @@ uint32_t test_utils::as(const std::string& instruction) {
                       (static_cast<unsigned char>(bytes[3]) << 24);
     return result;
 }
+
+int test_utils::is_correct(std::string call, uint32_t result, uint32_t expected) {
+    bool match = (result == expected);
+    std::cout << call << ": " << std::boolalpha << match << "\n"
+              << "result:  " << test_utils::get_binary(result) << "\n"
+              << "correct: " << test_utils::get_binary(expected)
+              << std::endl;
+    return match ? 0 : -1;
+}
