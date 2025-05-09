@@ -32,9 +32,9 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                         inst::InstGen::x2));
 
     /* shift leading dimensions to 4 bytes */
-    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x7, inst::InstGen::x7, 32));
-    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x8, inst::InstGen::x8, 32));
-    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x9, inst::InstGen::x9, 32));
+    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x7, inst::InstGen::x7, 2));
+    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x8, inst::InstGen::x8, 2));
+    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x9, inst::InstGen::x9, 2));
 
     // set register to reset B in the K loop:
     m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x15,
