@@ -139,6 +139,12 @@ class mini_jit::instructions::InstGen {
         s_3 = 0x700000
     } element_spec_t;
 
+    typedef enum : uint32_t {
+        vc1 = 0xc00,
+        vc2 = 0x4800,
+        vc3 = 0x1800,
+        vc4 = 0x800,
+    } vector_count_t;
 
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
