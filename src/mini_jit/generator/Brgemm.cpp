@@ -12,6 +12,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                            uint32_t trans_b,
                                                                            uint32_t trans_c,
                                                                            dtype_t dtype) {
+    BRGEMM_EXPECT(m == 16);
+    BRGEMM_EXPECT(n == 6);
+    BRGEMM_EXPECT((trans_a | trans_b | trans_c) == 0);
+    BRGEMM_EXPECT(dtype == dtype_t::fp32);
+
     // procedure call standard (store to stack)
     m_kernel.add_instr(0x6DBF27E8);
     m_kernel.add_instr(0x6DBF2FEA);
@@ -33,23 +38,25 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
     // set register to reset B in the K loop:
     m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x15,
-                                                   5));
+                                                   5,
+                                                   0));
     m_kernel.add_instr(inst::InstGen::base_mul_reg(inst::InstGen::x15,
                                                    inst::InstGen::x15,
                                                    inst::InstGen::x4));
     // set K loop register
     m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x10,
-                                                   k));
+                                                   k,
+                                                   0));
 
     for (size_t i = 0; i < 6; i++) {
         m_kernel.add_instr(inst::InstGen::neon_ld1_no_offset(static_cast<inst::InstGen::simd_fp_t>(4 * i),
                                                              inst::InstGen::x9,
                                                              inst::InstGen::vc4));
-        m_kernel.add_instr(inst::InstGen::base_add_shifted(inst::InstGen::x9,
-                                                           inst::InstGen::x9,
-                                                           inst::InstGen::x5,
-                                                           0,
-                                                           0));
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x9,
+                                                                    inst::InstGen::x9,
+                                                                    inst::InstGen::x5,
+                                                                    0,
+                                                                    0));
     }
 
     /* start k loop remember instruction count */
@@ -61,22 +68,22 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                    0));
     // load A TODO: ld1
     m_kernel.add_instr(0x4c402818);
-    m_kernel.add_instr(inst::InstGen::base_add_shifted(inst::InstGen::x0,
-                                                       inst::InstGen::x0,
-                                                       inst::InstGen::x3,
-                                                       0,
-                                                       0));
+    m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0,
+                                                                inst::InstGen::x0,
+                                                                inst::InstGen::x3,
+                                                                0,
+                                                                0));
 
     // load B
     for (size_t i = 0; i < 4; i++) {
         m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(28 + i),
                                                    inst::InstGen::x1,
                                                    0));
-        m_kernel.add_instr(inst::InstGen::base_add_shifted(inst::InstGen::x1,
-                                                           inst::InstGen::x1,
-                                                           inst::InstGen::x4,
-                                                           0,
-                                                           0));
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1,
+                                                                    inst::InstGen::x1,
+                                                                    inst::InstGen::x4,
+                                                                    0,
+                                                                    0));
     }
 
     // issue fmla
@@ -98,11 +105,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     m_kernel.add_instr(inst::InstGen::neon_ldr(inst::InstGen::v28,
                                                inst::InstGen::x1,
                                                0));
-    m_kernel.add_instr(inst::InstGen::base_add_shifted(inst::InstGen::x1,
-                                                       inst::InstGen::x1,
-                                                       inst::InstGen::x4,
-                                                       0,
-                                                       0));
+    m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1,
+                                                                inst::InstGen::x1,
+                                                                inst::InstGen::x4,
+                                                                0,
+                                                                0));
     m_kernel.add_instr(inst::InstGen::neon_ldr(inst::InstGen::v29,
                                                inst::InstGen::x1,
                                                0));
@@ -135,11 +142,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     }
 
     /* set new B address */
-    m_kernel.add_instr(inst::InstGen::base_sub_shifted(inst::InstGen::x1,
-                                                       inst::InstGen::x1,
-                                                       inst::InstGen::x15,
-                                                       0,
-                                                       0));
+    m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x1,
+                                                                inst::InstGen::x1,
+                                                                inst::InstGen::x15,
+                                                                0,
+                                                                0));
     m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x1,
                                                    inst::InstGen::x1,
                                                    0x4,
@@ -157,11 +164,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         m_kernel.add_instr(inst::InstGen::neon_st1_no_offset(static_cast<inst::InstGen::simd_fp_t>(4 * i),
                                                              inst::InstGen::x9,
                                                              inst::InstGen::vc4));
-        m_kernel.add_instr(inst::InstGen::base_add_shifted(inst::InstGen::x9,
-                                                           inst::InstGen::x9,
-                                                           inst::InstGen::x5,
-                                                           0,
-                                                           0));
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x9,
+                                                                    inst::InstGen::x9,
+                                                                    inst::InstGen::x5,
+                                                                    0,
+                                                                    0));
     }
 
     // procedure call standard (load from stack)
