@@ -125,6 +125,19 @@ class mini_jit::instructions::InstGen {
     } arr_spec_t;
 
     typedef enum : uint32_t {
+        S2_0 = 0x00000000,
+        S2_1 = 0x00200000,
+        S2_2 = 0x00000800,
+        S2_3 = 0x00200800,
+        S4_0 = 0x40000000,
+        S4_1 = 0x40200000,
+        S4_2 = 0x40000800,
+        S4_3 = 0x40200800,
+        D2_0 = 0x40400000,
+        D2_1 = 0x40400800
+    } element_spec_t;
+
+    typedef enum : uint32_t {
         vc1 = 0xc00,
         vc2 = 0x4800,
         vc3 = 0x1800,
@@ -212,6 +225,21 @@ class mini_jit::instructions::InstGen {
                                      simd_fp_t reg_src1,
                                      simd_fp_t reg_src2,
                                      arr_spec_t arr_spec);
+
+    /**
+     * @brief Generates an FMLA (element) instruction.
+     *
+     * @param reg_dest destination register.
+     * @param reg_src1 first source register.
+     * @param reg_src2 second source register.
+     * @param element_spec precision and element specifier.
+     *
+     * @return instruction.
+     **/
+    static uint32_t neon_fmla_element(simd_fp_t reg_dest,
+                                      simd_fp_t reg_src1,
+                                      simd_fp_t reg_src2,
+                                      element_spec_t element_spec);
 
     static uint32_t neon_ldr(simd_fp_t reg_dst,
                              gpr_t add_src,
