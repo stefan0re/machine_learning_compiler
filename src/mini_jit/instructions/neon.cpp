@@ -44,7 +44,7 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_element(simd_fp_t reg_dest,
     l_ins |= l_reg_id << 16;
 
     // set element specifier
-    uint32_t l_arr_spec = element_spec & 0x00700400;
+    uint32_t l_arr_spec = element_spec & 0x40700800;
     l_ins |= l_arr_spec;
 
     return l_ins;
