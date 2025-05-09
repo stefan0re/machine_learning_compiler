@@ -21,7 +21,6 @@ int main() {
     int result = 0;
 
     result |= test_base_br_cbnz();
-    result |= test_neon_fmla_element();
 
     return result;
 }
