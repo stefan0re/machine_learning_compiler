@@ -8,7 +8,11 @@
 #include "../instructions/instructions.h"
 
 namespace mini_jit::generator {
+
     class Util {
+       private:
+        static mini_jit::backend::Kernel m_kernel;
+
        public:
         inline static constexpr mini_jit::instructions::InstGen::gpr_t INPUT_ADDRESS_A_REG = mini_jit::instructions::InstGen::x0;
         inline static constexpr mini_jit::instructions::InstGen::gpr_t INPUT_ADDRESS_B_REG = mini_jit::instructions::InstGen::x1;

@@ -34,6 +34,8 @@ namespace mini_jit::generator {
                                                  InstGen::x10,
                                                  1,
                                                  0));
+
+        m_kernel.write("debug_gen_microkernel.bin");
     }
 
     // I assume that get_kernel_size only return valid kernels, so there must be enough registers
@@ -69,6 +71,8 @@ namespace mini_jit::generator {
                                                      0));
         }
 
+        m_kernel.write("debug_load_C.bin");
+
         return i;
     }
 
@@ -101,5 +105,7 @@ namespace mini_jit::generator {
                                                      vector_count_case,
                                                      0));
         }
+
+        m_kernel.write("debug_store_C.bin");
     }
 }  // namespace mini_jit::generator
