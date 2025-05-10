@@ -1,4 +1,4 @@
-#include "src/mini_jit/generator/util.h"
+#include "../src/mini_jit/generator/util.h"
 
 int main(int argc, char const *argv[]) {
     mini_jit::generator::Util util;

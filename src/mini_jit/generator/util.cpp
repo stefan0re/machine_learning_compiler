@@ -1,10 +1,12 @@
-#include <util.h>
+#include "util.h"
 
-#include "src/mini_jit/instructions/instructions.h"
+#include "../instructions/instructions.h"
 
 using mini_jit::instructions::InstGen;
 
 namespace mini_jit::generator {
+
+    mini_jit::backend::Kernel Util::m_kernel;
 
     void Util::get_kernel_sizes(int32_t i_m, int32_t i_n, Util::KernelSizes kernelsizes) {
     }
