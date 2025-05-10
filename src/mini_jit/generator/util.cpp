@@ -1,5 +1,7 @@
 #include "util.h"
 
+#include <iostream>
+
 #include "../instructions/instructions.h"
 
 using mini_jit::instructions::InstGen;
@@ -37,7 +39,9 @@ namespace mini_jit::generator {
                                                  1,
                                                  0));
 
+        // DEBUG
         m_kernel.write("debug_gen_microkernel.bin");
+        m_kernel.force_clear();
     }
 
     // I assume that get_kernel_size only return valid kernels, so there must be enough registers
@@ -62,6 +66,7 @@ namespace mini_jit::generator {
                 vector_count_case = 1;
             }
 
+            std::cout << "Reg: " << i << " vector: " << vector_count_case << std::endl;
             m_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(i),
                                                            Util::WORKING_ADDRESS_C_REG,
                                                            static_cast<InstGen::vector_count_t>(vector_count_case)));
@@ -73,7 +78,9 @@ namespace mini_jit::generator {
                                                      0));
         }
 
+        // DEBUG
         m_kernel.write("debug_load_C.bin");
+        m_kernel.force_clear();
 
         return i;
     }
@@ -108,6 +115,8 @@ namespace mini_jit::generator {
                                                      0));
         }
 
+        // DEBUG
         m_kernel.write("debug_store_C.bin");
+        m_kernel.force_clear();
     }
 }  // namespace mini_jit::generator

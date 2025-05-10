@@ -93,12 +93,17 @@ class mini_jit::backend::Kernel {
     void const* get_kernel() const;
 
     /**
-     * Writes the code buffer to the given file.
+     * DEBUG: Writes the code buffer to the given file.
      *
      * @param path path to the file.
      * disassemble with: objdump -D -b binary -m aarch64 file.bin
      **/
     void write(char const* path) const;
+
+    /**
+     * DEBUG: Clears the code buffer.
+     **/
+    void force_clear();
 };
 
 #endif
