@@ -14,7 +14,7 @@ g++ ../test_util.cpp \
 ./test_util
 
 objdump -D -b binary -m aarch64 debug_load_C.bin
-objdump -D -b binary -m aarch64 debug_store_C.bin
 objdump -D -b binary -m aarch64 debug_gen_microkernel.bin
+objdump -D -b binary -m aarch64 debug_store_C.bin
 
 cd ..
