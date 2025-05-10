@@ -14,32 +14,57 @@ namespace mini_jit::generator {
     }
 
     void Util::gen_microkernel(Util::KernelSize kernelsize, int32_t i_used_vector_reg_count) {
-        // shift leading dimensions to 4 bytes
-        m_kernel.add_instr(InstGen::base_lsl_imm(InstGen::x3, InstGen::x3, 2));
-        m_kernel.add_instr(InstGen::base_lsl_imm(InstGen::x4, InstGen::x4, 2));
-        m_kernel.add_instr(InstGen::base_lsl_imm(InstGen::x5, InstGen::x5, 2));
+        // start allocating vector registers from here
+        int32_t reg_index = i_used_vector_reg_count;
 
-        // set register to reset B in the K loop:
-        m_kernel.add_instr(InstGen::base_mov_imm(InstGen::x15,
-                                                 5,
-                                                 0));
-        m_kernel.add_instr(InstGen::base_mul_reg(InstGen::x15,
-                                                 InstGen::x15,
-                                                 InstGen::x4));
-        // set K loop register
-        m_kernel.add_instr(InstGen::base_mov_imm(InstGen::x10,
-                                                 0,
-                                                 0));
+        //
+        // load A matrix (M elements)
+        //
+        for (int remaining = kernelsize.M; remaining > 0; ++reg_index) {
+            // grab up to 4 lanes at a time
+            const auto count = std::min(remaining, 4);
+            remaining -= count;
 
-        // start k loop remember instruction count
-        size_t k_loop_count = m_kernel.get_size();
-        // sub k loop counter
-        m_kernel.add_instr(InstGen::base_sub_imm(InstGen::x10,
-                                                 InstGen::x10,
-                                                 1,
-                                                 0));
+            m_kernel.add_instr(
+                InstGen::neon_ld1_no_offset(
+                    static_cast<InstGen::simd_fp_t>(reg_index),
+                    Util::WORKING_ADDRESS_A_REG,
+                    static_cast<InstGen::vector_count_t>(count)));
+            m_kernel.add_instr(
+                InstGen::base_add_imm(
+                    Util::WORKING_ADDRESS_A_REG,
+                    Util::WORKING_ADDRESS_A_REG,
+                    count,
+                    /*no flags*/ 0));
+        }
+        // mark how many regs used for A
+        const int32_t regs_after_A = reg_index;
 
-        // DEBUG
+        //
+        // load B matrix (N elements)
+        //
+        for (int remaining = kernelsize.N; remaining > 0; ++reg_index) {
+            const auto count = std::min(remaining, 4);
+            remaining -= count;
+
+            m_kernel.add_instr(
+                InstGen::neon_ld1_no_offset(
+                    static_cast<InstGen::simd_fp_t>(reg_index),
+                    Util::WORKING_ADDRESS_B_REG,
+                    static_cast<InstGen::vector_count_t>(count)));
+            m_kernel.add_instr(
+                InstGen::base_add_imm(
+                    Util::WORKING_ADDRESS_B_REG,
+                    Util::WORKING_ADDRESS_B_REG,
+                    count,
+                    /*no flags*/ 0));
+        }
+
+        //
+        // FMA
+        //
+
+        // DEBUG: write out / reset for debugging
         m_kernel.write("debug_gen_microkernel.bin");
         m_kernel.force_clear();
     }
@@ -47,75 +72,71 @@ namespace mini_jit::generator {
     // I assume that get_kernel_size only return valid kernels, so there must be enough registers
     // to fit each value in and that the working registers are aligned already.
     int32_t Util::gen_c_load(Util::KernelSize kernelsize) {
-        int remaining_elements = kernelsize.M * kernelsize.N;
-        int i = 0;
-        int vector_count_case = 0;
+        // total number of elements we need to load
+        int remaining = kernelsize.M * kernelsize.N;
 
-        while (remaining_elements > 0) {
-            if (remaining_elements >= 4) {
-                remaining_elements -= 4;
-                vector_count_case = 4;
-            } else if (remaining_elements >= 3) {
-                remaining_elements -= 3;
-                vector_count_case = 3;
-            } else if (remaining_elements >= 2) {
-                remaining_elements -= 2;
-                vector_count_case = 2;
-            } else if (remaining_elements >= 1) {
-                remaining_elements -= 1;
-                vector_count_case = 1;
-            }
+        // count how many vector instructions we'll emit
+        int32_t load_ops = 0;
 
-            std::cout << "Reg: " << i << " vector: " << vector_count_case << std::endl;
-            m_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(i),
-                                                           Util::WORKING_ADDRESS_C_REG,
-                                                           static_cast<InstGen::vector_count_t>(vector_count_case)));
-            i++;
+        // loop until we've consumed all elements
+        for (; remaining > 0; ++load_ops) {
+            // grab up to 4 elements at a time
+            const auto count = std::min(remaining, 4);
+            remaining -= count;
 
-            m_kernel.add_instr(InstGen::base_add_imm(Util::WORKING_ADDRESS_C_REG,
-                                                     Util::WORKING_ADDRESS_C_REG,
-                                                     vector_count_case,
-                                                     0));
+            // issue the NEON load instruction
+            m_kernel.add_instr(
+                InstGen::neon_ld1_no_offset(
+                    static_cast<InstGen::simd_fp_t>(load_ops),
+                    Util::WORKING_ADDRESS_C_REG,
+                    static_cast<InstGen::vector_count_t>(count)));
+
+            // advance the base pointer by the same count
+            m_kernel.add_instr(
+                InstGen::base_add_imm(
+                    Util::WORKING_ADDRESS_C_REG,
+                    Util::WORKING_ADDRESS_C_REG,
+                    count,
+                    /*no flags*/ 0));
         }
 
-        // DEBUG
+        // DEBUG: write out / reset for debugging
         m_kernel.write("debug_load_C.bin");
         m_kernel.force_clear();
 
-        return i;
+        return load_ops;
     }
 
     void Util::gen_c_store(Util::KernelSize kernelsize) {
-        int remaining_elements = kernelsize.M * kernelsize.N;
-        int i = 0;
-        int vector_count_case = 0;
+        // total number of elements to store
+        int remaining = kernelsize.M * kernelsize.N;
 
-        while (remaining_elements > 0) {
-            if (remaining_elements >= 4) {
-                remaining_elements -= 4;
-                vector_count_case = 4;
-            } else if (remaining_elements >= 3) {
-                remaining_elements -= 3;
-                vector_count_case = 3;
-            } else if (remaining_elements >= 2) {
-                remaining_elements -= 2;
-                vector_count_case = 2;
-            } else if (remaining_elements >= 1) {
-                remaining_elements -= 1;
-                vector_count_case = 1;
-            }
+        // count how many store instructions we'll emit
+        int32_t store_ops = 0;
 
-            m_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(i),
-                                                           Util::WORKING_ADDRESS_C_REG,
-                                                           static_cast<InstGen::vector_count_t>(vector_count_case)));
-            i++;
-            m_kernel.add_instr(InstGen::base_add_imm(Util::WORKING_ADDRESS_C_REG,
-                                                     Util::WORKING_ADDRESS_C_REG,
-                                                     vector_count_case,
-                                                     0));
+        // loop until all elements are stored
+        for (; remaining > 0; ++store_ops) {
+            // take up to 4 elements per NEON store
+            const auto count = std::min(remaining, 4);
+            remaining -= count;
+
+            // issue the NEON store instruction
+            m_kernel.add_instr(
+                InstGen::neon_st1_no_offset(
+                    static_cast<InstGen::simd_fp_t>(store_ops),
+                    Util::WORKING_ADDRESS_C_REG,
+                    static_cast<InstGen::vector_count_t>(count)));
+
+            // advance the base pointer by the same count
+            m_kernel.add_instr(
+                InstGen::base_add_imm(
+                    Util::WORKING_ADDRESS_C_REG,
+                    Util::WORKING_ADDRESS_C_REG,
+                    count,
+                    /*no flags*/ 0));
         }
 
-        // DEBUG
+        // DEBUG: write out / reset for debugging
         m_kernel.write("debug_store_C.bin");
         m_kernel.force_clear();
     }
