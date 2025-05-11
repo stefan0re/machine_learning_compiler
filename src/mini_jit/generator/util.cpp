@@ -1,16 +1,174 @@
 #include "util.h"
 
+#include <float.h>
+#include <math.h>
+
 #include <iostream>
+#include <vector>
 
 #include "../instructions/instructions.h"
 
 using mini_jit::instructions::InstGen;
 
+uint32_t get_main_size(uint32_t n) {
+    if (n == 0) return 0;
+    n |= (n >> 1);
+    n |= (n >> 2);
+    n |= (n >> 4);
+    n |= (n >> 8);
+    n |= (n >> 16);
+    return n - (n >> 1);
+}
+
 namespace mini_jit::generator {
 
     mini_jit::backend::Kernel Util::m_kernel;
 
-    void Util::get_kernel_sizes(int32_t i_m, int32_t i_n, Util::KernelSizes kernelsizes) {
+    void mini_jit::generator::Util::get_kernel_sizes(int32_t m,
+                                                     int32_t n,
+                                                     mini_jit::generator::Util::KernelSizes kernelsizes) {
+        int32_t max_reg_space = 32;
+
+        std::cout << "M: " << m << ", N: " << n << std::endl;
+
+        KernelSize main_area = KernelSize{0, 0};
+        KernelSize right_area = KernelSize{0, 0};
+        KernelSize lower_area = KernelSize{0, 0};
+        KernelSize remainder_area = KernelSize{0, 0};
+        std::vector<KernelSize> work_areas;
+
+        bool m_split = m < 16 || ((m >= 16) && (m % 4 == 0));
+        bool n_split = n < 16 || ((n >= 16) && (n % 4 == 0));
+
+        if (m_split && n_split) {
+            main_area.M = m;
+            main_area.N = n;
+            work_areas.push_back(main_area);
+        } else if (m_split && !n_split) {
+            main_area.M = m;
+            main_area.N = get_main_size(n);
+            right_area.M = m;
+            right_area.N = n - main_area.N;
+            work_areas.push_back(main_area);
+            work_areas.push_back(right_area);
+        } else if (!m_split && n_split) {
+            main_area.M = get_main_size(m);
+            main_area.N = n;
+            lower_area.M = m - main_area.M;
+            lower_area.N = n;
+            work_areas.push_back(main_area);
+            work_areas.push_back(lower_area);
+        } else {
+            main_area.M = get_main_size(m);
+            main_area.N = get_main_size(n);
+            right_area.M = main_area.M;
+            right_area.N = n - main_area.N;
+            lower_area.M = m - main_area.M;
+            lower_area.N = main_area.N;
+            remainder_area.M = lower_area.M;
+            remainder_area.N = right_area.N;
+            work_areas.push_back(main_area);
+            work_areas.push_back(right_area);
+            work_areas.push_back(lower_area);
+            work_areas.push_back(remainder_area);
+        }
+
+        std::cout << "MainArea      M: " << main_area.M << ", N: " << main_area.N << "\n"
+                  << "RightArea     M: " << right_area.M << ", N: " << right_area.N << "\n"
+                  << "LowerArea     M: " << lower_area.M << ", N: " << lower_area.N << "\n"
+                  << "RemainderArea M: " << remainder_area.M << ", N: " << remainder_area.N << "\n"
+                  << std::endl;
+
+        double w_sd = 0.1;
+        double w_rl = 0.3;
+        double w_mn = 0.3;
+
+        std::vector<KernelSize> kernelsizes_v;
+
+        for (KernelSize area : work_areas) {
+            double min_score = DBL_MAX;
+            int32_t best_m, best_n;
+
+            int32_t m_upper = (area.M < 16) ? area.M : 16;
+            int32_t n_upper = (area.N < 16) ? area.N : 16;
+
+            for (int32_t m_temp = 1; m_temp <= m_upper; m_temp++) {
+                // iterate only to m_temp as more as a biggeer n means more B load instructions
+                for (int32_t n_temp = 1; n_temp <= n_upper; n_temp++) {
+                    // get used registers
+
+                    bool solves_M = (area.M % m_temp) == 0;
+                    bool solves_N = (area.N % n_temp) == 0;
+                    bool needs_forth = !solves_M && !solves_N;
+
+                    int32_t A_regs = (m_temp - (m_temp % 4)) / 4 + ((m_temp % 4 == 0) ? 0 : 1);
+                    // int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
+                    int32_t B_regs = n_temp;
+                    int32_t C_size = m_temp * n_temp;
+                    int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
+                    int32_t used_reg_space = A_regs + B_regs + C_regs;
+
+                    if (max_reg_space >= used_reg_space && (area.M % m_temp == 0 && area.N % n_temp == 0)) {
+                        std::cout << "m=" << m_temp << ", " << (area.M % m_temp == 0) << ", n=" << n_temp << ", " << (area.N % n_temp == 0) << std::endl;
+                        // higher if more square
+                        double squareness_deficit = fabs(((double)n_temp / (double)m_temp) - 1);
+
+                        double n_greater_m_deficit = (double)n_temp / (double)m_temp;
+
+                        // number of unused registers
+                        double registers_left = (max_reg_space - used_reg_space) / (double)max_reg_space;
+
+                        // std::cout << "\nArea M: " << area.M << ", Area N: " << area.N << ", " << area.M % m_temp << ", " << area.N % n_temp << std::endl;
+
+                        double score = w_sd * squareness_deficit + w_rl * registers_left + w_mn * n_greater_m_deficit;
+
+                        if (score < min_score) {
+                            min_score = score;
+                            best_m = m_temp;
+                            best_n = n_temp;
+                        }
+
+                        // std::cout << "squareness_deficit:\t " << squareness_deficit << "\nleft_registers:\t\t " << registers_left << "\ndevider_score:\t\t " << devider_score << "\nscore:\t\t\t " << score << std::endl;
+                    }
+                }
+            }
+            kernelsizes_v.push_back(KernelSize{best_m, best_n});
+        }
+
+        kernelsizes.kernel1.M = kernelsizes_v[0].M;
+        kernelsizes.kernel1.N = kernelsizes_v[0].N;
+
+        int i = 2;
+        if (right_area.M != 0) {
+            kernelsizes.kernel2.M = kernelsizes_v[1].M;
+            kernelsizes.kernel2.N = kernelsizes_v[1].N;
+        } else {
+            kernelsizes.kernel2.M = 0;
+            kernelsizes.kernel2.N = 0;
+            i = 1;
+        }
+
+        if (lower_area.M != 0) {
+            kernelsizes.kernel3.M = kernelsizes_v[i].M;
+            kernelsizes.kernel3.N = kernelsizes_v[i].N;
+        } else {
+            kernelsizes.kernel3.M = 0;
+            kernelsizes.kernel3.N = 0;
+        }
+
+        if (remainder_area.M != 0) {
+            kernelsizes.kernel4.M = kernelsizes_v[3].M;
+            kernelsizes.kernel4.N = kernelsizes_v[3].N;
+        } else {
+            kernelsizes.kernel4.M = 0;
+            kernelsizes.kernel4.N = 0;
+        }
+
+        std::cout << "MainArea Kernel      M: " << kernelsizes.kernel1.M << ", N: " << kernelsizes.kernel1.N << "\n"
+                  << "RightArea Kernel     M: " << kernelsizes.kernel2.M << ", N: " << kernelsizes.kernel2.N << "\n"
+                  << "LowerArea Kernel     M: " << kernelsizes.kernel3.M << ", N: " << kernelsizes.kernel3.N << "\n"
+                  << "RemainderArea Kernel M: " << kernelsizes.kernel4.M << ", N: " << kernelsizes.kernel4.N << "\n"
+                  << std::endl;
     }
 
     void Util::gen_microkernel(Util::KernelSize kernelsize, int32_t i_used_vector_reg_count) {
