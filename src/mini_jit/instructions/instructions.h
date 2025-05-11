@@ -249,6 +249,10 @@ class mini_jit::instructions::InstGen {
                                        gpr_t add_src,
                                        vector_count_t reg_count);
 
+    static uint32_t neon_ld1_scalar_index(simd_fp_t reg_dst, gpr_t base_reg, uint8_t lane_index);
+
+    static uint32_t neon_st1_scalar_index(simd_fp_t reg_dst, gpr_t base_reg, uint8_t lane_index);
+
     static uint32_t neon_fmla_by_element(simd_fp_t reg_dest,
                                          simd_fp_t reg_src1,
                                          simd_fp_t reg_src2,

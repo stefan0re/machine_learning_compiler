@@ -49,10 +49,10 @@ namespace mini_jit::generator {
         for (int i = 0; i < rem; i++) {
             // load one element at a time (.s[N])
             m_kernel.add_instr(
-                InstGen::neon_st1_no_offset(
+                InstGen::neon_ld1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_A_REG,
-                    static_cast<InstGen::vector_count_t>(i)));
+                    i));
 
             // advance the base pointer by 1 elements
             m_kernel.add_instr(
@@ -101,10 +101,10 @@ namespace mini_jit::generator {
         for (int i = 0; i < rem; i++) {
             // load one element at a time (.s[N])
             m_kernel.add_instr(
-                InstGen::neon_st1_no_offset(
+                InstGen::neon_ld1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_B_REG,
-                    static_cast<InstGen::vector_count_t>(i)));
+                    i));
 
             // advance the base pointer by K elements
             m_kernel.add_instr(
@@ -193,10 +193,10 @@ namespace mini_jit::generator {
         for (int i = 0; i < rem; i++) {
             // load one element at a time (.s[N])
             m_kernel.add_instr(
-                InstGen::neon_ld1_no_offset(
+                InstGen::neon_ld1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_C_REG,
-                    static_cast<InstGen::vector_count_t>(i)));
+                    i));
 
             // advance the base pointer by 1 elements
             m_kernel.add_instr(
@@ -248,10 +248,10 @@ namespace mini_jit::generator {
         for (int i = 0; i < rem; i++) {
             // load one element at a time (.s[N])
             m_kernel.add_instr(
-                InstGen::neon_st1_no_offset(
+                InstGen::neon_st1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_C_REG,
-                    static_cast<InstGen::vector_count_t>(i)));
+                    i));
 
             // advance the base pointer by 1 elements
             m_kernel.add_instr(
