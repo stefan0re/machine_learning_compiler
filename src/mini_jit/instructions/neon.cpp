@@ -98,14 +98,14 @@ uint32_t mini_jit::instructions::InstGen::neon_ld1_no_offset(simd_fp_t reg_dst,
 }
 
 uint32_t mini_jit::instructions::InstGen::neon_ld1_scalar_index(simd_fp_t reg_dst,
-                                                                gpr_t base_reg,
+                                                                gpr_t reg_src,
                                                                 uint8_t lane_index) {
     uint32_t inst = 0;
 
     inst |= 0b00 << 12;                // opcode (opc): bits 13:12
     inst |= 0b10 << 10;                // size = 0b10 → 32-bit
     inst |= (lane_index & 0x3) << 20;  // index: bits 21:20
-    inst |= (base_reg & 0x1F) << 5;    // Rn: bits 9:5
+    inst |= (reg_src & 0x1F) << 5;     // Rn: bits 9:5
     inst |= (reg_dst & 0x1F);          // Rt: bits 4:0
 
     inst |= 0x0D40A000;  // Fixed top bits for LD1 (scalar structure load, to lane)
@@ -133,14 +133,14 @@ uint32_t mini_jit::instructions::InstGen::neon_st1_no_offset(simd_fp_t reg_dst,
 }
 
 uint32_t mini_jit::instructions::InstGen::neon_st1_scalar_index(simd_fp_t reg_dst,
-                                                                gpr_t base_reg,
+                                                                gpr_t reg_src,
                                                                 uint8_t lane_index) {
     uint32_t inst = 0;
 
     inst |= 0b00 << 12;                // opcode (opc): bits 13:12
     inst |= 0b10 << 10;                // size = 0b10 → 32-bit
     inst |= (lane_index & 0x3) << 20;  // index: bits 21:20
-    inst |= (base_reg & 0x1F) << 5;    // Rn: bits 9:5
+    inst |= (reg_src & 0x1F) << 5;     // Rn: bits 9:5
     inst |= (reg_dst & 0x1F);          // Rt: bits 4:0
 
     inst |= 0x0D000000;  // Base opcode for ST1 (L=0), structure store to lane
