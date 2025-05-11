@@ -28,7 +28,7 @@ namespace mini_jit::generator {
         int rem = count % 4;
 
         // main quad (4s) loop
-        for (; reg_count < quads; reg_count) {
+        for (; reg_count < quads; reg_count++) {
             // load four elements at once (4s)
             m_kernel.add_instr(
                 InstGen::neon_st1_no_offset(
@@ -80,7 +80,7 @@ namespace mini_jit::generator {
         rem = count % 4;
 
         // main quad (4s) loop
-        for (; reg_count < quads; reg_count) {
+        for (; reg_count < quads; reg_count++) {
             // load four elements at once (4s)
             m_kernel.add_instr(
                 InstGen::neon_st1_no_offset(
@@ -172,7 +172,7 @@ namespace mini_jit::generator {
         int rem = count % 4;
 
         // main quad (4s) loop
-        for (; reg_count < quads; reg_count) {
+        for (; reg_count < quads; reg_count++) {
             // load four elements at once (4s)
             m_kernel.add_instr(
                 InstGen::neon_ld1_no_offset(
@@ -227,7 +227,7 @@ namespace mini_jit::generator {
         int rem = count % 4;
 
         // main quad (4s) loop
-        for (; reg_count < quads; reg_count) {
+        for (; reg_count < quads; reg_count++) {
             // load four elements at once (4s)
             m_kernel.add_instr(
                 InstGen::neon_st1_no_offset(
