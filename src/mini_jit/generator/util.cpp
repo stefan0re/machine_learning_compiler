@@ -58,7 +58,7 @@ namespace mini_jit::generator {
                 InstGen::neon_ld1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_A_REG,
-                    i));
+                    s4_values[i]));
 
             // advance the base pointer by 1 elements
             m_kernel.add_instr(
@@ -110,7 +110,7 @@ namespace mini_jit::generator {
                 InstGen::neon_ld1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_B_REG,
-                    i));
+                    s4_values[i]));
 
             // advance the base pointer by K elements
             m_kernel.add_instr(
@@ -205,7 +205,7 @@ namespace mini_jit::generator {
                 InstGen::neon_ld1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_C_REG,
-                    i));
+                    s4_values[i]));
 
             // advance the base pointer by 1 elements
             m_kernel.add_instr(
@@ -214,8 +214,6 @@ namespace mini_jit::generator {
                     Util::WORKING_ADDRESS_C_REG,
                     1,
                     /*no flags*/ 0));
-
-            reg_count++;
         }
 
         // DEBUG: write out / reset for debugging
@@ -260,7 +258,7 @@ namespace mini_jit::generator {
                 InstGen::neon_st1_scalar_index(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_C_REG,
-                    i));
+                    s4_values[i]));
 
             // advance the base pointer by 1 elements
             m_kernel.add_instr(
