@@ -6,6 +6,12 @@
 
 using mini_jit::instructions::InstGen;
 
+static const InstGen::element_spec_t s4_values[] = {
+    InstGen::S4_0,
+    InstGen::S4_1,
+    InstGen::S4_2,
+    InstGen::S4_3};
+
 namespace mini_jit::generator {
 
     mini_jit::backend::Kernel Util::m_kernel;
@@ -19,19 +25,19 @@ namespace mini_jit::generator {
         // load A matrix (M elements)
         //
 
-        // count how many vectors are in use
+        // count how many vectors are in use, but scipt already used ones
         int32_t reg_count = i_used_vector_reg_count;
 
         // total number of elements needed to load
         int count = kernelsize.M;
-        int quads = count / 4;
+        int A_quads = count / 4;
         int rem = count % 4;
 
         // main quad (4s) loop
-        for (; reg_count < quads; reg_count++) {
+        for (; reg_count < A_quads + i_used_vector_reg_count; reg_count++) {
             // load four elements at once (4s)
             m_kernel.add_instr(
-                InstGen::neon_st1_no_offset(
+                InstGen::neon_ld1_no_offset(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_A_REG,
                     InstGen::vector_count_t::vc4));
@@ -76,14 +82,14 @@ namespace mini_jit::generator {
 
         // total number of elements needed to load
         count = kernelsize.N;
-        quads = count / 4;
+        int B_quads = count / 4;
         rem = count % 4;
 
         // main quad (4s) loop
-        for (; reg_count < quads; reg_count++) {
+        for (; reg_count < B_quads + regs_after_A; reg_count++) {
             // load four elements at once (4s)
             m_kernel.add_instr(
-                InstGen::neon_st1_no_offset(
+                InstGen::neon_ld1_no_offset(
                     static_cast<InstGen::simd_fp_t>(reg_count),
                     Util::WORKING_ADDRESS_B_REG,
                     InstGen::vector_count_t::vc4));
@@ -131,19 +137,22 @@ namespace mini_jit::generator {
 
         // total number of elements needed to load
         count = kernelsize.M;
-        quads = count / 4;
         rem = count % 4;
 
-        // for each value n
-        for (int n = 0; n < kernelsize.N; n++) {
-            // for each quad m
-            for (int m = 0; m < quads; m++) {
-                // mulitply four elements with one scalar (4s)
-                m_kernel.add_instr(
-                    InstGen::neon_fmla_element(static_cast<InstGen::simd_fp_t>(m * n),
-                                               static_cast<InstGen::simd_fp_t>(m * n + i_used_vector_reg_count),
-                                               static_cast<InstGen::simd_fp_t>(n + regs_after_A),
-                                               static_cast<InstGen::element_spec_t>(n % 4)));
+        // for each register holding 4 values from N
+        for (int n = 0; n < B_quads; n++) {
+            // for each value in that register (vector)
+            for (int j = 0; j < 4; j++) {
+                // for each quad m
+                for (int m = 0; m < A_quads; m++) {
+                    // mulitply four elements with one scalar (4s)
+                    m_kernel.add_instr(
+                        InstGen::neon_fmla_element(static_cast<InstGen::simd_fp_t>(n * j * A_quads + m),
+                                                   static_cast<InstGen::simd_fp_t>(n * j * A_quads + m + i_used_vector_reg_count),
+                                                   static_cast<InstGen::simd_fp_t>(n + regs_after_A),
+                                                   // acces the correct index, because the s version starts at enum 4
+                                                   s4_values[j % 4]));
+                }
             }
 
             // remainder
