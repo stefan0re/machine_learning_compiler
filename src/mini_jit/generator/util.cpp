@@ -75,9 +75,9 @@ namespace mini_jit::generator {
         //
 
         // total number of elements needed to load
-        int count = kernelsize.N;
-        int quads = count / 4;
-        int rem = count % 4;
+        count = kernelsize.N;
+        quads = count / 4;
+        rem = count % 4;
 
         // main quad (4s) loop
         for (; reg_count < quads; reg_count) {
@@ -127,12 +127,12 @@ namespace mini_jit::generator {
         //
 
         // count how many vectors are in use
-        int32_t reg_count = i_used_vector_reg_count;
+        reg_count = i_used_vector_reg_count;
 
         // total number of elements needed to load
-        int count = kernelsize.M;
-        int quads = count / 4;
-        int rem = count % 4;
+        count = kernelsize.M;
+        quads = count / 4;
+        rem = count % 4;
 
         // for each value n
         for (int n = 0; n < kernelsize.N; n++) {
