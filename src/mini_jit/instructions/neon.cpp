@@ -97,20 +97,17 @@ uint32_t mini_jit::instructions::InstGen::neon_ld1_no_offset(simd_fp_t reg_dst,
     return l_inst;
 }
 
+// LD1 { <Vt>.S }[<index>], [<Xn|SP>]
 uint32_t mini_jit::instructions::InstGen::neon_ld1_scalar_index(simd_fp_t reg_dst,
                                                                 gpr_t reg_src,
                                                                 uint8_t lane_index) {
-    uint32_t inst = 0;
+    uint32_t l_inst = 0xD408000;
 
-    inst |= 0b00 << 12;                // opcode (opc): bits 13:12
-    inst |= 0b10 << 10;                // size = 0b10 → 32-bit
-    inst |= (lane_index & 0x3) << 20;  // index: bits 21:20
-    inst |= (reg_src & 0x1F) << 5;     // Rn: bits 9:5
-    inst |= (reg_dst & 0x1F);          // Rt: bits 4:0
+    l_inst |= (reg_dst & 0x1Fu) << 0;    // Rt: bits 4:0
+    l_inst |= (reg_src & 0x1Fu) << 5;    // Rn: bits 9:5
+    l_inst |= (lane_index & 0x3) << 20;  // index: bits 21:20
 
-    inst |= 0x0D40A000;  // Fixed top bits for LD1 (scalar structure load, to lane)
-
-    return inst;
+    return l_inst;
 }
 
 // TODO: MAKE THIS DYNAMIC FOR MORE V REGISTERS AND OTHER SIZES THEN 4s.
@@ -135,15 +132,11 @@ uint32_t mini_jit::instructions::InstGen::neon_st1_no_offset(simd_fp_t reg_dst,
 uint32_t mini_jit::instructions::InstGen::neon_st1_scalar_index(simd_fp_t reg_dst,
                                                                 gpr_t reg_src,
                                                                 uint8_t lane_index) {
-    uint32_t inst = 0;
+    uint32_t l_inst = 0xD008000;
 
-    inst |= 0b00 << 12;                // opcode (opc): bits 13:12
-    inst |= 0b10 << 10;                // size = 0b10 → 32-bit
-    inst |= (lane_index & 0x3) << 20;  // index: bits 21:20
-    inst |= (reg_src & 0x1F) << 5;     // Rn: bits 9:5
-    inst |= (reg_dst & 0x1F);          // Rt: bits 4:0
+    l_inst |= (reg_dst & 0x1Fu) << 0;    // Rt: bits 4:0
+    l_inst |= (reg_src & 0x1Fu) << 5;    // Rn: bits 9:5
+    l_inst |= (lane_index & 0x3) << 20;  // index: bits 21:20
 
-    inst |= 0x0D000000;  // Base opcode for ST1 (L=0), structure store to lane
-
-    return inst;
+    return l_inst;
 }
