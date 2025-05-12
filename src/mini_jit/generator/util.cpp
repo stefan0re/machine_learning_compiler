@@ -133,7 +133,7 @@ namespace mini_jit::generator {
         //
 
         // count how many vectors are in use
-        reg_count = i_used_vector_reg_count;
+        reg_count = 0;
 
         // total number of elements needed to load
         count = kernelsize.M;
@@ -147,7 +147,7 @@ namespace mini_jit::generator {
                 for (int m = 0; m < A_quads; m++) {
                     // mulitply four elements with one scalar (4s)
                     m_kernel.add_instr(
-                        InstGen::neon_fmla_element(static_cast<InstGen::simd_fp_t>(n * j * A_quads + m),
+                        InstGen::neon_fmla_element(static_cast<InstGen::simd_fp_t>(++reg_count),
                                                    static_cast<InstGen::simd_fp_t>(n * j * A_quads + m + i_used_vector_reg_count),
                                                    static_cast<InstGen::simd_fp_t>(n + regs_after_A),
                                                    // acces the correct index, because the s version starts at enum 4
