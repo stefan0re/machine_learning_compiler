@@ -258,7 +258,7 @@ class mini_jit::instructions::InstGen {
      *
      * @return instruction.
      **/
-    static uint32_t neon_ld1_scalar_index(simd_fp_t reg_dst, gpr_t reg_src, element_spec_t element_spec);
+    static uint32_t neon_ld1_scalar_index(simd_fp_t reg_dst, gpr_t reg_src, int index);
 
     /**
      * @brief Generates an ST1 (single structure) instruction.
@@ -269,7 +269,7 @@ class mini_jit::instructions::InstGen {
      *
      * @return instruction.
      **/
-    static uint32_t neon_st1_scalar_index(simd_fp_t reg_dst, gpr_t reg_src, element_spec_t element_spec);
+    static uint32_t neon_st1_scalar_index(simd_fp_t reg_dst, gpr_t reg_src, int index);
 
     static uint32_t neon_fmla_by_element(simd_fp_t reg_dest,
                                          simd_fp_t reg_src1,
