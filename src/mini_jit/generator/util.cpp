@@ -73,7 +73,7 @@ namespace mini_jit::generator {
 
         // mark how many regs used for A
         // if there was a remainder, another register is used
-        const int32_t regs_after_A = (0 < rem) ? reg_count++ : reg_count;
+        const int32_t regs_after_A = (0 < rem) ? ++reg_count : reg_count;
 
         // ----------------------------------------------------------------------------
         //
@@ -125,7 +125,7 @@ namespace mini_jit::generator {
 
         // mark how many regs used for A
         // if there was a remainder, another register is used
-        const int32_t regs_after_A_and_B = (0 < rem) ? reg_count++ : reg_count;
+        const int32_t regs_after_A_and_B = (0 < rem) ? ++reg_count : reg_count;
 
         // ----------------------------------------------------------------------------
         //
@@ -153,14 +153,6 @@ namespace mini_jit::generator {
                                                    // acces the correct index, because the s version starts at enum 4
                                                    s4_values[j % 4]));
                 }
-            }
-
-            // remainder
-            for (int i = 0; i < rem; i++) {
-                // load one element at a time (.s[N])
-                // fmla s0, s1, s2
-                // m_kernel.add_instr(
-                //     InstGen::base_mul_reg(static_cast<InstGen::simd_fp_t>(reg_count), gpr_t src_1, gpr_t src_0));
             }
         }
 
@@ -221,7 +213,7 @@ namespace mini_jit::generator {
         m_kernel.force_clear();
 
         // if there was a remainder, another register is used
-        return (0 < rem) ? reg_count++ : reg_count;
+        return (0 < rem) ? ++reg_count : reg_count;
     }
 
     void Util::gen_c_store(Util::KernelSize kernelsize) {
