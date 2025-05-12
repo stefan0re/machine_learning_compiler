@@ -20,3 +20,11 @@ add_executable(mini_jit_unit_tests
 )
 target_link_libraries(mini_jit_unit_tests PRIVATE mini_jit)
 add_test(NAME MiniJitTests COMMAND mini_jit_unit_tests)
+
+# Generator-Methods-Tests
+add_executable(mini_jit_generator_methods_test
+    test_gen_methods.cpp
+    test_utils.cpp
+)
+target_link_libraries(mini_jit_generator_methods_test PRIVATE mini_jit)
+add_test(NAME GeneratorMethodsTests COMMAND mini_jit_generator_methods_test)
