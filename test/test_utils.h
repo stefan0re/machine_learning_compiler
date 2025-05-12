@@ -38,7 +38,7 @@ namespace test_utils {
      *
      * @return if result==expected 0, else 1.
      **/
-    int is_correct(std::string call, uint32_t result, uint32_t expected);
+    int instr_is_correct(std::string call, uint32_t result, uint32_t expected);
 }  // namespace test_utils
 
 #endif

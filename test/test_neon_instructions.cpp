@@ -11,7 +11,7 @@ int test_neon_fmla_element() {
     std::string call = "fmla v8.2d, v8.2d, v9.d[1]";
     uint32_t mc2 = test_utils::as(call);
 
-    return test_utils::is_correct(call, mc1, mc2);
+    return test_utils::instr_is_correct(call, mc1, mc2);
 }
 
 int main() {
