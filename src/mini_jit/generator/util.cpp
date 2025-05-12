@@ -26,7 +26,7 @@ namespace mini_jit::generator {
 
     void mini_jit::generator::Util::get_kernel_sizes(int32_t m,
                                                      int32_t n,
-                                                     mini_jit::generator::Util::KernelSizes kernelsizes) {
+                                                     mini_jit::generator::Util::KernelSizes &kernelsizes) {
         int32_t max_reg_space = 32;
 
         std::cout << "M: " << m << ", N: " << n << std::endl;
@@ -37,6 +37,7 @@ namespace mini_jit::generator {
         KernelSize remainder_area = KernelSize{0, 0};
         std::vector<KernelSize> work_areas;
 
+        // split full matrix into working areas
         bool m_split = m < 16 || ((m >= 16) && (m % 4 == 0));
         bool n_split = n < 16 || ((n >= 16) && (n % 4 == 0));
 
@@ -79,16 +80,19 @@ namespace mini_jit::generator {
                   << "RemainderArea M: " << remainder_area.M << ", N: " << remainder_area.N << "\n"
                   << std::endl;
 
+        // define weights for scoring
         double w_sd = 0.1;
         double w_rl = 0.3;
         double w_mn = 0.3;
 
+        // find a kernel for each working areas
         std::vector<KernelSize> kernelsizes_v;
-
         for (KernelSize area : work_areas) {
             double min_score = DBL_MAX;
-            int32_t best_m, best_n;
+            int32_t best_m = 0;
+            int32_t best_n = 0;
 
+            // do not choose kernels, that are bigger than area
             int32_t m_upper = (area.M < 16) ? area.M : 16;
             int32_t n_upper = (area.N < 16) ? area.N : 16;
 
@@ -96,29 +100,23 @@ namespace mini_jit::generator {
                 // iterate only to m_temp as more as a biggeer n means more B load instructions
                 for (int32_t n_temp = 1; n_temp <= n_upper; n_temp++) {
                     // get used registers
-
-                    bool solves_M = (area.M % m_temp) == 0;
-                    bool solves_N = (area.N % n_temp) == 0;
-                    bool needs_forth = !solves_M && !solves_N;
-
                     int32_t A_regs = (m_temp - (m_temp % 4)) / 4 + ((m_temp % 4 == 0) ? 0 : 1);
-                    // int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
-                    int32_t B_regs = n_temp;
+                    int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
+                    // int32_t B_regs = n_temp;
                     int32_t C_size = m_temp * n_temp;
-                    int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
+                    // int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
+                    int32_t C_regs = (C_size - (C_size % 4)) / 4 + (C_size % 4 == 0);
                     int32_t used_reg_space = A_regs + B_regs + C_regs;
 
                     if (max_reg_space >= used_reg_space && (area.M % m_temp == 0 && area.N % n_temp == 0)) {
-                        std::cout << "m=" << m_temp << ", " << (area.M % m_temp == 0) << ", n=" << n_temp << ", " << (area.N % n_temp == 0) << std::endl;
-                        // higher if more square
+                        // metric for how square the rectangle spanned by n_temp and m_temp is
                         double squareness_deficit = fabs(((double)n_temp / (double)m_temp) - 1);
 
+                        // metrix for how much bigger m is compared to n
                         double n_greater_m_deficit = (double)n_temp / (double)m_temp;
 
-                        // number of unused registers
+                        // relative number of unused registers
                         double registers_left = (max_reg_space - used_reg_space) / (double)max_reg_space;
-
-                        // std::cout << "\nArea M: " << area.M << ", Area N: " << area.N << ", " << area.M % m_temp << ", " << area.N % n_temp << std::endl;
 
                         double score = w_sd * squareness_deficit + w_rl * registers_left + w_mn * n_greater_m_deficit;
 
@@ -127,14 +125,13 @@ namespace mini_jit::generator {
                             best_m = m_temp;
                             best_n = n_temp;
                         }
-
-                        // std::cout << "squareness_deficit:\t " << squareness_deficit << "\nleft_registers:\t\t " << registers_left << "\ndevider_score:\t\t " << devider_score << "\nscore:\t\t\t " << score << std::endl;
                     }
                 }
             }
             kernelsizes_v.push_back(KernelSize{best_m, best_n});
         }
 
+        // fill return objekt
         kernelsizes.kernel1.M = kernelsizes_v[0].M;
         kernelsizes.kernel1.N = kernelsizes_v[0].N;
 
