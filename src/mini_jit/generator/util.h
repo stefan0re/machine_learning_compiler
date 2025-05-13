@@ -64,6 +64,7 @@ namespace mini_jit::generator {
          * @param i_used_vector_reg_count The number of used vector registers.
          */
         static void gen_microkernel(KernelSize kernelsize,
+                                    int K,
                                     int32_t i_used_vector_reg_count);
 
         /**

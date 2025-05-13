@@ -249,6 +249,28 @@ class mini_jit::instructions::InstGen {
                                        gpr_t add_src,
                                        vector_count_t reg_count);
 
+    /**
+     * @brief Generates an LD1 (single structure) instruction.
+     *
+     * @param reg_dest destination register.
+     * @param reg_src  source register.
+     * @param lane_index element specifier (0 to 3)
+     *
+     * @return instruction.
+     **/
+    static uint32_t neon_ld1_scalar_index(simd_fp_t reg_dst, gpr_t reg_src, int index);
+
+    /**
+     * @brief Generates an ST1 (single structure) instruction.
+     *
+     * @param reg_dest destination register.
+     * @param reg_src  source register.
+     * @param lane_index element specifier (0 to 3)
+     *
+     * @return instruction.
+     **/
+    static uint32_t neon_st1_scalar_index(simd_fp_t reg_dst, gpr_t reg_src, int index);
+
     static uint32_t neon_fmla_by_element(simd_fp_t reg_dest,
                                          simd_fp_t reg_src1,
                                          simd_fp_t reg_src2,
