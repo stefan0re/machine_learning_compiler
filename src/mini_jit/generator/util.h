@@ -43,6 +43,8 @@ namespace mini_jit::generator {
         struct KernelSizes {
             KernelSize kernel1;
             KernelSize kernel2;
+            KernelSize kernel3;
+            KernelSize kernel4;
         };
 
         /**
@@ -52,9 +54,9 @@ namespace mini_jit::generator {
          * @param i_n The number of columns in the matrix B.
          * @param kernelsizes The size of each kernel.
          */
-        static void get_kernel_sizes(int32_t i_m,
-                                     int32_t i_n,
-                                     KernelSizes kernelsizes);
+        static void get_kernel_sizes(int32_t m,
+                                     int32_t n,
+                                     KernelSizes &kernelsizes);
 
         /**
          * @brief Generate microkernels.
