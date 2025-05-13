@@ -25,7 +25,6 @@ static const InstGen::element_spec_t s4_values[] = {
     InstGen::S4_1,
     InstGen::S4_2,
     InstGen::S4_3};
-}
 
 namespace mini_jit::generator {
 
