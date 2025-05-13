@@ -113,3 +113,7 @@ void mini_jit::backend::Kernel::write(char const* path) const {
     l_out.write(reinterpret_cast<char const*>(m_buffer.data()),
                 m_buffer.size() * 4);
 }
+
+void mini_jit::backend::Kernel::force_clear() {
+    m_buffer.clear();
+}

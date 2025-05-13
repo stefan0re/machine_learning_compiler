@@ -62,18 +62,6 @@ uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
     return l_inst;
 }
 
-uint32_t mini_jit::instructions::InstGen::neon_ld1_no_offset(simd_fp_t reg_dst,
-                                                             gpr_t add_src,
-                                                             vector_count_t reg_count) {
-    uint32_t l_inst = 0x4c402000;
-
-    l_inst |= (reg_dst & 0x1f);
-    l_inst |= (add_src & 0x1f) << 5;
-    l_inst |= reg_count;
-
-    return l_inst;
-}
-
 uint32_t mini_jit::instructions::InstGen::neon_fmla_by_element(simd_fp_t reg_dest,
                                                                simd_fp_t reg_src1,
                                                                simd_fp_t reg_src2,
@@ -90,14 +78,71 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_by_element(simd_fp_t reg_des
     return l_ins;
 }
 
+// TODO: MAKE THIS DYNAMIC FOR MORE V REGISTERS AND OTHER SIZES THEN 4s.
+
+/*
+ * LD1 instruction for ONLY one v register at a time with 4s.
+ */
+uint32_t mini_jit::instructions::InstGen::neon_ld1_no_offset(simd_fp_t reg_dst,
+                                                             gpr_t add_src,
+                                                             vector_count_t /*reg_count*/) {
+    uint32_t l_inst = 0xC400000;
+
+    l_inst |= (reg_dst & 0x1F);       // Rt: bits 4:0
+    l_inst |= (add_src & 0x1F) << 5;  // Rn: bits 9:5
+    l_inst |= (0b10) << 10;           // size: bits 11:10
+    l_inst |= 0b0111 << 12;           // opcode: bits 15:12
+    l_inst |= 0b1 << 30;              // Q (size): 31
+
+    return l_inst;
+}
+
+// LD1 { <Vt>.S }[<index>], [<Xn|SP>]
+uint32_t mini_jit::instructions::InstGen::neon_ld1_scalar_index(simd_fp_t reg_dst,
+                                                                gpr_t reg_src,
+                                                                int index) {
+    uint32_t l_inst = 0xD408000;
+
+    uint32_t q = (index >> 1) & 0x1;  // Q
+    uint32_t s = index & 0x1;         // S
+
+    l_inst |= (reg_dst & 0x1Fu) << 0;  // Rt: bits 4:0
+    l_inst |= (reg_src & 0x1Fu) << 5;  // Rn: bits 9:5
+    l_inst |= (q << 30) | (s << 12);
+
+    return l_inst;
+}
+
+// TODO: MAKE THIS DYNAMIC FOR MORE V REGISTERS AND OTHER SIZES THEN 4s.
+
+/*
+ * ST1 instruction for ONLY one v register at a time with 4s.
+ */
 uint32_t mini_jit::instructions::InstGen::neon_st1_no_offset(simd_fp_t reg_dst,
                                                              gpr_t add_src,
-                                                             vector_count_t reg_count) {
-    uint32_t l_inst = 0x4c002000;
+                                                             vector_count_t /*reg_count*/) {
+    uint32_t l_inst = 0xC000000;
 
-    l_inst |= (reg_dst & 0x1f);
-    l_inst |= (add_src & 0x1f) << 5;
-    l_inst |= reg_count;
+    l_inst |= (reg_dst & 0x1F);       // Rt: bits 4:0
+    l_inst |= (add_src & 0x1F) << 5;  // Rn: bits 9:5
+    l_inst |= (0b10) << 10;           // size: bits 11:10
+    l_inst |= 0b0111 << 12;           // opcode: bits 15:12
+    l_inst |= 0b1 << 30;              // Q (size): 31
+
+    return l_inst;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_st1_scalar_index(simd_fp_t reg_dst,
+                                                                gpr_t reg_src,
+                                                                int index) {
+    uint32_t l_inst = 0xD008000;
+
+    uint32_t q = (index >> 1) & 0x1;  // Q
+    uint32_t s = index & 0x1;         // S
+
+    l_inst |= (reg_dst & 0x1Fu) << 0;  // Rt: bits 4:0
+    l_inst |= (reg_src & 0x1Fu) << 5;  // Rn: bits 9:5
+    l_inst |= (q << 30) | (s << 12);
 
     return l_inst;
 }
