@@ -229,7 +229,7 @@ namespace mini_jit::generator {
 
         // mark how many regs used for A
         // if there was a remainder, another register is used
-        const int32_t regs_after_A = (0 < rem) ? ++reg_count : reg_count;
+        const int32_t regs_after_A = reg_count + 1;
 
         // ----------------------------------------------------------------------------
         //
@@ -240,7 +240,7 @@ namespace mini_jit::generator {
         for (int j = 0; j < kernelsize.N; j++) {
             m_kernel.add_instr(
                 InstGen::neon_ld1_scalar_index(
-                    static_cast<InstGen::simd_fp_t>((reg_count % 4 == 0) ? ++reg_count : reg_count),
+                    static_cast<InstGen::simd_fp_t>((j % 4 == 0) ? ++reg_count : reg_count),
                     Util::WORKING_ADDRESS_B_REG,
                     j % 4));
 
@@ -268,17 +268,17 @@ namespace mini_jit::generator {
         int C_reg_count = 0;
         int B_reg_count = -1;
 
-        // total number of elements needed to load
-        count = kernelsize.M;
-        rem = count % 4;
+        int has_remainder = (kernelsize.M % 4 == 0) ? 0 : 1;
 
         // for each col
         for (int j = 0; j < kernelsize.N; j++) {
             // after for values, use the next register for values in B
-            (j % 4 == 0) ? ++B_reg_count : 0;
+            if (j % 4 == 0) {
+                ++B_reg_count;
+            }
 
-            // for each row with each quad = (4s) + 1 for remainder
-            for (int i = 0; i < A_quads + 1; i++) {
+            // for each row with each quad = (4s) + 1 if there is a remainder
+            for (int i = 0; i < A_quads + has_remainder; i++) {
                 // mulitply four elements with one scalar (4s)
                 m_kernel.add_instr(
                     InstGen::neon_fmla_element(static_cast<InstGen::simd_fp_t>(C_reg_count++),
