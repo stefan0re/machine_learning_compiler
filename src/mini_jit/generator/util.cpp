@@ -110,8 +110,8 @@ namespace mini_jit::generator {
                     int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
                     // int32_t B_regs = n_temp;
                     int32_t C_size = m_temp * n_temp;
-                    // int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
-                    int32_t C_regs = (C_size - (C_size % 4)) / 4 + (C_size % 4 == 0);
+                    int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
+                    // int32_t C_regs = (C_size - (C_size % 4)) / 4 + (C_size % 4 == 0);
                     int32_t used_reg_space = A_regs + B_regs + C_regs;
 
                     if (max_reg_space >= used_reg_space && (area.M % m_temp == 0 && area.N % n_temp == 0)) {
