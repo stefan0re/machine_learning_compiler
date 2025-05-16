@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "../src/mini_jit/generator/util.h"
+#include "../src/mini_jit/generator/Util.h"
 
 using namespace mini_jit::generator;
 
