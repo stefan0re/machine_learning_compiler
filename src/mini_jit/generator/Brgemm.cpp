@@ -1,4 +1,6 @@
 #include "Brgemm.h"
+#include "util.h"
+#include <iostream>
 
 #include "../instructions/instructions.h"
 
@@ -12,8 +14,7 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                            uint32_t trans_b,
                                                                            uint32_t trans_c,
                                                                            dtype_t dtype) {
-    BRGEMM_EXPECT(m == 16);
-    BRGEMM_EXPECT(n == 6);
+
     BRGEMM_EXPECT((trans_a | trans_b | trans_c) == 0);
     BRGEMM_EXPECT(dtype == dtype_t::fp32);
 
@@ -24,152 +25,30 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     m_kernel.add_instr(0x6DBF3FEE);
 
     /* Store pointers of A, B and C to x7, x8, x9 */
-    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x7,
-                                                        inst::InstGen::x0));
-    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x8,
-                                                        inst::InstGen::x1));
-    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x9,
-                                                        inst::InstGen::x2));
+    m_kernel.add_instr(inst::InstGen::base_mov_register(Util::WORKING_ADDRESS_A_REG,
+                                                        Util::INPUT_ADDRESS_A_REG));
+    m_kernel.add_instr(inst::InstGen::base_mov_register(Util::WORKING_ADDRESS_B_REG,
+                                                        Util::INPUT_ADDRESS_B_REG));
+    m_kernel.add_instr(inst::InstGen::base_mov_register(Util::WORKING_ADDRESS_C_REG,
+                                                        Util::INPUT_ADDRESS_C_REG));
 
-    /* shift leading dimensions to 4 bytes */
-    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x3, inst::InstGen::x3, 2));
-    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x4, inst::InstGen::x4, 2));
-    m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x5, inst::InstGen::x5, 2));
+    /* shift leading dimensions to 4 bytes  TODO!*/
+    // m_kernel.add_instr(inst::InstGen::base_lsl_imm(Util::LEADING_DIM_A_REG, Util::LEADING_DIM_A_REG, 2));
+    // m_kernel.add_instr(inst::InstGen::base_lsl_imm(Util::LEADING_DIM_B_REG, Util::LEADING_DIM_B_REG, 2));
+    // m_kernel.add_instr(inst::InstGen::base_lsl_imm(Util::LEADING_DIM_C_REG, Util::LEADING_DIM_C_REG, 2));
+    m_kernel.add_instr(0xd37ef463);
+    m_kernel.add_instr(0xd37ef484);
+    m_kernel.add_instr(0xd37ef4a5);
 
-    // set register to reset B in the K loop:
-    m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x15,
-                                                   5,
-                                                   0));
-    m_kernel.add_instr(inst::InstGen::base_mul_reg(inst::InstGen::x15,
-                                                   inst::InstGen::x15,
-                                                   inst::InstGen::x4));
-    // set K loop register
-    m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x10,
-                                                   k,
-                                                   0));
+    Util::KernelSizes kernelsizes;
+    Util::get_kernel_sizes(m, n, kernelsizes);
 
-    for (size_t i = 0; i < 6; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_ld1_no_offset(static_cast<inst::InstGen::simd_fp_t>(4 * i),
-                                                             inst::InstGen::x9,
-                                                             inst::InstGen::vc4));
-        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x9,
-                                                                    inst::InstGen::x9,
-                                                                    inst::InstGen::x5,
-                                                                    0,
-                                                                    0));
-    }
+    // load C block
+    Util::generator_load_reg_block(m_kernel, kernelsizes.kernel1);
 
-    /* start k loop remember instruction count */
-    size_t k_loop_count = m_kernel.get_size();
-    // sub k loop counter
-    m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x10,
-                                                   inst::InstGen::x10,
-                                                   1,
-                                                   0));
-    // load A TODO: ld1
-    m_kernel.add_instr(0x4c402818);
-    m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0,
-                                                                inst::InstGen::x0,
-                                                                inst::InstGen::x3,
-                                                                0,
-                                                                0));
+    
+    
 
-    // load B
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(28 + i),
-                                                   inst::InstGen::x1,
-                                                   0));
-        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1,
-                                                                    inst::InstGen::x1,
-                                                                    inst::InstGen::x4,
-                                                                    0,
-                                                                    0));
-    }
-
-    // issue fmla
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(0 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
-                                                               inst::InstGen::v28,
-                                                               0));
-    }
-
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(4 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
-                                                               inst::InstGen::v29,
-                                                               0));
-    }
-    // load rest of B
-
-    m_kernel.add_instr(inst::InstGen::neon_ldr(inst::InstGen::v28,
-                                               inst::InstGen::x1,
-                                               0));
-    m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1,
-                                                                inst::InstGen::x1,
-                                                                inst::InstGen::x4,
-                                                                0,
-                                                                0));
-    m_kernel.add_instr(inst::InstGen::neon_ldr(inst::InstGen::v29,
-                                               inst::InstGen::x1,
-                                               0));
-
-    // fmla
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(8 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
-                                                               inst::InstGen::v30,
-                                                               0));
-    }
-
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(12 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
-                                                               inst::InstGen::v31,
-                                                               0));
-    }
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(16 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
-                                                               inst::InstGen::v28,
-                                                               0));
-    }
-    for (size_t i = 0; i < 4; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_fmla_by_element(static_cast<inst::InstGen::simd_fp_t>(20 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(24 + i),
-                                                               inst::InstGen::v29,
-                                                               0));
-    }
-
-    /* set new B address */
-    m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x1,
-                                                                inst::InstGen::x1,
-                                                                inst::InstGen::x15,
-                                                                0,
-                                                                0));
-    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x1,
-                                                   inst::InstGen::x1,
-                                                   0x4,
-                                                   0));
-
-    /* cbnz K loop */
-    m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x10,
-                                                   (k_loop_count - m_kernel.get_size()) / 4 - 1));
-
-    /* Store C */
-    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x9,
-                                                        inst::InstGen::x2));
-
-    for (size_t i = 0; i < 6; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_st1_no_offset(static_cast<inst::InstGen::simd_fp_t>(4 * i),
-                                                             inst::InstGen::x9,
-                                                             inst::InstGen::vc4));
-        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x9,
-                                                                    inst::InstGen::x9,
-                                                                    inst::InstGen::x5,
-                                                                    0,
-                                                                    0));
-    }
 
     // procedure call standard (load from stack)
     m_kernel.add_instr(0x6CC13FEE);

@@ -243,7 +243,8 @@ class mini_jit::instructions::InstGen {
 
     static uint32_t neon_ldr(simd_fp_t reg_dst,
                              gpr_t add_src,
-                             int32_t imm9);
+                             int32_t imm9,
+                             arr_spec_t i_dtype );
 
     static uint32_t neon_ld1_no_offset(simd_fp_t reg_dst,
                                        gpr_t add_src,

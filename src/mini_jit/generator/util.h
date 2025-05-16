@@ -78,6 +78,9 @@ namespace mini_jit::generator {
          * @param kernel The kernel sizes.
          */
         static void gen_c_store(KernelSize kernelsize);
+
+        static void generator_load_reg_block( mini_jit::backend::Kernel &kernel,
+                                              KernelSize& i_kernelsize);  
     };
 }  // namespace mini_jit::generator
 #endif

@@ -407,4 +407,90 @@ namespace mini_jit::generator {
         m_kernel.write("debug_store_C.bin");
         m_kernel.force_clear();
     }
+
+    void Util::generator_load_reg_block( backend::Kernel& i_kernel,
+                                         Util::KernelSize& i_kernelsize ){
+        
+
+        int32_t l_n_count = 0;
+        int32_t l_reg_count = 0;
+
+        for( ; l_n_count < i_kernelsize.N; l_n_count++){
+            int32_t l_m_count = 0;
+            while( l_m_count < i_kernelsize.M ){
+                if( (i_kernelsize.M - l_m_count) > 15 ){
+                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                    Util::WORKING_ADDRESS_C_REG,
+                                                                    InstGen::vector_count_t::vc4));
+                    i_kernel.add_instr( InstGen::base_add_imm( Util::WORKING_ADDRESS_C_REG,
+                                                            Util::WORKING_ADDRESS_C_REG,
+                                                            64,
+                                                            0));
+                    l_reg_count += 4;
+                    l_m_count += 16;
+                } else if( (i_kernelsize.M - l_m_count) > 11 ){
+                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                    Util::WORKING_ADDRESS_C_REG,
+                                                                    InstGen::vector_count_t::vc3));
+                    i_kernel.add_instr( InstGen::base_add_imm( Util::WORKING_ADDRESS_C_REG,
+                                                            Util::WORKING_ADDRESS_C_REG,
+                                                            48,
+                                                            0));
+                    l_reg_count += 3;
+                    l_m_count += 12;
+                } else if( (i_kernelsize.M - l_m_count) > 7 ){
+                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                    Util::WORKING_ADDRESS_C_REG,
+                                                                    InstGen::vector_count_t::vc2));
+                    i_kernel.add_instr( InstGen::base_add_imm( Util::WORKING_ADDRESS_C_REG,
+                                                            Util::WORKING_ADDRESS_C_REG,
+                                                            32,
+                                                            0));
+                    l_reg_count += 2;
+                    l_m_count +=8;
+                } else if( (i_kernelsize.M - l_m_count) > 3 ){
+                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                    Util::WORKING_ADDRESS_C_REG,
+                                                                    InstGen::vector_count_t::vc1));
+                    i_kernel.add_instr( InstGen::base_add_imm( Util::WORKING_ADDRESS_C_REG,
+                                                            Util::WORKING_ADDRESS_C_REG,
+                                                            16,
+                                                            0));
+                    l_reg_count += 1;
+                    l_m_count += 4;
+                }  else{ 
+                    if( (i_kernelsize.M - l_m_count) > 1){
+                        i_kernel.add_instr( InstGen::neon_ldr( static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                        Util::WORKING_ADDRESS_C_REG,
+                                                        8,
+                                                        InstGen::arr_spec_t::d2 ));
+                        l_m_count +=2;
+                    }
+                    if( ((i_kernelsize.M - l_m_count) % 2) == 1){
+                    i_kernel.add_instr( InstGen::neon_st1_scalar_index( static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                        Util::WORKING_ADDRESS_C_REG,
+                                                                        (i_kernelsize.M - l_m_count)-1));
+                        l_m_count++;
+                    }
+                    i_kernel.add_instr( InstGen::base_add_imm( Util::WORKING_ADDRESS_C_REG,
+                                                            Util::WORKING_ADDRESS_C_REG,
+                                                            4,
+                                                            0));
+                    l_reg_count += 1;
+                }
+            }
+            // Add Leading dimension
+            i_kernel.add_instr( InstGen::base_sub_imm( Util::WORKING_ADDRESS_C_REG,
+                                                    Util::WORKING_ADDRESS_C_REG,
+                                                    i_kernelsize.M * 4,
+                                                    0 ));
+            i_kernel.add_instr( InstGen::base_add_shifted_register( Util::WORKING_ADDRESS_C_REG,
+                                                                    Util::WORKING_ADDRESS_C_REG,
+                                                                    Util::LEADING_DIM_C_REG,
+                                                                    0,
+                                                                    0 ));            
+        }
+        // restore Working C reg
+    }
+
 }  // namespace mini_jit::generator
