@@ -56,7 +56,7 @@ namespace mini_jit::generator {
          */
         static void get_kernel_sizes(int32_t m,
                                      int32_t n,
-                                     KernelSizes &kernelsizes);
+                                     KernelSizes& kernelsizes);
 
         /**
          * @brief Generate microkernels.

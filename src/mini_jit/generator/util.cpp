@@ -32,7 +32,7 @@ namespace mini_jit::generator {
 
     void mini_jit::generator::Util::get_kernel_sizes(int32_t m,
                                                      int32_t n,
-                                                     mini_jit::generator::Util::KernelSizes &kernelsizes) {
+                                                     mini_jit::generator::Util::KernelSizes& kernelsizes) {
         int32_t max_reg_space = 32;
 
         std::cout << "M: " << m << ", N: " << n << std::endl;
