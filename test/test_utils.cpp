@@ -43,3 +43,38 @@ int test_utils::instr_is_correct(std::string call, uint32_t result, uint32_t exp
               << std::endl;
     return match ? 0 : -1;
 }
+
+void test_utils::generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero) {
+    float MAX = 100;
+    for (uint32_t i = 0; i < height; i++) {
+        for (uint32_t j = 0; j < width; j++) {
+            int index = j * height + i;
+            float element = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX));
+            M[index] = (1 - (double)set_zero) * element;
+        }
+    }
+}
+
+void test_utils::visualize_matrix(uint32_t height, uint32_t width, float* M, std::string name) {
+    std::cout << name << std::endl;
+    for (uint32_t i = 0; i < height; i++) {
+        for (uint32_t j = 0; j < width; j++) {
+            int index = j * height + i;
+            std::cout << M[index] << " ";
+        }
+        std::cout << std::endl;
+    }
+}
+
+bool test_utils::compare_matrix(uint32_t height, uint32_t width, float* M, float* C) {
+    for (uint32_t i = 0; i < height; i++) {
+        for (uint32_t j = 0; j < width; j++) {
+            int index = j * height + i;
+            if (M[index] != C[index]) {
+                std::cout << "Matrices are not equal in element: " << index << " M: " << M[index] << ", C: " << C[index] << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
