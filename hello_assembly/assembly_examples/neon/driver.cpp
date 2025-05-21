@@ -314,7 +314,7 @@ int main() {
 
     // TEST TRANSPOSE
     // -------------------------------------------------
-    if (!test_transpose_8_8(1, 1)) {
+    if (!test_transpose_8_8(4 + 2 + 8 + 16 + 16, 300000000)) {
         return 1;
     }
 
