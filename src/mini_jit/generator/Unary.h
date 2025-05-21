@@ -3,11 +3,19 @@
 
 #include <cstdint>
 
+#include "../backend/Kernel.h"
+#include "Util.h"
+
 namespace mini_jit::generator {
     class Unary;
 }
 
 class mini_jit::generator::Unary {
+   private:
+    static mini_jit::backend::Kernel m_kernel;
+
+    static void gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize);
+
    public:
     /// data type
     enum class dtype_t : uint32_t {
@@ -26,6 +34,17 @@ class mini_jit::generator::Unary {
     enum class error_t : int32_t {
         success = 0
     };
+
+    /**
+     * @brief Get kernel sizes for sub-matrices.
+     * @param m            Number of rows in A and B.
+     * @param n            Number of columns in A and B.
+     * @param kernel_sizes size for each kernel for the sub-matrices.
+     * @return error_t::success on success, another error_t value otherwise.
+     **/
+    static error_t get_kernel_sizes(uint32_t m,
+                                    uint32_t n,
+                                    Util::KernelSizes& kernel_sizes);
 
     /**
      * @brief Generate a kernel for a unary primitive.
