@@ -146,16 +146,11 @@ void reference_transpose(float const* a, float* b, int64_t lda, int64_t ldb) {
 
 void visualize_matix(float const* c,
                      int64_t height,
-                     int64_t width,
-                     bool truncate = false) {
+                     int64_t width) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = j * height + i;
-            if (truncate) {
-                std::cout << static_cast<int>(c[index]) << " ";
-            } else {
-                std::cout << c[index] << " ";
-            }
+            std::cout << c[index] << " ";
         }
         std::cout << std::endl;
     }
@@ -258,15 +253,20 @@ int test_transpose_8_8(int64_t ops_per_call, int64_t iterations) {
     std::chrono::_V2::system_clock::time_point start, end;
     bool is_correct = true;
 
-    get_matrices(a, b, b_ref, _temp, size, size, size);
+    get_matrices(a, b, b_ref, _temp, size, size, size, true);
 
     reference_transpose(a, b_ref, size, size);
     trans_neon_8_8(a, b, size, size);
 
     // DEBUG
-    visualize_matix(b, 8, 8, true);
-    std::cout << std::endl;
-    visualize_matix(b_ref, 8, 8, true);
+    std::cout << "A:" << std::endl;
+    visualize_matix(a, 8, 8);
+    std::cout << "\nB_ref:" << std::endl;
+    visualize_matix(b_ref, 8, 8);
+    std::cout << "\nB:" << std::endl;
+    visualize_matix(b, 8, 8);
+    std::cout << "\n"
+              << std::endl;
 
     double epsilon = 1e-3;
     for (int i = 0; i < size; i++) {
