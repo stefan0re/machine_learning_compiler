@@ -1,6 +1,8 @@
 #ifndef MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 #define MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 
+#include <math.h>
+
 #include <cstdint>
 #include <string>
 
@@ -279,5 +281,9 @@ class mini_jit::instructions::InstGen {
     static uint32_t neon_st1_no_offset(simd_fp_t reg_dst,
                                        gpr_t add_src,
                                        vector_count_t reg_count);
+
+    static uint32_t neon_movi_zero(simd_fp_t reg_dest,
+                                   bool use_full_register,
+                                   bool use_double);
 };
 #endif
