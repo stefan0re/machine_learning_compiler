@@ -114,8 +114,9 @@ namespace mini_jit::generator {
                     // get used registers
                     int32_t A_regs = (m_temp - (m_temp % 4)) / 4 + ((m_temp % 4 == 0) ? 0 : 1);
                     int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
+                    // int32_t B_regs = n_temp;
                     int32_t C_size = m_temp * n_temp;
-                    int32_t C_regs = (C_size - (C_size % 4) * n_temp) / 4 + ((C_size % 4 == 0) ? 0 : n_temp);
+                    int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
                     // int32_t C_regs = (C_size - (C_size % 4)) / 4 + (C_size % 4 == 0);
                     int32_t used_reg_space = A_regs + B_regs + C_regs;
 
@@ -345,7 +346,7 @@ namespace mini_jit::generator {
                     InstGen::base_add_imm(
                         pointer_register,
                         pointer_register,
-                        1,
+                        4,
                         /*no flags*/ 0));
             }
 
@@ -426,7 +427,7 @@ namespace mini_jit::generator {
                     InstGen::base_add_imm(
                         pointer_register,
                         pointer_register,
-                        1,
+                        4,
                         /*no flags*/ 0));
             }
 
