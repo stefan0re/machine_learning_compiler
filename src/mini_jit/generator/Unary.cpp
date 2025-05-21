@@ -25,16 +25,25 @@ namespace mini_jit::generator {
     void Unary::gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize) {
         // count how many vectors are in use
         int32_t reg_count = 0;
+        // m_kernel.add_instr(0x4F030480);  // place 100
 
         // total number of elements needed to load
         int count = kernelsize.M;
         int quads = count / 4;
+        int rem = count % 4;
 
         for (int j = 0; j < kernelsize.N; j++) {
             // for each row with each quad = (4s)
             for (int i = 0; i < quads; i++) {
                 m_kernel.add_instr(inst::InstGen::neon_movi_zero(static_cast<inst::InstGen::simd_fp_t>(reg_count++), true, false));
             }
+        }
+
+        for (int i = 0; i < rem; i++) {
+            // load one element at a time (.s[N])
+            m_kernel.add_instr(
+                inst::InstGen::neon_movi_zero(
+                    static_cast<inst::InstGen::simd_fp_t>(reg_count), true, false));
         }
     }
 
@@ -137,26 +146,26 @@ namespace mini_jit::generator {
         int32_t main_m_iters = (int32_t)(main_m_size / (double)kernels.kernel1.M);
         int32_t main_n_iters = (int32_t)(main_n_size / (double)kernels.kernel1.N);
         areas.push_back({main_m_size, main_n_size, main_m_iters, main_n_iters, 0, kernels.kernel1});
-        std::cout << "Main Def:\nsizes: m=" << main_m_size << ", n=" << main_n_size << "\niters: m=" << main_m_iters << ", n=" << main_n_iters << "\noffset=" << 0 << std::endl;
+        std::cout << "Main Def:\n sizes: m=" << main_m_size << ", n=" << main_n_size << "\n iters: m=" << main_m_iters << ", n=" << main_n_iters << "\n offset=" << 0 << std::endl;
 
         int32_t right_m_iters = (int32_t)(remainder_n_size != 0) * (int32_t)(main_m_size / (double)kernels.kernel2.M);
         int32_t lower_n_iters = (int32_t)(remainder_m_size != 0) * (int32_t)(main_n_size / (double)kernels.kernel3.N);
 
         if (right_m_iters != 0) {
             uint32_t offset = main_n_size * m * 4;
-            std::cout << "Right Def:\nsizes: m=" << main_m_size << ", n=" << remainder_n_size << "\niters: m=" << right_m_iters << ", n=" << 1 << "\noffset=" << offset << std::endl;
+            std::cout << "Right Def:\n sizes: m=" << main_m_size << ", n=" << remainder_n_size << "\n iters: m=" << right_m_iters << ", n=" << 1 << "\n offset=" << offset << std::endl;
             areas.push_back({main_n_size, remainder_n_size, right_m_iters, 1, offset, kernels.kernel2});
         }
 
         if (lower_n_iters != 0) {
             uint32_t offset = main_m_size * 4;
-            std::cout << "Lower Def:\nsizes: m=" << remainder_m_size << ", n=" << main_n_size << "\niters: m=" << 1 << ", n=" << lower_n_iters << "\noffset=" << offset << std::endl;
+            std::cout << "Lower Def:\n sizes: m=" << remainder_m_size << ", n=" << main_n_size << "\n iters: m=" << 1 << ", n=" << lower_n_iters << "\n offset=" << offset << std::endl;
             areas.push_back({main_n_size, remainder_n_size, 1, lower_n_iters, offset, kernels.kernel3});
         }
 
         if (lower_n_iters != 0 && right_m_iters != 0) {
             uint32_t offset = main_n_size * m * 4 + main_m_size * 4;
-            std::cout << "Lower Def:\nsizes: m=" << remainder_m_size << ", n=" << remainder_n_size << "\niters: m=" << 1 << ", n=" << 1 << "\noffset=" << offset << std::endl;
+            std::cout << "Lower Def:\n sizes: m=" << remainder_m_size << ", n=" << remainder_n_size << "\n iters: m=" << 1 << ", n=" << 1 << "\n offset=" << offset << std::endl;
             areas.push_back({remainder_m_size, remainder_n_size, 1, 1, offset, kernels.kernel4});
         }
 
@@ -178,6 +187,11 @@ namespace mini_jit::generator {
                                                            inst::InstGen::x7,
                                                            (int32_t)area.offset,
                                                            0));
+            m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8,
+                                                           inst::InstGen::x8,
+                                                           (int32_t)area.offset,
+                                                           0));
+            std::cout << "Add offset: " << (int32_t)area.offset << std::endl;
 
             // shift leading dimensions to 4 bytes
             m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x2, inst::InstGen::x2, 2));

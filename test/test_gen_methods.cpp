@@ -28,8 +28,8 @@ int test_get_kernel_sizes() {
 
 int test_generate_zero() {
     Util::KernelSize kernelSize;
-    kernelSize.M = 18;
-    kernelSize.N = 8;
+    kernelSize.M = 128;
+    kernelSize.N = 64;
     int leading_dimension = kernelSize.M;
 
     float a[kernelSize.M * kernelSize.N];
@@ -45,7 +45,7 @@ int test_generate_zero() {
 
     zero(a, b, leading_dimension, leading_dimension);
 
-    test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
+    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
 
     float c[kernelSize.M * kernelSize.N];
     test_utils::generate_matrix(kernelSize.M, kernelSize.N, c, true);
