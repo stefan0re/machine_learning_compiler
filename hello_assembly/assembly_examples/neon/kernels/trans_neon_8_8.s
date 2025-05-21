@@ -1,4 +1,3 @@
-
 /**
 * @brief Identity primitive that transposes an 8x8 matrix A and return it in B.
 * @param a    Pointer to column-major matrix A.
@@ -8,75 +7,81 @@
 * static void trans_neon_8_8(float const* a, float* b, int64_t ld_a, int64_t ld_b);
 **/
 
-
     .text
     .type trans_neon_8_8, %function
     .global trans_neon_8_8
 trans_neon_8_8:
 
-    // Load 8 rows, 2 x q-registers per row (left and right halves)
-    ld1 {v0.4s}, [x0], #16
-    ld1 {v1.4s}, [x0], #16
-    ld1 {v2.4s}, [x0], #16
-    ld1 {v3.4s}, [x0], #16
-    ld1 {v4.4s}, [x0], #16
-    ld1 {v5.4s}, [x0], #16
-    ld1 {v6.4s}, [x0], #16
-    ld1 {v7.4s}, [x0], #16
+    // save stack
+    stp  d8,  d9, [sp, #-16]!
+    stp d10, d11, [sp, #-16]!
+    stp d12, d13, [sp, #-16]!
+    stp d14, d15, [sp, #-16]!
 
-    ld1 {v8.4s},  [x0], #16
-    ld1 {v9.4s},  [x0], #16
-    ld1 {v10.4s}, [x0], #16
-    ld1 {v11.4s}, [x0], #16
-    ld1 {v12.4s}, [x0], #16
-    ld1 {v13.4s}, [x0], #16
-    ld1 {v14.4s}, [x0], #16
-    ld1 {v15.4s}, [x0], #16
+    // load working register
+    // A
+    mov x7, x0
+    // B
+    mov x8, x1
 
-    // v0–v7  = rows 0–3, left halves
-    // v8–v15 = rows 4–7, left halves
+    // load A
+    ld1     {v0.4s-v3.4s},   [x7], #64
+    ld1     {v4.4s-v7.4s},   [x7], #64
+    ld1     {v16.4s-v19.4s}, [x7], #64
+    ld1     {v20.4s-v23.4s}, [x7], #64
 
-    // Transpose pairs: 32-bit interleave (TRN1/TRN2)
-    trn1 v16.4s, v0.4s, v1.4s
-    trn2 v17.4s, v0.4s, v1.4s
-    trn1 v18.4s, v2.4s, v3.4s
-    trn2 v19.4s, v2.4s, v3.4s
+    // top half (shift 32-bit values)
+    trn1    v24.4s, v0.4s, v2.4s    // row0
+    trn1    v25.4s, v1.4s, v3.4s
+    trn2    v26.4s, v0.4s, v2.4s    // row1
+    trn2    v27.4s, v1.4s, v3.4s
+    trn1    v28.4s, v4.4s, v6.4s    // row2
+    trn1    v29.4s, v5.4s, v7.4s
+    trn2    v30.4s, v4.4s, v6.4s    // row3
+    trn2    v31.4s, v5.4s, v7.4s
+    
+    // bottom half (shift 32-bit values)
+    trn1    v0.4s, v16.4s, v18.4s   // row4
+    trn1    v1.4s, v17.4s, v19.4s
+    trn2    v2.4s, v16.4s, v18.4s   // row5
+    trn2    v3.4s, v17.4s, v19.4s
+    trn1    v4.4s, v20.4s, v22.4s   // row6
+    trn1    v5.4s, v21.4s, v23.4s
+    trn2    v6.4s, v20.4s, v22.4s   // row7
+    trn2    v7.4s, v21.4s, v23.4s
 
-    trn1 v20.4s, v4.4s, v5.4s
-    trn2 v21.4s, v4.4s, v5.4s
-    trn1 v22.4s, v6.4s, v7.4s
-    trn2 v23.4s, v6.4s, v7.4s
+    // top half (shift 64-bit values) 
+    trn1    v16.2d, v24.2d, v28.2d  // row0a
+    trn1    v17.2d, v0.2d, v4.2d    // row0b
+    trn1    v18.2d, v26.2d, v30.2d  // row1a
+    trn1    v19.2d, v2.2d, v6.2d    // row1b
+    trn2    v20.2d, v24.2d, v28.2d  // row2a
+    trn2    v21.2d, v0.2d, v4.2d    // row2b
+    trn2    v22.2d, v26.2d, v30.2d  // row3a
+    trn2    v23.2d, v2.2d, v6.2d    // row3b
 
-    // Now 64-bit interleave (TRN1/TRN2 at 64-bit)
-    trn1 v24.2d, v16.2d, v18.2d
-    trn2 v25.2d, v16.2d, v18.2d
-    trn1 v26.2d, v17.2d, v19.2d
-    trn2 v27.2d, v17.2d, v19.2d
+    // save to reuse registers 
+    st1     {v16.4s-v19.4s}, [x8], #64
+    st1     {v20.4s-v23.4s}, [x8], #64
 
-    trn1 v28.2d, v20.2d, v22.2d
-    trn2 v29.2d, v20.2d, v22.2d
-    trn1 v30.2d, v21.2d, v23.2d
-    trn2 v31.2d, v21.2d, v23.2d
+    // bottom half (shift 64-bit values)
+    trn1    v16.2d, v25.2d, v29.2d  // row4a
+    trn1    v17.2d, v1.2d, v5.2d    // row4b
+    trn1    v18.2d, v27.2d, v31.2d  // row5a
+    trn1    v19.2d, v3.2d, v7.2d    // row5b
+    trn2    v20.2d, v25.2d, v29.2d  // row4a
+    trn2    v21.2d, v1.2d, v5.2d    // row4b
+    trn2    v22.2d, v27.2d, v31.2d  // row5a
+    trn2    v23.2d, v3.2d, v7.2d    // row5b
 
-    // v24–v31 now contain the 8 columns of the transposed matrix
+    // store B
+    st1     {v16.4s-v19.4s}, [x8], #64
+    st1     {v20.4s-v23.4s}, [x8]
 
-    // Store transposed columns
-    st1 {v24.4s}, [x1], #16
-    st1 {v25.4s}, [x1], #16
-    st1 {v26.4s}, [x1], #16
-    st1 {v27.4s}, [x1], #16
-    st1 {v28.4s}, [x1], #16
-    st1 {v29.4s}, [x1], #16
-    st1 {v30.4s}, [x1], #16
-    st1 {v31.4s}, [x1], #16
-
+    // restore stack
     ldp d14, d15, [sp], #16
     ldp d12, d13, [sp], #16
     ldp d10, d11, [sp], #16
     ldp  d8,  d9, [sp], #16
 
 ret
-
-
-
-

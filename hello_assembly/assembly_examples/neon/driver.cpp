@@ -253,20 +253,10 @@ int test_transpose_8_8(int64_t ops_per_call, int64_t iterations) {
     std::chrono::_V2::system_clock::time_point start, end;
     bool is_correct = true;
 
-    get_matrices(a, b, b_ref, _temp, size, size, size, true);
+    get_matrices(a, b, b_ref, _temp, size, size, size);
 
     reference_transpose(a, b_ref, size, size);
     trans_neon_8_8(a, b, size, size);
-
-    // DEBUG
-    std::cout << "A:" << std::endl;
-    visualize_matix(a, 8, 8);
-    std::cout << "\nB_ref:" << std::endl;
-    visualize_matix(b_ref, 8, 8);
-    std::cout << "\nB:" << std::endl;
-    visualize_matix(b, 8, 8);
-    std::cout << "\n"
-              << std::endl;
 
     double epsilon = 1e-3;
     for (int i = 0; i < size; i++) {
@@ -300,28 +290,28 @@ int test_transpose_8_8(int64_t ops_per_call, int64_t iterations) {
 
 int main() {
     srand(static_cast<unsigned>(time(0)));
-    // if (!test_matmul(6, 16, 1, 192, 150000000, matmul_16_6_1)) {
-    //     return 1;
-    // }
-    // if (!test_matmul(6, 16, 64, 192 * 64, 10000000, matmul_16_6_64)) {
-    //     return 1;
-    // }
-    // if (!test_matmul(6, 64, 64, 192 * 64 * 4, 2000000, matmul_64_6_64)) {
-    //     return 1;
-    // }
-    // if (!test_matmul(48, 64, 64, 192 * 64 * 4 * 8, 250000, matmul_64_48_64)) {
-    //     return 1;
-    // }
-    // if (!test_matmul(6, 14, 64, 192 * 64, 10000000, matmul_14_6_64)) {
-    //     return 1;
-    // }
-    // if (!test_matmul(6, 15, 64, 192 * 64, 10000000, matmul_15_6_64)) {
-    //     return 1;
-    // }
-    // if (!test_matmul(64, 64, 64, 128 * 64 * 8 * 8, 150000, matmul_64_64_64)) {
-    //     return 1;
-    // }
-    //
+    if (!test_matmul(6, 16, 1, 192, 150000000, matmul_16_6_1)) {
+        return 1;
+    }
+    if (!test_matmul(6, 16, 64, 192 * 64, 10000000, matmul_16_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 64, 64, 192 * 64 * 4, 2000000, matmul_64_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(48, 64, 64, 192 * 64 * 4 * 8, 250000, matmul_64_48_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 14, 64, 192 * 64, 10000000, matmul_14_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(6, 15, 64, 192 * 64, 10000000, matmul_15_6_64)) {
+        return 1;
+    }
+    if (!test_matmul(64, 64, 64, 128 * 64 * 8 * 8, 150000, matmul_64_64_64)) {
+        return 1;
+    }
+
     // TEST TRANSPOSE
     // -------------------------------------------------
     if (!test_transpose_8_8(1, 1)) {
