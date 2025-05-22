@@ -177,6 +177,7 @@ First, it consists of a set of loads:
     ld1     {v20.4s-v23.4s}, [x7], #64
 
 Then, a set of trn1 and trn2 instructions for the 32-bit valued rows, divided into an upper and a lower part.
+
 .. code-block:: text
     :linenos:
 
@@ -202,6 +203,7 @@ Then, a set of trn1 and trn2 instructions for the 32-bit valued rows, divided in
 
 Followed by another trn1 and trn2 block for the 64-bit blocks, also divided into an upper and a lower part.
 Note: Because there were not enough registers, the upper part is stored and the registers are reused for the lower part.
+
 .. code-block:: text
     :linenos:
 
@@ -224,6 +226,7 @@ Note: Because there were not enough registers, the upper part is stored and the 
     st1     {v20.4s-v23.4s}, [x8]
 
 This implementation is optimized:
+
 .. code-block:: text
     :linenos:
 
