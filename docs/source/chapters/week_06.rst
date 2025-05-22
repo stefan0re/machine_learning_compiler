@@ -159,8 +159,80 @@ Again this implementation is not as optimized as wished as the benchmarking resu
     Duration:       0.0384401 sec
     Throughput:     10.6555 GFLOPS
 
+Identity
+____
+
+We implemented the identity matrix in the simplest possible way: by iterating through the input matrix A element by element and storing each value in B with the corresponding offset based on the size (assuming that A and B are square matrices).
+
 Task 2: Transposition
 ---------------------
+The neon 8 by 8 identity kernel can be found at: https://github.com/stefan0re/machine_learning_compiler/hello_assembly/assembly_examples/neon.
+First, it consists of a set of loads:
+.. code-block:: text
+    :linenos:
+    
+    ld1     {v0.4s-v3.4s},   [x7], #64
+    ld1     {v4.4s-v7.4s},   [x7], #64
+    ld1     {v16.4s-v19.4s}, [x7], #64
+    ld1     {v20.4s-v23.4s}, [x7], #64
+
+Then, a set of trn1 and trn2 instructions for the 32-bit valued rows, divided into an upper and a lower part.
+.. code-block:: text
+    :linenos:
+
+    // top half (shift 32-bit values)
+    trn1    v24.4s, v0.4s, v2.4s    // row0
+    trn1    v25.4s, v1.4s, v3.4s
+    trn2    v26.4s, v0.4s, v2.4s    // row1
+    trn2    v27.4s, v1.4s, v3.4s
+    trn1    v28.4s, v4.4s, v6.4s    // row2
+    trn1    v29.4s, v5.4s, v7.4s
+    trn2    v30.4s, v4.4s, v6.4s    // row3
+    trn2    v31.4s, v5.4s, v7.4s
+    
+    // bottom half (shift 32-bit values)
+    trn1    v0.4s, v16.4s, v18.4s   // row4
+    trn1    v1.4s, v17.4s, v19.4s
+    trn2    v2.4s, v16.4s, v18.4s   // row5
+    trn2    v3.4s, v17.4s, v19.4s
+    trn1    v4.4s, v20.4s, v22.4s   // row6
+    trn1    v5.4s, v21.4s, v23.4s
+    trn2    v6.4s, v20.4s, v22.4s   // row7
+    trn2    v7.4s, v21.4s, v23.4s
+
+Followed by another trn1 and trn2 block for the 64-bit blocks, also divided into an upper and a lower part.
+Note: Because there were not enough registers, the upper part is stored and the registers are reused for the lower part.
+.. code-block:: text
+    :linenos:
+
+    // save to reuse registers 
+    st1     {v16.4s-v19.4s}, [x8], #64
+    st1     {v20.4s-v23.4s}, [x8], #64
+
+    // bottom half (shift 64-bit values)
+    trn1    v16.2d, v25.2d, v29.2d  // row4a
+    trn1    v17.2d, v1.2d, v5.2d    // row4b
+    trn1    v18.2d, v27.2d, v31.2d  // row5a
+    trn1    v19.2d, v3.2d, v7.2d    // row5b
+    trn2    v20.2d, v25.2d, v29.2d  // row4a
+    trn2    v21.2d, v1.2d, v5.2d    // row4b
+    trn2    v22.2d, v27.2d, v31.2d  // row5a
+    trn2    v23.2d, v3.2d, v7.2d    // row5b
+
+    // store B
+    st1     {v16.4s-v19.4s}, [x8], #64
+    st1     {v20.4s-v23.4s}, [x8]
+
+This implementation is optimized:
+.. code-block:: text
+    :linenos:
+
+    ---------------------------------
+    Testing transpose_8_8
+    
+    Iterations:     300000000 times
+    Duration:       1.22983 sec
+    Throughput:     11.221 GFLOPS
 
 
 We all worked on the tasks in equal parts.
