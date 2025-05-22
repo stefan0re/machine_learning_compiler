@@ -14,10 +14,51 @@ int test_neon_fmla_element() {
     return test_utils::instr_is_correct(call, mc1, mc2);
 }
 
+int test_neon_movi_zero() {
+    using namespace mini_jit::instructions;
+
+    uint32_t mc1 = InstGen::neon_movi_zero(InstGen::simd_fp_t::v8,
+                                           true,
+                                           false);
+    std::string call = "movi v8.4s, #0";
+    uint32_t mc2 = test_utils::as(call);
+
+    return test_utils::instr_is_correct(call, mc1, mc2);
+}
+
+int test_neon_fmaxnmp_vector() {
+    using namespace mini_jit::instructions;
+
+    uint32_t mc1 = InstGen::neon_fmaxnmp_vector(InstGen::simd_fp_t::v8,
+                                                InstGen::simd_fp_t::v9,
+                                                InstGen::simd_fp_t::v7,
+                                                false);
+    std::string call = "fmaxnmp v8.4s, v9.4s, v7.4s";
+    uint32_t mc2 = test_utils::as(call);
+
+    return test_utils::instr_is_correct(call, mc1, mc2);
+}
+
+int test_neon_fmax_vector() {
+    using namespace mini_jit::instructions;
+
+    uint32_t mc1 = InstGen::neon_fmax_vector(InstGen::simd_fp_t::v0,
+                                             InstGen::simd_fp_t::v1,
+                                             InstGen::simd_fp_t::v2,
+                                             true);
+    std::string call = "fmax v0.2d, v1.2d, v2.2d";
+    uint32_t mc2 = test_utils::as(call);
+
+    return test_utils::instr_is_correct(call, mc1, mc2);
+}
+
 int main() {
     int result = 0;
 
     result |= test_neon_fmla_element();
+    result |= test_neon_movi_zero();
+    result |= test_neon_fmaxnmp_vector();
+    result |= test_neon_fmax_vector();
 
     return result;
 }

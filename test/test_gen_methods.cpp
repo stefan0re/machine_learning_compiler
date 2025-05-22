@@ -1,6 +1,10 @@
+#include <math.h>
+
 #include <iostream>
 
-#include "../src/mini_jit/generator/util.h"
+#include "../src/mini_jit/generator/Unary.h"
+#include "../src/mini_jit/generator/Util.h"
+#include "./test_utils.h"
 
 using namespace mini_jit::generator;
 
@@ -24,10 +28,74 @@ int test_get_kernel_sizes() {
     return match ? 0 : -1;
 }
 
+int test_generate_zero() {
+    Util::KernelSize kernelSize;
+    kernelSize.M = 128;
+    kernelSize.N = 64;
+    int leading_dimension = kernelSize.M;
+
+    float a[kernelSize.M * kernelSize.N];
+    float b[kernelSize.M * kernelSize.N];
+    Unary unary;
+
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, a);
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, b);
+
+    unary.generate(kernelSize.M, kernelSize.N, 0, Unary::dtype_t::fp32, Unary::ptype_t::zero);
+
+    Unary::kernel_t zero = unary.get_kernel();
+
+    zero(a, b, leading_dimension, leading_dimension);
+
+    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
+
+    float c[kernelSize.M * kernelSize.N];
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, c, true);
+    bool match = test_utils::compare_matrix(kernelSize.M, kernelSize.N, b, c);
+
+    return match ? 0 : -1;
+}
+
+int test_generate_relu() {
+    Util::KernelSize kernelSize;
+    kernelSize.M = 128;
+    kernelSize.N = 64;
+    int leading_dimension = kernelSize.M;
+
+    float a[kernelSize.M * kernelSize.N];
+    float b[kernelSize.M * kernelSize.N];
+    Unary unary;
+
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, a);
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, b);
+
+    unary.generate(kernelSize.M, kernelSize.N, 0, Unary::dtype_t::fp32, Unary::ptype_t::relu);
+
+    Unary::kernel_t relu = unary.get_kernel();
+
+    relu(a, b, leading_dimension, leading_dimension);
+
+    float c[kernelSize.M * kernelSize.N];
+
+    for (int i = 0; i < kernelSize.M; i++) {
+        for (int j = 0; j < kernelSize.N; j++) {
+            int index = j * kernelSize.M + i;
+            c[index] = std::max(0.f, a[index]);
+        }
+    }
+
+    bool match = test_utils::compare_matrix(kernelSize.M, kernelSize.N, b, c);
+
+    return match ? 0 : -1;
+}
+
 int main() {
+    srand(static_cast<unsigned>(time(0)));
     int result = 0;
 
     result |= test_get_kernel_sizes();
+    // result |= test_generate_zero();
+    result |= test_generate_relu();
 
     return result;
 }
