@@ -172,3 +172,58 @@ uint32_t mini_jit::instructions::InstGen::neon_movi_zero(simd_fp_t reg_dest,
 
     return l_ins;
 }
+
+uint32_t mini_jit::instructions::InstGen::neon_fmaxnmp_vector(simd_fp_t reg_dest,
+                                                              simd_fp_t reg_src1,
+                                                              simd_fp_t reg_src2,
+                                                              bool is_double_precision) {
+    // Base encoding for FMAXNMP (vector), per ARMv8-A spec
+    uint32_t l_ins = 0x2e20c400;  // FMAXNMP vector base opcode
+
+    // Set Q = 1 (128-bit vector)
+    l_ins |= (1 << 30);
+
+    // Set sz bit based on precision: 0 for 32-bit, 1 for 64-bit
+    if (is_double_precision)
+        l_ins |= (1 << 22);  // sz = 1
+
+    // Set Rm (source register 2)
+    uint32_t l_reg_id = reg_src2 & 0x1f;
+    l_ins |= l_reg_id << 16;
+
+    // Set Rn (source register 1)
+    l_reg_id = reg_src1 & 0x1f;
+    l_ins |= l_reg_id << 5;
+
+    // Set Rd (destination register)
+    l_reg_id = reg_dest & 0x1f;
+    l_ins |= l_reg_id;
+
+    return l_ins;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_fmax_vector(simd_fp_t reg_dest,
+                                                           simd_fp_t reg_src1,
+                                                           simd_fp_t reg_src2,
+                                                           bool is_double_precision) {
+    // Base encoding for FMAX (vector), element-wise
+    uint32_t l_ins = 0x0e20f400;
+
+    // Set Q = 1 (128-bit vector)
+    l_ins |= (1 << 30);
+
+    // Set sz bit (bit 22): 0 for 32-bit (single), 1 for 64-bit (double)
+    if (is_double_precision)
+        l_ins |= (1 << 22);
+
+    // Set Rm (source register 2) bits [20:16]
+    l_ins |= (reg_src2 & 0x1f) << 16;
+
+    // Set Rn (source register 1) bits [9:5]
+    l_ins |= (reg_src1 & 0x1f) << 5;
+
+    // Set Rd (destination register) bits [4:0]
+    l_ins |= (reg_dest & 0x1f);
+
+    return l_ins;
+}
