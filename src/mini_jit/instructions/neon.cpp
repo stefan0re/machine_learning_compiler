@@ -1,3 +1,6 @@
+#include <cstring>
+#include <iostream>
+
 #include "instructions.h"
 
 uint32_t mini_jit::instructions::InstGen::neon_fmla_vector(simd_fp_t reg_dest,
@@ -145,4 +148,27 @@ uint32_t mini_jit::instructions::InstGen::neon_st1_scalar_index(simd_fp_t reg_ds
     l_inst |= (q << 30) | (s << 12);
 
     return l_inst;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_movi_zero(simd_fp_t reg_dest,
+                                                         bool use_full_register,
+                                                         bool use_double) {
+    // MOVI base encoding
+    uint32_t l_ins = 0x0f000400;
+
+    // Set Q bit
+    if (use_full_register) {
+        l_ins |= (1u << 30);
+    }
+
+    uint8_t size_field = 0b10;  // default 32-bit (float)
+    if (use_double) {
+        size_field = 0b11;  // 64-bit (double)
+    }
+    l_ins |= (size_field << 29);
+
+    // Destination register (bits 4:0)
+    l_ins |= (reg_dest & 0x1f);
+
+    return l_ins;
 }

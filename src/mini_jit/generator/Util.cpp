@@ -1,4 +1,4 @@
-#include "util.h"
+#include "Util.h"
 
 #include <float.h>
 #include <math.h>
@@ -30,42 +30,37 @@ namespace mini_jit::generator {
 
     mini_jit::backend::Kernel Util::m_kernel;
 
-    void mini_jit::generator::Util::get_kernel_sizes(int32_t m,
-                                                     int32_t n,
-                                                     mini_jit::generator::Util::KernelSizes &kernelsizes) {
-        int32_t max_reg_space = 32;
-
-        std::cout << "M: " << m << ", N: " << n << std::endl;
-
+    void Util::get_area_sizes(int32_t m,
+                              int32_t n,
+                              std::vector<KernelSize>& work_areas) {
         KernelSize main_area = KernelSize{0, 0};
         KernelSize right_area = KernelSize{0, 0};
         KernelSize lower_area = KernelSize{0, 0};
         KernelSize remainder_area = KernelSize{0, 0};
-        std::vector<KernelSize> work_areas;
 
         // split full matrix into working areas
         bool m_split = m < 16 || ((m >= 16) && (m % 4 == 0));
         bool n_split = n < 16 || ((n >= 16) && (n % 4 == 0));
 
         if (m_split && n_split) {
+            // only main area
             main_area.M = m;
             main_area.N = n;
-            work_areas.push_back(main_area);
+
         } else if (m_split && !n_split) {
+            // main and right
             main_area.M = m;
             main_area.N = get_main_size(n);
             right_area.M = m;
             right_area.N = n - main_area.N;
-            work_areas.push_back(main_area);
-            work_areas.push_back(right_area);
         } else if (!m_split && n_split) {
+            // main and lower
             main_area.M = get_main_size(m);
             main_area.N = n;
             lower_area.M = m - main_area.M;
             lower_area.N = n;
-            work_areas.push_back(main_area);
-            work_areas.push_back(lower_area);
         } else {
+            // all areas
             main_area.M = get_main_size(m);
             main_area.N = get_main_size(n);
             right_area.M = main_area.M;
@@ -74,17 +69,28 @@ namespace mini_jit::generator {
             lower_area.N = main_area.N;
             remainder_area.M = lower_area.M;
             remainder_area.N = right_area.N;
-            work_areas.push_back(main_area);
-            work_areas.push_back(right_area);
-            work_areas.push_back(lower_area);
-            work_areas.push_back(remainder_area);
         }
+        work_areas.push_back(main_area);
+        work_areas.push_back(right_area);
+        work_areas.push_back(lower_area);
+        work_areas.push_back(remainder_area);
 
-        std::cout << "MainArea      M: " << main_area.M << ", N: " << main_area.N << "\n"
-                  << "RightArea     M: " << right_area.M << ", N: " << right_area.N << "\n"
-                  << "LowerArea     M: " << lower_area.M << ", N: " << lower_area.N << "\n"
-                  << "RemainderArea M: " << remainder_area.M << ", N: " << remainder_area.N << "\n"
+        std::cout << "MainArea Size      M: " << work_areas[0].M << ", N: " << work_areas[0].N << "\n"
+                  << "RightArea Size     M: " << work_areas[1].M << ", N: " << work_areas[1].N << "\n"
+                  << "LowerArea Size     M: " << work_areas[2].M << ", N: " << work_areas[2].N << "\n"
+                  << "RemainderArea Size M: " << work_areas[3].M << ", N: " << work_areas[3].N << "\n"
                   << std::endl;
+    }
+
+    void Util::get_kernel_sizes(int32_t m,
+                                int32_t n,
+                                Util::KernelSizes& kernelsizes) {
+        int32_t max_reg_space = 32;
+
+        std::cout << "M: " << m << ", N: " << n << std::endl;
+
+        std::vector<KernelSize> work_areas;
+        Util::get_area_sizes(m, n, work_areas);
 
         // define weights for scoring
         double w_sd = 0.1;
@@ -141,7 +147,7 @@ namespace mini_jit::generator {
         kernelsizes.kernel1.N = kernelsizes_v[0].N;
 
         int i = 2;
-        if (right_area.M != 0) {
+        if (work_areas[1].M != 0) {
             kernelsizes.kernel2.M = kernelsizes_v[1].M;
             kernelsizes.kernel2.N = kernelsizes_v[1].N;
         } else {
@@ -150,7 +156,7 @@ namespace mini_jit::generator {
             i = 1;
         }
 
-        if (lower_area.M != 0) {
+        if (work_areas[2].M != 0) {
             kernelsizes.kernel3.M = kernelsizes_v[i].M;
             kernelsizes.kernel3.N = kernelsizes_v[i].N;
         } else {
@@ -158,7 +164,7 @@ namespace mini_jit::generator {
             kernelsizes.kernel3.N = 0;
         }
 
-        if (remainder_area.M != 0) {
+        if (work_areas[3].M != 0) {
             kernelsizes.kernel4.M = kernelsizes_v[3].M;
             kernelsizes.kernel4.N = kernelsizes_v[3].N;
         } else {
@@ -294,7 +300,7 @@ namespace mini_jit::generator {
 
     // I assume that get_kernel_size only return valid kernels, so there must be enough registers
     // to fit each value in and that the working registers are aligned already.
-    int32_t Util::gen_c_load(Util::KernelSize kernelsize) {
+    int32_t Util::gen_matrix_load(mini_jit::backend::Kernel& i_kernel, Util::KernelSize kernelsize, InstGen::gpr_t pointer_register, uint32_t leading_dimension) {
         // count how many vectors are in use
         int32_t reg_count = 0;
 
@@ -303,56 +309,79 @@ namespace mini_jit::generator {
         int quads = count / 4;
         int rem = count % 4;
 
+        uint32_t ld_bytes = leading_dimension * 4;
+
         // for each col
         for (int j = 0; j < kernelsize.N; j++) {
             // for each row with each quad = (4s)
             for (int i = 0; i < quads; i++) {
                 // load four elements at once (4s)
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::neon_ld1_no_offset(
                         static_cast<InstGen::simd_fp_t>(reg_count++),
-                        Util::WORKING_ADDRESS_C_REG,
+                        pointer_register,
                         InstGen::vector_count_t::vc4));
 
                 // advance the base pointer by 4 elements
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::base_add_imm(
-                        Util::WORKING_ADDRESS_C_REG,
-                        Util::WORKING_ADDRESS_C_REG,
-                        4,
+                        pointer_register,
+                        pointer_register,
+                        16,
                         /*no flags*/ 0));
             }
 
             // remainder
             for (int i = 0; i < rem; i++) {
                 // load one element at a time (.s[N])
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::neon_ld1_scalar_index(
                         static_cast<InstGen::simd_fp_t>(reg_count),
-                        Util::WORKING_ADDRESS_C_REG,
+                        pointer_register,
                         i));
 
                 // advance the base pointer by 1 elements
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::base_add_imm(
-                        Util::WORKING_ADDRESS_C_REG,
-                        Util::WORKING_ADDRESS_C_REG,
-                        1,
+                        pointer_register,
+                        pointer_register,
+                        4,
                         /*no flags*/ 0));
             }
+
+            i_kernel.add_instr(
+                InstGen::base_sub_imm(
+                    pointer_register,
+                    pointer_register,
+                    kernelsize.M * 4,
+                    /*no flags*/ 0));
+
+            i_kernel.add_instr(
+                InstGen::base_add_imm(
+                    pointer_register,
+                    pointer_register,
+                    ld_bytes,
+                    /*no flags*/ 0));
 
             (0 < rem) ? ++reg_count : reg_count;
         }
 
+        i_kernel.add_instr(
+            InstGen::base_sub_imm(
+                pointer_register,
+                pointer_register,
+                ld_bytes * (kernelsize.N),
+                /*no flags*/ 0));
+
         // DEBUG: write out / reset for debugging
-        m_kernel.write("debug_load_C.bin");
-        m_kernel.force_clear();
+        /*m_kernel.write("debug_load_C.bin");
+        m_kernel.force_clear();*/
 
         // if there was a remainder, another register is used
         return reg_count;
     }
 
-    void Util::gen_c_store(Util::KernelSize kernelsize) {
+    void Util::gen_matrix_store(mini_jit::backend::Kernel& i_kernel, Util::KernelSize kernelsize, mini_jit::instructions::InstGen::gpr_t pointer_register, uint32_t leading_dimension) {
         // count how many vectors are in use
         int32_t reg_count = 0;
 
@@ -361,49 +390,72 @@ namespace mini_jit::generator {
         int quads = count / 4;
         int rem = count % 4;
 
+        uint32_t ld_bytes = leading_dimension * 4;
+
         // for each col
         for (int j = 0; j < kernelsize.N; j++) {
             // for each row with each quad = (4s)
             for (int i = 0; i < quads; i++) {
                 // load four elements at once (4s)
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::neon_st1_no_offset(
                         static_cast<InstGen::simd_fp_t>(reg_count++),
-                        Util::WORKING_ADDRESS_C_REG,
+                        pointer_register,
                         InstGen::vector_count_t::vc4));
 
                 // advance the base pointer by 4 elements
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::base_add_imm(
-                        Util::WORKING_ADDRESS_C_REG,
-                        Util::WORKING_ADDRESS_C_REG,
-                        4,
+                        pointer_register,
+                        pointer_register,
+                        16,
                         /*no flags*/ 0));
             }
 
             // remainder
             for (int i = 0; i < rem; i++) {
                 // load one element at a time (.s[N])
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::neon_st1_scalar_index(
                         static_cast<InstGen::simd_fp_t>(reg_count),
-                        Util::WORKING_ADDRESS_C_REG,
+                        pointer_register,
                         i));
 
                 // advance the base pointer by 1 elements
-                m_kernel.add_instr(
+                i_kernel.add_instr(
                     InstGen::base_add_imm(
-                        Util::WORKING_ADDRESS_C_REG,
-                        Util::WORKING_ADDRESS_C_REG,
-                        1,
+                        pointer_register,
+                        pointer_register,
+                        4,
                         /*no flags*/ 0));
             }
+
+            i_kernel.add_instr(
+                InstGen::base_sub_imm(
+                    pointer_register,
+                    pointer_register,
+                    kernelsize.M * 4,
+                    /*no flags*/ 0));
+
+            i_kernel.add_instr(
+                InstGen::base_add_imm(
+                    pointer_register,
+                    pointer_register,
+                    ld_bytes,
+                    /*no flags*/ 0));
 
             (0 < rem) ? ++reg_count : reg_count;
         }
 
+        i_kernel.add_instr(
+            InstGen::base_sub_imm(
+                pointer_register,
+                pointer_register,
+                ld_bytes * (kernelsize.N),
+                /*no flags*/ 0));
+
         // DEBUG: write out / reset for debugging
-        m_kernel.write("debug_store_C.bin");
-        m_kernel.force_clear();
+        /*m_kernel.write("debug_store_C.bin");
+        m_kernel.force_clear();*/
     }
 }  // namespace mini_jit::generator
