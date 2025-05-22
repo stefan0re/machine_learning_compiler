@@ -4,75 +4,62 @@
 #include <iostream>
 #include <random>
 
-#include "../src/mini_jit/"
+#include "../src/mini_jit/generator/Unary.h"
+#include "../test/test_utils.h"
 
-void reference_mat_mul(float const* a,
-                       float const* b,
-                       float* c,
-                       int64_t n,
-                       int64_t m,
-                       int64_t k) {
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < n; j++) {
-            for (int l = 0; l < k; l++) {
-                c[(j * m) + i] += a[(l * m) + i] * b[(j * k) + l];
-            }
-        }
+int benchmark_unary(uint32_t m, uint32_t n, int iterations, mini_jit::generator::Unary::ptype_t ptype) {
+    std::cout << "---------------------------------" << std::endl;
+    std::cout << "Benchmarking Unary: ";
+
+    double ops_per_call;
+    if (ptype == mini_jit::generator::Unary::ptype_t::zero) {
+        std::cout << "Zero " << std::endl;
+    } else if (ptype == mini_jit::generator::Unary::ptype_t::relu) {
+        std::cout << "Relu " << std::endl;
+    } else if (ptype == mini_jit::generator::Unary::ptype_t::identity) {
+        std::cout << "Identity " << std::endl;
     }
+
+    alignas(16) float a[m * n];
+    alignas(16) float b[m * n];
+    std::chrono::_V2::system_clock::time_point start, end;
+    bool is_correct = true;
+
+    test_utils::generate_matrix(m, n, a);
+    test_utils::generate_matrix(m, n, b);
+    std::cout << "Matrix dimensions of " << m << "x" << n << std::endl;
+
+    mini_jit::generator::Unary unary;
+
+    unary.generate(m, n, 0, mini_jit::generator::Unary::dtype_t::fp32, ptype);
+    mini_jit::generator::Unary::kernel_t kernel = unary.get_kernel();
+
+    start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iterations; i++) {
+        kernel(a, b, m, m);
+    }
+    end = std::chrono::high_resolution_clock::now();
+
+    double duration = std::chrono::duration<double>(end - start).count();
+    double throughput = ((double)iterations * (double)((unary.fops * 4 * 4 * 16))) / duration;  // 192 flops in one iter
+
+    std::cout << "\nIterations:\t" << iterations << " times" << std::endl;
+    std::cout << "Duration:\t" << duration << " sec" << std::endl;
+    std::cout << "Throughput:\t" << throughput / 1e9 << " GFLOPS\n"
+              << std::endl;
+
+    return 1;
 }
-
-void visualize_matix(float const* c,
-                     int64_t height,
-                     int64_t width) {
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = j * height + i;
-            std::cout << c[index] << " ";
-        }
-        std::cout << std::endl;
-    }
-}
-
-void get_matrices(float* a,
-                  float* b,
-                  float* c,
-                  float* c_ref,
-                  int64_t n,
-                  int64_t m,
-                  int64_t k,
-                  bool visualization = false) {
-    float MAX = 100.f;
-    // fill a
-    for (int j = 0; j < k; j++) {
-        for (int i = 0; i < m; i++) {
-            int a_index = j * m + i;
-            a[a_index] = (1 - (double)visualization) * static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX)) + (double)visualization * i;
-        }
-    }
-
-    // fill b
-    for (int j = 0; j < n; j++) {
-        for (int i = 0; i < k; i++) {
-            int b_index = j * k + i;
-            b[b_index] = (1 - (double)visualization) * static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX)) + (double)visualization * j;
-        }
-    }
-
-    // fill c
-    for (int i = 0; i < m; i++) {
-        for (int j = 0; j < n; j++) {
-            int c_index = j * m + i;
-            float element = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX));
-            c[c_index] = (1 - (double)visualization) * element;
-            c_ref[c_index] = (1 - (double)visualization) * element;
-        }
-    }
-}
-
-int benchmark(void (*jit_func)(float const*, float const*, float*, int64_t, int64_t, int64_t));
 
 int main() {
     srand(static_cast<unsigned>(time(0)));
+
+    benchmark_unary(64, 64, 2500000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(512, 512, 1000000, mini_jit::generator::Unary::ptype_t::zero);
+    // benchmark_unary(2048, 2048, 10000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(64, 64, 2500000, mini_jit::generator::Unary::ptype_t::relu);
+    benchmark_unary(512, 512, 100000, mini_jit::generator::Unary::ptype_t::relu);
+    // benchmark_unary(2048, 2048, 10000, mini_jit::generator::Unary::ptype_t::relu);
 
     return 0;
 }
