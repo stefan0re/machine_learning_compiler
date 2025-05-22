@@ -285,5 +285,15 @@ class mini_jit::instructions::InstGen {
     static uint32_t neon_movi_zero(simd_fp_t reg_dest,
                                    bool use_full_register,
                                    bool use_double);
+
+    static uint32_t neon_fmaxnmp_vector(simd_fp_t reg_dest,
+                                        simd_fp_t reg_src1,
+                                        simd_fp_t reg_src2,
+                                        bool is_double_precision);
+
+    static uint32_t neon_fmax_vector(simd_fp_t reg_dest,
+                                     simd_fp_t reg_src1,
+                                     simd_fp_t reg_src2,
+                                     bool is_double_precision);
 };
 #endif

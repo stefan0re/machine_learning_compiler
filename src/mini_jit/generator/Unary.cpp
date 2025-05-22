@@ -47,6 +47,36 @@ namespace mini_jit::generator {
         }
     }
 
+    void Unary::gen_unary_relu(mini_jit::generator::Util::KernelSize kernelsize) {
+        // count how many vectors are in use
+        int32_t reg_count = 0;
+
+        // total number of elements needed to load
+        int count = kernelsize.M;
+        int quads = count / 4;
+        int rem = count % 4;
+        m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::simd_fp_t::v31, true, false));
+
+        for (int j = 0; j < kernelsize.N; j++) {
+            // for each row with each quad = (4s)
+            for (int i = 0; i < quads; i++) {
+                m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(reg_count),
+                                                                   static_cast<inst::InstGen::simd_fp_t>(reg_count),
+                                                                   inst::InstGen::simd_fp_t::v31,
+                                                                   false));
+                reg_count++;
+            }
+        }
+
+        for (int i = 0; i < rem; i++) {
+            // load one element at a time (.s[N])
+            m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(reg_count),
+                                                               static_cast<inst::InstGen::simd_fp_t>(reg_count),
+                                                               inst::InstGen::simd_fp_t::v31,
+                                                               false));
+        }
+    }
+
     Unary::error_t Unary::get_kernel_sizes(uint32_t m,
                                            uint32_t n,
                                            Util::KernelSizes& kernelsizes) {
@@ -230,6 +260,8 @@ namespace mini_jit::generator {
 
             if (ptype == Unary::ptype_t::zero) {
                 Unary::gen_unary_zero(area.kernelsize);
+            } else if (ptype == Unary::ptype_t::relu) {
+                Unary::gen_unary_relu(area.kernelsize);
             }
 
             // store in B

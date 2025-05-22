@@ -46,11 +46,13 @@ int test_utils::instr_is_correct(std::string call, uint32_t result, uint32_t exp
 
 void test_utils::generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero) {
     float MAX = 100;
+    float MIN = -100;
     for (uint32_t i = 0; i < height; i++) {
         for (uint32_t j = 0; j < width; j++) {
             int index = j * height + i;
-            float element = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX));
-            M[index] = (1 - (double)set_zero) * element;
+            float rand_float = static_cast<float>(rand()) / RAND_MAX;  // [0,1]
+            rand_float = rand_float * (MAX - MIN) + MIN;
+            M[index] = (1 - (double)set_zero) * rand_float;
         }
     }
 }
