@@ -47,6 +47,36 @@ namespace mini_jit::generator {
         }
     }
 
+    void Unary::gen_unary_transpose(mini_jit::generator::Util::KernelSize kernelsize) {
+        int max_size = kernelsize.M * kernelsize.N;
+        int helper = 0;
+
+        // for all elements in a
+        for (int i = 0; i < max_size; i++) {
+            // copy from a to b
+            m_kernel.add_instr(inst::InstGen::base_mov_register(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_A_REG));
+
+            // calc new element_b by adding the offset (size)
+            // add x4, x4, x2
+            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, kernelsize.M, 0));
+            helper += kernelsize.M;
+
+            // if the elements_b exeeds the maximum size
+            if (max_size - helper < 0) {
+                // start over
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, max_size, 0));
+                helper -= max_size;
+
+                // next element in b
+                m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, 1, 0));
+                helper += 1;
+            }
+
+            // next element in a
+            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG, Util::WORKING_ADDRESS_A_REG, 1, 0));
+        }
+    }
+
     Unary::error_t Unary::get_kernel_sizes(uint32_t m,
                                            uint32_t n,
                                            Util::KernelSizes& kernelsizes) {
@@ -229,6 +259,10 @@ namespace mini_jit::generator {
             int32_t regs_used_l = Util::gen_matrix_load(m_kernel, area.kernelsize, inst::InstGen::x7, m);
 
             if (ptype == Unary::ptype_t::zero) {
+                Unary::gen_unary_zero(area.kernelsize);
+            }
+
+            if (ptype == Unary::ptype_t::identity && trans_b == 1) {
                 Unary::gen_unary_zero(area.kernelsize);
             }
 

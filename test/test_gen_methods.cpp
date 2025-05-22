@@ -54,12 +54,42 @@ int test_generate_zero() {
     return match ? 0 : -1;
 }
 
+int test_generate_identity() {
+    Util::KernelSize kernelSize;
+    kernelSize.M = 128;
+    kernelSize.N = 64;
+    int leading_dimension = kernelSize.M;
+
+    float a[kernelSize.M * kernelSize.N];
+    float b[kernelSize.M * kernelSize.N];
+    Unary unary;
+
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, a);
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, b);
+
+    unary.generate(kernelSize.M, kernelSize.N, 1, Unary::dtype_t::fp32, Unary::ptype_t::identity);
+
+    Unary::kernel_t identity = unary.get_kernel();
+
+    identity(a, b, leading_dimension, leading_dimension);
+
+    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
+
+    float c[kernelSize.M * kernelSize.N];
+    test_utils::generate_matrix(kernelSize.M, kernelSize.N, c, true);
+    test_utils::transpose_matrix(kernelSize.M, kernelSize.N, a, c);
+    bool match = test_utils::compare_matrix(kernelSize.M, kernelSize.N, c, b);
+
+    return match ? 0 : -1;
+}
+
 int main() {
     srand(static_cast<unsigned>(time(0)));
     int result = 0;
 
     result |= test_get_kernel_sizes();
     result |= test_generate_zero();
+    result |= test_generate_identity();
 
     return result;
 }

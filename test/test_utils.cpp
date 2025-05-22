@@ -55,6 +55,14 @@ void test_utils::generate_matrix(uint32_t height, uint32_t width, float* M, bool
     }
 }
 
+void test_utils::transpose_matrix(uint32_t height, uint32_t width, float* M, float* N) {
+    for (uint32_t i = 0; i < height; i++) {
+        for (uint32_t j = 0; j < width; j++) {
+            M[j * height + i] = N[i * width + j];
+        }
+    }
+}
+
 void test_utils::visualize_matrix(uint32_t height, uint32_t width, float* M, std::string name) {
     std::cout << name << std::endl;
     for (uint32_t i = 0; i < height; i++) {
