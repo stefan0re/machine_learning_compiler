@@ -15,6 +15,7 @@ class mini_jit::generator::Unary {
     static mini_jit::backend::Kernel m_kernel;
 
     static void gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize);
+    static void gen_unary_relu(mini_jit::generator::Util::KernelSize kernelsize);
 
    public:
     /// data type
