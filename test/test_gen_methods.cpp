@@ -56,7 +56,7 @@ int test_generate_zero() {
 
 int test_generate_identity() {
     Util::KernelSize kernelSize;
-    kernelSize.M = 128;
+    kernelSize.M = 64;
     kernelSize.N = 64;
     int leading_dimension = kernelSize.M;
 
