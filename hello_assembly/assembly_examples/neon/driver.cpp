@@ -107,6 +107,18 @@ void matmul_64_64_64(float const* a,
                      int64_t lda,
                      int64_t ldb,
                      int64_t ldc);
+
+/**
+ * @brief Identity primitive that transposes an 8x8 matrix.
+ * @param a    Pointer to column-major matrix A.
+ * @param b    Pointer to row-major matrix B.
+ * @param ld_a Leading dimension of A.
+ * @param ld_b Leading dimension of B.
+ **/
+void trans_neon_8_8(float const* a,
+                    float* b,
+                    int64_t ld_a,
+                    int64_t ld_b);
 }
 
 void reference_mat_mul(float const* a,
@@ -120,6 +132,14 @@ void reference_mat_mul(float const* a,
             for (int l = 0; l < k; l++) {
                 c[(j * m) + i] += a[(l * m) + i] * b[(j * k) + l];
             }
+        }
+    }
+}
+
+void reference_transpose(float const* a, float* b, int64_t lda, int64_t ldb) {
+    for (int64_t i = 0; i < lda; ++i) {
+        for (int64_t j = 0; j < lda; ++j) {
+            b[j * ldb + i] = a[i * lda + j];
         }
     }
 }
@@ -221,6 +241,53 @@ int test_matmul(int64_t n,
     return 1;
 }
 
+int test_transpose_8_8(int64_t ops_per_call, int64_t iterations) {
+    const int size = 8;
+    std::cout << "---------------------------------" << std::endl;
+    std::cout << "Testing transpose_8_8" << std::endl;
+    alignas(16) float a[size * size];
+    alignas(16) float b[size * size];
+    alignas(16) float b_ref[size * size];
+    alignas(16) float _temp[size * size];
+
+    std::chrono::_V2::system_clock::time_point start, end;
+    bool is_correct = true;
+
+    get_matrices(a, b, b_ref, _temp, size, size, size);
+
+    reference_transpose(a, b_ref, size, size);
+    trans_neon_8_8(a, b, size, size);
+
+    double epsilon = 1e-3;
+    for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+            int b_index = j * size + i;
+            if (std::fabs(b[b_index] - b_ref[b_index]) > (epsilon * std::fabs(b_ref[b_index]))) {
+                std::cout << "Failed in: i=" << i << ", j=" << j << std::endl;
+                std::cout << b[b_index] << " != " << b_ref[b_index] << ", Diff=" << (std::fabs(b[b_index] - b_ref[b_index])) << std::endl;
+                // DEBUG
+                // return 0;
+            }
+        }
+    }
+
+    start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < iterations; i++) {
+        trans_neon_8_8(a, b, size, size);
+    }
+    end = std::chrono::high_resolution_clock::now();
+
+    double duration = std::chrono::duration<double>(end - start).count();
+    double throughput = ((double)iterations * (double)ops_per_call) / duration;
+
+    std::cout << "\nIterations:\t" << iterations << " times" << std::endl;
+    std::cout << "Duration:\t" << duration << " sec" << std::endl;
+    std::cout << "Throughput:\t" << throughput / 1e9 << " GFLOPS\n"
+              << std::endl;
+
+    return 1;
+}
+
 int main() {
     srand(static_cast<unsigned>(time(0)));
     if (!test_matmul(6, 16, 1, 192, 150000000, matmul_16_6_1)) {
@@ -244,5 +311,12 @@ int main() {
     if (!test_matmul(64, 64, 64, 128 * 64 * 8 * 8, 150000, matmul_64_64_64)) {
         return 1;
     }
+
+    // TEST TRANSPOSE
+    // -------------------------------------------------
+    if (!test_transpose_8_8(4 + 2 + 8 + 16 + 16, 300000000)) {
+        return 1;
+    }
+
     return 0;
 }
