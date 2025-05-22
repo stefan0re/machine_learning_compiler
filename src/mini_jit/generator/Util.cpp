@@ -75,11 +75,11 @@ namespace mini_jit::generator {
         work_areas.push_back(lower_area);
         work_areas.push_back(remainder_area);
 
-        std::cout << "MainArea Size      M: " << work_areas[0].M << ", N: " << work_areas[0].N << "\n"
-                  << "RightArea Size     M: " << work_areas[1].M << ", N: " << work_areas[1].N << "\n"
-                  << "LowerArea Size     M: " << work_areas[2].M << ", N: " << work_areas[2].N << "\n"
-                  << "RemainderArea Size M: " << work_areas[3].M << ", N: " << work_areas[3].N << "\n"
-                  << std::endl;
+        // std::cout << "MainArea Size      M: " << work_areas[0].M << ", N: " << work_areas[0].N << "\n"
+        //<< "RightArea Size     M: " << work_areas[1].M << ", N: " << work_areas[1].N << "\n"
+        //<< "LowerArea Size     M: " << work_areas[2].M << ", N: " << work_areas[2].N << "\n"
+        //<< "RemainderArea Size M: " << work_areas[3].M << ", N: " << work_areas[3].N << "\n"
+        //<< std::endl;
     }
 
     void Util::get_kernel_sizes(int32_t m,
