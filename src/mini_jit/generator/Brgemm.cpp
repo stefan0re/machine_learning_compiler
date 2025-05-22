@@ -33,9 +33,6 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                         Util::INPUT_ADDRESS_C_REG));
 
     /* shift leading dimensions to 4 bytes  TODO!*/
-    // m_kernel.add_instr(inst::InstGen::base_lsl_imm(Util::LEADING_DIM_A_REG, Util::LEADING_DIM_A_REG, 2));
-    // m_kernel.add_instr(inst::InstGen::base_lsl_imm(Util::LEADING_DIM_B_REG, Util::LEADING_DIM_B_REG, 2));
-    // m_kernel.add_instr(inst::InstGen::base_lsl_imm(Util::LEADING_DIM_C_REG, Util::LEADING_DIM_C_REG, 2));
     m_kernel.add_instr(0xd37ef463);
     m_kernel.add_instr(0xd37ef484);
     m_kernel.add_instr(0xd37ef4a5);
@@ -43,11 +40,11 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     Util::KernelSizes kernelsizes;
     Util::get_kernel_sizes(m, n, kernelsizes);
 
-    // load C block
-    Util::generator_load_reg_block(m_kernel, kernelsizes.kernel1);
 
-    
-    
+
+    Util::generator_load_reg_block(m_kernel, kernelsizes.kernel1, Util::WORKING_ADDRESS_C_REG);
+
+    Util::generator_store_reg_block(m_kernel, kernelsizes.kernel1, Util::WORKING_ADDRESS_C_REG);
 
 
     // procedure call standard (load from stack)

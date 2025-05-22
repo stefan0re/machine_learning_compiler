@@ -64,6 +64,20 @@ uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
     return l_inst;
 }
 
+uint32_t mini_jit::instructions::InstGen::neon_str( simd_fp_t reg_dst,
+                                                    gpr_t add_src,
+                                                    int32_t imm9,
+                                                    arr_spec_t i_dtype ) {
+    uint32_t l_inst = 0xfc00'0400;
+
+    l_inst |= (reg_dst & 0x1f);
+    l_inst |= i_dtype;
+    l_inst |= (add_src & 0x1f) << 5;
+    l_inst |= (imm9 % 0x1ff) << 12;
+
+    return l_inst;
+}
+
 uint32_t mini_jit::instructions::InstGen::neon_fmla_by_element(simd_fp_t reg_dest,
                                                                simd_fp_t reg_src1,
                                                                simd_fp_t reg_src2,
@@ -122,13 +136,13 @@ uint32_t mini_jit::instructions::InstGen::neon_ld1_scalar_index(simd_fp_t reg_ds
  */
 uint32_t mini_jit::instructions::InstGen::neon_st1_no_offset(simd_fp_t reg_dst,
                                                              gpr_t add_src,
-                                                             vector_count_t /*reg_count*/) {
-    uint32_t l_inst = 0xC000000;
+                                                             vector_count_t v_reg_count ) {
+    uint32_t l_inst = 0x0C00'2000;
 
     l_inst |= (reg_dst & 0x1F);       // Rt: bits 4:0
     l_inst |= (add_src & 0x1F) << 5;  // Rn: bits 9:5
     l_inst |= (0b10) << 10;           // size: bits 11:10
-    l_inst |= 0b0111 << 12;           // opcode: bits 15:12
+    l_inst |= v_reg_count;           // opcode: bits 15:12
     l_inst |= 0b1 << 30;              // Q (size): 31
 
     return l_inst;

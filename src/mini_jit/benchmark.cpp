@@ -5,12 +5,14 @@
 #include "generator/Brgemm.h"
 #include "include/gemm_ref.h"
 
+/* currently just testing if load and store C works (copy) */
+
 int main(int argc, char *argv[]) {
     std::cout << "mini_jit benchmark" << std::endl;
     std::cout << "===================" << std::endl;
 
-    int64_t m = 16;
-    int64_t n = 6;
+    int64_t m = atoi(argv[1]);
+    int64_t n = atoi(argv[2]);
     int64_t k = (argc > 1) ? atoi(argv[1]) : 64;
 
     const int64_t lda = m;
@@ -29,10 +31,10 @@ int main(int argc, char *argv[]) {
     float *l_c_2 = (float *)malloc(ldc * n * sizeof(float));
 
     for (int i = 0; i < lda * k; i++) {
-        l_a[i] = (float)drand48();
+        l_a[i] = (float)drand48()*0;
     }
     for (int i = 0; i < ldb * n; i++) {
-        l_b[i] = (float)drand48();
+        l_b[i] = (float)drand48()*0;
     }
     for (int i = 0; i < ldc * n; i++) {
         l_c_1[i] = (float)drand48();

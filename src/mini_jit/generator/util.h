@@ -80,7 +80,12 @@ namespace mini_jit::generator {
         static void gen_c_store(KernelSize kernelsize);
 
         static void generator_load_reg_block( mini_jit::backend::Kernel &kernel,
-                                              KernelSize& i_kernelsize);  
+                                              KernelSize& i_kernelsize,
+                                              mini_jit::instructions::InstGen::gpr_t i_register);
+
+        static void generator_store_reg_block( backend::Kernel& i_kernel,
+                                               Util::KernelSize& i_kernelsize,
+                                               mini_jit::instructions::InstGen::gpr_t i_register);
     };
 }  // namespace mini_jit::generator
 #endif
