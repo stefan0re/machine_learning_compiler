@@ -48,32 +48,36 @@ namespace mini_jit::generator {
     }
 
     void Unary::gen_unary_transpose(mini_jit::generator::Util::KernelSize kernelsize) {
-        int max_size = kernelsize.M * kernelsize.N;
+        // TODO: Why is N = 1 ?????
+        int max_size = kernelsize.M * kernelsize.M;
         int helper = 0;
 
         // for all elements in a
         for (int i = 0; i < max_size; i++) {
             // copy from a to b
-            m_kernel.add_instr(inst::InstGen::base_mov_register(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_A_REG));
+            // TODO: This instructions are not implemented
+            // ldr x11, [x7]
+            m_kernel.add_instr(3107979499);
+            // str x11, [x8]
+            m_kernel.add_instr(3103785227);
 
             // calc new element_b by adding the offset (size)
-            // add x4, x4, x2
-            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, kernelsize.M, 0));
+            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, kernelsize.M * 4, 0));
             helper += kernelsize.M;
 
             // if the elements_b exeeds the maximum size
             if (max_size - helper < 0) {
                 // start over
-                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, max_size, 0));
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, max_size * 4, 0));
                 helper -= max_size;
 
                 // next element in b
-                m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, 1, 0));
+                m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, 4, 0));
                 helper += 1;
             }
 
             // next element in a
-            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG, Util::WORKING_ADDRESS_A_REG, 1, 0));
+            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG, Util::WORKING_ADDRESS_A_REG, 4, 0));
         }
     }
 
@@ -263,7 +267,7 @@ namespace mini_jit::generator {
             }
 
             if (ptype == Unary::ptype_t::identity && trans_b == 1) {
-                Unary::gen_unary_zero(area.kernelsize);
+                Unary::gen_unary_transpose(area.kernelsize);
             }
 
             // store in B

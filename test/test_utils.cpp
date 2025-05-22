@@ -1,5 +1,7 @@
 #include "./test_utils.h"
 
+#include <cmath>
+
 std::bitset<32> test_utils::get_binary(uint32_t decimal) {
     std::bitset<32> binary(decimal);
     return binary;
@@ -44,21 +46,24 @@ int test_utils::instr_is_correct(std::string call, uint32_t result, uint32_t exp
     return match ? 0 : -1;
 }
 
-void test_utils::generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero) {
+void test_utils::generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero, bool visualization) {
     float MAX = 100;
     for (uint32_t i = 0; i < height; i++) {
         for (uint32_t j = 0; j < width; j++) {
             int index = j * height + i;
             float element = static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / MAX));
+            if (visualization) {
+                element = std::trunc(element);
+            }
             M[index] = (1 - (double)set_zero) * element;
         }
     }
 }
 
 void test_utils::transpose_matrix(uint32_t height, uint32_t width, float* M, float* N) {
-    for (uint32_t i = 0; i < height; i++) {
-        for (uint32_t j = 0; j < width; j++) {
-            M[j * height + i] = N[i * width + j];
+    for (uint32_t i = 0; i < height; ++i) {
+        for (uint32_t j = 0; j < width; ++j) {
+            N[j * height + i] = M[i * width + j];
         }
     }
 }
