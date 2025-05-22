@@ -22,9 +22,10 @@ namespace mini_jit::generator {
 
     mini_jit::backend::Kernel Unary::m_kernel;
 
-    void Unary::gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize) {
+    int32_t Unary::gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize) {
         // count how many vectors are in use
         int32_t reg_count = 0;
+        int32_t op_count = 0;
         // m_kernel.add_instr(0x4F030480);  // place 100
 
         // total number of elements needed to load
@@ -36,6 +37,7 @@ namespace mini_jit::generator {
             // for each row with each quad = (4s)
             for (int i = 0; i < quads; i++) {
                 m_kernel.add_instr(inst::InstGen::neon_movi_zero(static_cast<inst::InstGen::simd_fp_t>(reg_count++), true, false));
+                op_count++;
             }
         }
 
@@ -44,18 +46,23 @@ namespace mini_jit::generator {
             m_kernel.add_instr(
                 inst::InstGen::neon_movi_zero(
                     static_cast<inst::InstGen::simd_fp_t>(reg_count), true, false));
+            op_count++;
         }
+
+        return reg_count;
     }
 
-    void Unary::gen_unary_relu(mini_jit::generator::Util::KernelSize kernelsize) {
+    int32_t Unary::gen_unary_relu(mini_jit::generator::Util::KernelSize kernelsize) {
         // count how many vectors are in use
         int32_t reg_count = 0;
+        int32_t op_count = 0;
 
         // total number of elements needed to load
         int count = kernelsize.M;
         int quads = count / 4;
         int rem = count % 4;
         m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::simd_fp_t::v31, true, false));
+        op_count++;
 
         for (int j = 0; j < kernelsize.N; j++) {
             // for each row with each quad = (4s)
@@ -65,6 +72,7 @@ namespace mini_jit::generator {
                                                                    inst::InstGen::simd_fp_t::v31,
                                                                    false));
                 reg_count++;
+                op_count++;
             }
         }
 
@@ -74,7 +82,10 @@ namespace mini_jit::generator {
                                                                static_cast<inst::InstGen::simd_fp_t>(reg_count),
                                                                inst::InstGen::simd_fp_t::v31,
                                                                false));
+            op_count++;
         }
+
+        return reg_count;
     }
 
     Unary::error_t Unary::get_kernel_sizes(uint32_t m,
@@ -147,11 +158,11 @@ namespace mini_jit::generator {
         kernelsizes.kernel4.M = kernelsizes_v[3].M;
         kernelsizes.kernel4.N = kernelsizes_v[3].N;
 
-        std::cout << "MainArea Kernel      M: " << kernelsizes.kernel1.M << ", N: " << kernelsizes.kernel1.N << "\n"
-                  << "RightArea Kernel     M: " << kernelsizes.kernel2.M << ", N: " << kernelsizes.kernel2.N << "\n"
-                  << "LowerArea Kernel     M: " << kernelsizes.kernel3.M << ", N: " << kernelsizes.kernel3.N << "\n"
-                  << "RemainderArea Kernel M: " << kernelsizes.kernel4.M << ", N: " << kernelsizes.kernel4.N << "\n"
-                  << std::endl;
+        // std::cout << "MainArea Kernel      M: " << kernelsizes.kernel1.M << ", N: " << kernelsizes.kernel1.N << "\n"
+        //<< "RightArea Kernel     M: " << kernelsizes.kernel2.M << ", N: " << kernelsizes.kernel2.N << "\n"
+        //<< "LowerArea Kernel     M: " << kernelsizes.kernel3.M << ", N: " << kernelsizes.kernel3.N << "\n"
+        //<< "RemainderArea Kernel M: " << kernelsizes.kernel4.M << ", N: " << kernelsizes.kernel4.N << "\n"
+        //<< std::endl;
 
         return Unary::error_t::success;
     }
@@ -163,6 +174,8 @@ namespace mini_jit::generator {
                                    Unary::ptype_t ptype) {
         Util::KernelSizes kernels;
         Unary::get_kernel_sizes(m, n, kernels);
+
+        int16_t fops = 0;
 
         // get area definations
         std::vector<AreaDefinition> areas;
@@ -176,26 +189,26 @@ namespace mini_jit::generator {
         int32_t main_m_iters = (int32_t)(main_m_size / (double)kernels.kernel1.M);
         int32_t main_n_iters = (int32_t)(main_n_size / (double)kernels.kernel1.N);
         areas.push_back({main_m_size, main_n_size, main_m_iters, main_n_iters, 0, kernels.kernel1});
-        std::cout << "Main Def:\n sizes: m=" << main_m_size << ", n=" << main_n_size << "\n iters: m=" << main_m_iters << ", n=" << main_n_iters << "\n offset=" << 0 << std::endl;
+        // std::cout << "Main Def:\n sizes: m=" << main_m_size << ", n=" << main_n_size << "\n iters: m=" << main_m_iters << ", n=" << main_n_iters << "\n offset=" << 0 << std::endl;
 
         int32_t right_m_iters = (int32_t)(remainder_n_size != 0) * (int32_t)(main_m_size / (double)kernels.kernel2.M);
         int32_t lower_n_iters = (int32_t)(remainder_m_size != 0) * (int32_t)(main_n_size / (double)kernels.kernel3.N);
 
         if (right_m_iters != 0) {
             uint32_t offset = main_n_size * m * 4;
-            std::cout << "Right Def:\n sizes: m=" << main_m_size << ", n=" << remainder_n_size << "\n iters: m=" << right_m_iters << ", n=" << 1 << "\n offset=" << offset << std::endl;
+            // std::cout << "Right Def:\n sizes: m=" << main_m_size << ", n=" << remainder_n_size << "\n iters: m=" << right_m_iters << ", n=" << 1 << "\n offset=" << offset << std::endl;
             areas.push_back({main_n_size, remainder_n_size, right_m_iters, 1, offset, kernels.kernel2});
         }
 
         if (lower_n_iters != 0) {
             uint32_t offset = main_m_size * 4;
-            std::cout << "Lower Def:\n sizes: m=" << remainder_m_size << ", n=" << main_n_size << "\n iters: m=" << 1 << ", n=" << lower_n_iters << "\n offset=" << offset << std::endl;
+            // std::cout << "Lower Def:\n sizes: m=" << remainder_m_size << ", n=" << main_n_size << "\n iters: m=" << 1 << ", n=" << lower_n_iters << "\n offset=" << offset << std::endl;
             areas.push_back({main_n_size, remainder_n_size, 1, lower_n_iters, offset, kernels.kernel3});
         }
 
         if (lower_n_iters != 0 && right_m_iters != 0) {
             uint32_t offset = main_n_size * m * 4 + main_m_size * 4;
-            std::cout << "Lower Def:\n sizes: m=" << remainder_m_size << ", n=" << remainder_n_size << "\n iters: m=" << 1 << ", n=" << 1 << "\n offset=" << offset << std::endl;
+            // std::cout << "Lower Def:\n sizes: m=" << remainder_m_size << ", n=" << remainder_n_size << "\n iters: m=" << 1 << ", n=" << 1 << "\n offset=" << offset << std::endl;
             areas.push_back({remainder_m_size, remainder_n_size, 1, 1, offset, kernels.kernel4});
         }
 
@@ -221,7 +234,7 @@ namespace mini_jit::generator {
                                                            inst::InstGen::x8,
                                                            (int32_t)area.offset,
                                                            0));
-            std::cout << "Add offset: " << (int32_t)area.offset << std::endl;
+            // std::cout << "Add offset: " << (int32_t)area.offset << std::endl;
 
             // shift leading dimensions to 4 bytes
             m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x2, inst::InstGen::x2, 2));
@@ -259,9 +272,9 @@ namespace mini_jit::generator {
             int32_t regs_used_l = Util::gen_matrix_load(m_kernel, area.kernelsize, inst::InstGen::x7, m);
 
             if (ptype == Unary::ptype_t::zero) {
-                Unary::gen_unary_zero(area.kernelsize);
+                this->fops += Unary::gen_unary_zero(area.kernelsize);
             } else if (ptype == Unary::ptype_t::relu) {
-                Unary::gen_unary_relu(area.kernelsize);
+                this->fops += Unary::gen_unary_relu(area.kernelsize);
             }
 
             // store in B
