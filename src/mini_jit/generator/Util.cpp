@@ -84,7 +84,8 @@ namespace mini_jit::generator {
 
     void Util::get_kernel_sizes(int32_t m,
                                 int32_t n,
-                                Util::KernelSizes& kernelsizes) {
+                                Util::KernelSizes& kernelsizes,
+                                bool only_square) {
         int32_t max_reg_space = 32;
 
         std::cout << "M: " << m << ", N: " << n << std::endl;
@@ -93,9 +94,8 @@ namespace mini_jit::generator {
         Util::get_area_sizes(m, n, work_areas);
 
         // define weights for scoring
-        double w_sd = 0.1;
-        double w_rl = 0.3;
-        double w_mn = 0.3;
+        double w_rl = 1.2;
+        double w_mn = 0.45;
 
         // find a kernel for each working areas
         std::vector<KernelSize> kernelsizes_v;
@@ -111,6 +111,7 @@ namespace mini_jit::generator {
             for (int32_t m_temp = 1; m_temp <= m_upper; m_temp++) {
                 // iterate only to m_temp as more as a biggeer n means more B load instructions
                 for (int32_t n_temp = 1; n_temp <= n_upper; n_temp++) {
+                    if ((n_temp != m_temp) && only_square) continue;
                     // get used registers
                     int32_t A_regs = (m_temp - (m_temp % 4)) / 4 + ((m_temp % 4 == 0) ? 0 : 1);
                     int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
@@ -120,18 +121,16 @@ namespace mini_jit::generator {
                     int32_t used_reg_space = A_regs + B_regs + C_regs;
 
                     if (max_reg_space >= used_reg_space && (area.M % m_temp == 0 && area.N % n_temp == 0)) {
-                        // metric for how square the rectangle spanned by n_temp and m_temp is
-                        double squareness_deficit = fabs(((double)n_temp / (double)m_temp) - 1);
-
                         // metrix for how much bigger m is compared to n
                         double n_greater_m_deficit = (double)n_temp / (double)m_temp;
 
                         // relative number of unused registers
                         double registers_left = (max_reg_space - used_reg_space) / (double)max_reg_space;
 
-                        double score = w_sd * squareness_deficit + w_rl * registers_left + w_mn * n_greater_m_deficit;
-
+                        double score = w_rl * registers_left + w_mn * n_greater_m_deficit;
+                        std::cout << m_temp << "x" << n_temp << " | " << score << ", rl: " << registers_left << ", nm: " << n_greater_m_deficit << std::endl;
                         if (score < min_score) {
+                            std::cout << "taken" << std::endl;
                             min_score = score;
                             best_m = m_temp;
                             best_n = n_temp;
