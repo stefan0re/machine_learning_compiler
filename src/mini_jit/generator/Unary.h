@@ -47,7 +47,8 @@ class mini_jit::generator::Unary {
      **/
     static error_t get_kernel_sizes(uint32_t m,
                                     uint32_t n,
-                                    Util::KernelSizes& kernel_sizes);
+                                    Util::KernelSizes& kernel_sizes,
+                                    bool only_square = false);
 
     /**
      * @brief Generate a kernel for a unary primitive.
