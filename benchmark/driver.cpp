@@ -20,8 +20,9 @@ int benchmark_unary(uint32_t m, uint32_t n, int iterations, mini_jit::generator:
         std::cout << "Identity " << std::endl;
     }
 
-    alignas(16) float a[m * n];
-    alignas(16) float b[m * n];
+    size_t size = m * n;
+    float* a = new float[size];
+    float* b = new float[size];
     std::chrono::_V2::system_clock::time_point start, end;
     bool is_correct = true;
 
@@ -48,18 +49,23 @@ int benchmark_unary(uint32_t m, uint32_t n, int iterations, mini_jit::generator:
     std::cout << "Throughput:\t" << throughput / 1e9 << " GFLOPS\n"
               << std::endl;
 
+    delete[] a;
+    delete[] b;
+
     return 1;
 }
 
 int main() {
     srand(static_cast<unsigned>(time(0)));
 
-    benchmark_unary(64, 64, 2500000, mini_jit::generator::Unary::ptype_t::zero);
-    benchmark_unary(512, 512, 1000000, mini_jit::generator::Unary::ptype_t::zero);
-    // benchmark_unary(2048, 2048, 10000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(50, 50, 11000000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(64, 64, 10000000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(512, 512, 9000000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(2048, 2048, 10000, mini_jit::generator::Unary::ptype_t::zero);
+    benchmark_unary(50, 50, 2500000, mini_jit::generator::Unary::ptype_t::relu);
     benchmark_unary(64, 64, 2500000, mini_jit::generator::Unary::ptype_t::relu);
     benchmark_unary(512, 512, 100000, mini_jit::generator::Unary::ptype_t::relu);
-    // benchmark_unary(2048, 2048, 10000, mini_jit::generator::Unary::ptype_t::relu);
+    benchmark_unary(2048, 2048, 10000, mini_jit::generator::Unary::ptype_t::relu);
 
     return 0;
 }

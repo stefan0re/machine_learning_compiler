@@ -30,12 +30,13 @@ int test_get_kernel_sizes() {
 
 int test_generate_zero() {
     Util::KernelSize kernelSize;
-    kernelSize.M = 128;
-    kernelSize.N = 64;
+    kernelSize.M = 37;
+    kernelSize.N = 114;
+    size_t size = kernelSize.M * kernelSize.N;
     int leading_dimension = kernelSize.M;
 
-    float a[kernelSize.M * kernelSize.N];
-    float b[kernelSize.M * kernelSize.N];
+    float* a = new float[size];
+    float* b = new float[size];
     Unary unary;
 
     test_utils::generate_matrix(kernelSize.M, kernelSize.N, a);
@@ -47,35 +48,36 @@ int test_generate_zero() {
 
     zero(a, b, leading_dimension, leading_dimension);
 
-    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
-
-    float c[kernelSize.M * kernelSize.N];
+    float* c = new float[size];
     test_utils::generate_matrix(kernelSize.M, kernelSize.N, c, true);
     bool match = test_utils::compare_matrix(kernelSize.M, kernelSize.N, b, c);
+
+    delete[] a;
+    delete[] b;
+    delete[] c;
 
     return match ? 0 : -1;
 }
 
 int test_generate_relu() {
     Util::KernelSize kernelSize;
-    kernelSize.M = 128;
-    kernelSize.N = 64;
+    kernelSize.M = 2048;
+    kernelSize.N = 2048;
+    size_t size = kernelSize.M * kernelSize.N;
     int leading_dimension = kernelSize.M;
 
-    float a[kernelSize.M * kernelSize.N];
-    float b[kernelSize.M * kernelSize.N];
+    float* a = new float[size];
+    float* b = new float[size];
+
     Unary unary;
 
     test_utils::generate_matrix(kernelSize.M, kernelSize.N, a);
     test_utils::generate_matrix(kernelSize.M, kernelSize.N, b);
-
     unary.generate(kernelSize.M, kernelSize.N, 0, Unary::dtype_t::fp32, Unary::ptype_t::relu);
-
     Unary::kernel_t relu = unary.get_kernel();
 
     relu(a, b, leading_dimension, leading_dimension);
-
-    float c[kernelSize.M * kernelSize.N];
+    float* c = new float[size];
 
     for (int i = 0; i < kernelSize.M; i++) {
         for (int j = 0; j < kernelSize.N; j++) {
@@ -85,6 +87,10 @@ int test_generate_relu() {
     }
 
     bool match = test_utils::compare_matrix(kernelSize.M, kernelSize.N, b, c);
+
+    delete[] a;
+    delete[] b;
+    delete[] c;
 
     return match ? 0 : -1;
 }
