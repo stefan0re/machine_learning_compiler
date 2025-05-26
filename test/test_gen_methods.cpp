@@ -119,9 +119,9 @@ int test_generate_identity() {
     test_utils::transpose_matrix(kernelSize.M, kernelSize.N, a, c);
     bool match = test_utils::compare_matrix(kernelSize.M, kernelSize.N, c, b);
 
-    test_utils::visualize_matrix(kernelSize.M, kernelSize.N, a, "A");
-    test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
-    test_utils::visualize_matrix(kernelSize.M, kernelSize.N, c, "C");
+    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, a, "A");
+    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, b, "B");
+    // test_utils::visualize_matrix(kernelSize.M, kernelSize.N, c, "C");
 
     return match ? 0 : -1;
 }
@@ -130,9 +130,9 @@ int main() {
     srand(static_cast<unsigned>(time(0)));
     int result = 0;
 
-    // result |= test_get_kernel_sizes();
-    // result |= test_generate_zero();
-    // result |= test_generate_relu();
+    result |= test_get_kernel_sizes();
+    result |= test_generate_zero();
+    result |= test_generate_relu();
     result |= test_generate_identity();
 
     return result;
