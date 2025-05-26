@@ -28,7 +28,7 @@ int test_base_stp() {
 }
 
 int test_base_mov_imm() {
-    uint32_t mc1 = l_gen.base_mov_imm(gpr_t::w1, 1, 0);
+    uint32_t mc1 = l_gen.base_mov_imm(gpr_t::w1, 1, 16);
     string call = "mov w1, #1";
     uint32_t mc2 = test_utils::as(call);
     return test_utils::instr_is_correct(call, mc1, mc2);
@@ -37,6 +37,20 @@ int test_base_mov_imm() {
 int test_base_mov_register() {
     uint32_t mc1 = l_gen.base_mov_register(gpr_t::w1, gpr_t::w2);
     string call = "mov w1, w2";
+    uint32_t mc2 = test_utils::as(call);
+    return test_utils::instr_is_correct(call, mc1, mc2);
+}
+
+int test_base_movz() {
+    uint32_t mc1 = l_gen.base_movz(gpr_t::x1, 3, 48);
+    string call = "movz x1, #3, lsl #48";
+    uint32_t mc2 = test_utils::as(call);
+    return test_utils::instr_is_correct(call, mc1, mc2);
+}
+
+int test_base_movk() {
+    uint32_t mc1 = l_gen.base_movk(gpr_t::x7, 22, 0);
+    string call = "movk x7, #22, lsl #0";
     uint32_t mc2 = test_utils::as(call);
     return test_utils::instr_is_correct(call, mc1, mc2);
 }
@@ -98,6 +112,8 @@ int main() {
     result |= test_base_stp();
     result |= test_base_mov_imm();
     result |= test_base_mov_register();
+    result |= test_base_movz();
+    result |= test_base_movk();
     result |= test_base_add_imm();
     result |= test_base_add_shifted_register();
     result |= test_base_sub_imm();
