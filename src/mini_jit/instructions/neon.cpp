@@ -227,3 +227,41 @@ uint32_t mini_jit::instructions::InstGen::neon_fmax_vector(simd_fp_t reg_dest,
 
     return l_ins;
 }
+
+uint32_t mini_jit::instructions::InstGen::neon_ld1_multiple(simd_fp_t reg_base,
+                                                            gpr_t reg_src,
+                                                            ld1_opcode_t op_code,
+                                                            ld1_t element) {
+    // Basis-Opcode für LD1 (multiple structures)
+    uint32_t l_ins = 0x0c402000;
+
+    l_ins |= element;
+    l_ins |= op_code << 12;
+
+    // Set Rn (source register) bits [9:5]
+    l_ins |= (reg_src & 0x1f) << 5;
+
+    // Set Rt (first or only register) bits [4:0]
+    l_ins |= (reg_base & 0x1f);
+
+    return l_ins;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_st1_multiple(simd_fp_t reg_base,
+                                                            gpr_t reg_src,
+                                                            ld1_opcode_t op_code,
+                                                            ld1_t element) {
+    // Basis-Opcode für LD1 (multiple structures)
+    uint32_t l_ins = 0x0c002000;
+
+    l_ins |= element;
+    l_ins |= op_code << 12;
+
+    // Set Rn (source register) bits [9:5]
+    l_ins |= (reg_src & 0x1f) << 5;
+
+    // Set Rt (first or only register) bits [4:0]
+    l_ins |= (reg_base & 0x1f);
+
+    return l_ins;
+}

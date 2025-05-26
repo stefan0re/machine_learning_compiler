@@ -140,11 +140,24 @@ class mini_jit::instructions::InstGen {
     } element_spec_t;
 
     typedef enum : uint32_t {
+        S2 = 0x800,
+        S4 = 0x40000800,
+        D2 = 0x40000c00
+    } ld1_t;
+
+    typedef enum : uint32_t {
         vc1 = 0xc00,
         vc2 = 0x4800,
         vc3 = 0x1800,
         vc4 = 0x800,
     } vector_count_t;
+
+    typedef enum : uint32_t {
+        one_regs = 0x7,
+        two_regs = 0xa,
+        three_regs = 0x6,
+        four_regs = 0x2,
+    } ld1_opcode_t;
 
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
@@ -172,6 +185,10 @@ class mini_jit::instructions::InstGen {
      * @param Wm  -> SRC
      */
     static uint32_t base_mov_register(gpr_t dst_reg, gpr_t src_reg);
+
+    static uint32_t base_movz(gpr_t Xd, uint16_t imm16, uint8_t shift /* must be 0, 16, 32, or 48 */);
+
+    static uint32_t base_movk(gpr_t Xd, uint16_t imm16, uint8_t shift /* must be 0, 16, 32, or 48 */);
 
     /**
      * @brief Generates an ADD (Add Immediate) instruction.
@@ -295,5 +312,15 @@ class mini_jit::instructions::InstGen {
                                      simd_fp_t reg_src1,
                                      simd_fp_t reg_src2,
                                      bool is_double_precision);
+
+    static uint32_t neon_ld1_multiple(simd_fp_t base_reg,
+                                      gpr_t src_reg,
+                                      ld1_opcode_t op_code,
+                                      ld1_t element);
+
+    static uint32_t neon_st1_multiple(simd_fp_t base_reg,
+                                      gpr_t src_reg,
+                                      ld1_opcode_t op_code,
+                                      ld1_t element);
 };
 #endif

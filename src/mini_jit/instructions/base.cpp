@@ -53,6 +53,44 @@ namespace mini_jit {
             return ins;
         }
 
+        uint32_t InstGen::base_movz(gpr_t Xd, uint16_t imm16, uint8_t shift /* must be 0, 16, 32, or 48 */) {
+            uint32_t ins = 0xD2800000u;  // Base encoding for MOVZ
+
+            // Set destination register Rd (bits [4:0])
+            ins |= (Xd & 0x1Fu);
+
+            // Set imm16 (bits [20:5])
+            ins |= ((imm16 & 0xFFFFu) << 5);
+
+            // Set hw (shift >> 4, bits [22:21])
+            uint32_t hw = (shift / 16) & 0x3u;
+            ins |= (hw << 21);
+
+            // Set sf (bit 31) → 1 for 64-bit registers (X registers)
+            ins |= ((Xd >> 5) & 0x1u) << 31;
+
+            return ins;
+        }
+
+        uint32_t InstGen::base_movk(gpr_t Xd, uint16_t imm16, uint8_t shift /* must be 0, 16, 32, or 48 */) {
+            uint32_t ins = 0xF2800000u;  // Base encoding for MOVK
+
+            // Set destination register Rd (bits [4:0])
+            ins |= (Xd & 0x1Fu);
+
+            // Set imm16 (bits [20:5])
+            ins |= ((imm16 & 0xFFFFu) << 5);
+
+            // Set hw (shift >> 4, bits [22:21])
+            uint32_t hw = (shift / 16) & 0x3u;
+            ins |= (hw << 21);
+
+            // Set sf (bit 31) → 1 for 64-bit registers (X registers)
+            ins |= ((Xd >> 5) & 0x1u) << 31;
+
+            return ins;
+        }
+
         // add  <W/X>d, <W/X>n, #imm12 {, LSL #shift}
         uint32_t InstGen::base_add_imm(gpr_t Wd, gpr_t Wn, int32_t imm12, int32_t shift) {
             uint32_t ins = 0x11000000u;
