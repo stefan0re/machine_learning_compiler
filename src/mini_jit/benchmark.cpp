@@ -8,18 +8,22 @@
 /* currently just testing if load and store C works (copy) */
 
 int main(int argc, char *argv[]) {
-    std::cout << "mini_jit benchmark" << std::endl;
-    std::cout << "===================" << std::endl;
+    // std::cout << "mini_jit benchmark" << std::endl;
+    // std::cout << "===================" << std::endl;
 
     int64_t m = atoi(argv[1]);
     int64_t n = atoi(argv[2]);
-    int64_t k = (argc > 1) ? atoi(argv[1]) : 64;
+    int64_t k = (argc > 3) ? atoi(argv[3]) : 1;
 
     const int64_t lda = m;
     const int64_t ldb = k;
     const int64_t ldc = m;
     const int64_t br_stride_a = m * k;
     const int64_t br_stride_b = k * n;
+
+    std::cout << "Dimensions: M = " << m << ", N = " << n << ", K = " << k << std::endl;
+    // std::cout << "Leading dims: A = " << lda << ", B = " << ldb << ", C = " << ldc << std::endl;
+    // std::cout << "Brgemm stride: A = " << br_stride_a << ", B = " << br_stride_b << std::endl;
 
     mini_jit::generator::Brgemm l_brgemm;
     l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
@@ -31,10 +35,10 @@ int main(int argc, char *argv[]) {
     float *l_c_2 = (float *)malloc(ldc * n * sizeof(float));
 
     for (int i = 0; i < lda * k; i++) {
-        l_a[i] = (float)drand48()*0;
+        l_a[i] = (float)drand48();
     }
     for (int i = 0; i < ldb * n; i++) {
-        l_b[i] = (float)drand48()*0;
+        l_b[i] = (float)drand48();
     }
     for (int i = 0; i < ldc * n; i++) {
         l_c_1[i] = (float)drand48();
@@ -62,11 +66,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-   
+    if (l_diff < 1e-4) l_diff = 0;
 
-    std::cout << "Dimensions: M = " << m << ", N = " << n << ", K = " << k << std::endl;
-    std::cout << "Leading dims: A = " << lda << ", B = " << ldb << ", C = " << ldc << std::endl;
-    std::cout << "Brgemm stride: A = " << br_stride_a << ", B = " << br_stride_b << std::endl;
     std::cout << "Diff: " << l_diff << std::endl;
     std::cout << "===================" << std::endl;
 

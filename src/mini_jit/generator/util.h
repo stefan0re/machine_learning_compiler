@@ -58,6 +58,13 @@ namespace mini_jit::generator {
                                      int32_t n,
                                      KernelSizes &kernelsizes);
 
+        static void get_kernel_sizes_brgemm( int32_t m,
+                                             int32_t n,
+                                             mini_jit::generator::Util::KernelSize &kernelsize_1,
+                                             mini_jit::generator::Util::KernelSize &kernelsize_2,
+                                             int32_t &i_used_vector_reg_count,
+                                             int32_t &i_used_vector_reg_count_small);
+
         /**
          * @brief Generate microkernels.
          * @param kernel The kernel sizes.

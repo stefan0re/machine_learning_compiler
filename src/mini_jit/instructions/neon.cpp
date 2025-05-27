@@ -54,7 +54,7 @@ uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
                                                    gpr_t add_src,
                                                    int32_t imm9,
                                                    arr_spec_t i_dtype ) {
-    uint32_t l_inst = 0xbd400000;
+    uint32_t l_inst = 0x3c40'0400;
 
     l_inst |= (reg_dst & 0x1f);
     l_inst |= i_dtype;
@@ -82,7 +82,7 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_by_element(simd_fp_t reg_des
                                                                simd_fp_t reg_src1,
                                                                simd_fp_t reg_src2,
                                                                uint32_t arr_index) {
-    uint32_t l_ins = 0x4f801000;
+    uint32_t l_ins = 0xfc00'0400;
 
     l_ins |= (reg_dest & 0x1f);
     l_ins |= (reg_src1 & 0x1f) << 5;

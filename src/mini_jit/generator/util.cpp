@@ -394,203 +394,231 @@ namespace mini_jit::generator {
         m_kernel.force_clear();
     }
 
-    void Util::generator_load_reg_block( backend::Kernel& i_kernel,
-                                         Util::KernelSize& i_kernelsize,
-                                         InstGen::gpr_t i_register ){
-        
-
+    void Util::generator_load_reg_block(backend::Kernel &i_kernel,
+                                        Util::KernelSize &i_kernelsize,
+                                        InstGen::gpr_t i_register) {
         int32_t l_n_count = 0;
         int32_t l_reg_count = 0;
 
         // prepare C restore register Help 1
-        i_kernel.add_instr(InstGen::base_mov_imm( Util::HELP_REG_1, i_kernelsize.N, 0));
+        i_kernel.add_instr(InstGen::base_mov_imm(Util::HELP_REG_1, i_kernelsize.N, 0));
         i_kernel.add_instr(InstGen::base_mul_reg(Util::HELP_REG_1, Util::HELP_REG_1, Util::LEADING_DIM_C_REG));
 
-        for( ; l_n_count < i_kernelsize.N; l_n_count++){
+        for (; l_n_count < i_kernelsize.N; l_n_count++) {
             int32_t l_m_count = 0;
-            while( l_m_count < i_kernelsize.M ){
-                if( (i_kernelsize.M - l_m_count) > 15 ){
-                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc4));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            64,
-                                                            0));
+            while (l_m_count < i_kernelsize.M) {
+                if ((i_kernelsize.M - l_m_count) > 15) {
+                    i_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc4));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             64,
+                                                             0));
                     l_reg_count += 4;
                     l_m_count += 16;
-                } else if( (i_kernelsize.M - l_m_count) > 11 ){
-                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc3));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            48,
-                                                            0));
+                } else if ((i_kernelsize.M - l_m_count) > 11) {
+                    i_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc3));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             48,
+                                                             0));
                     l_reg_count += 3;
                     l_m_count += 12;
-                } else if( (i_kernelsize.M - l_m_count) > 7 ){
-                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc2));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            32,
-                                                            0));
+                } else if ((i_kernelsize.M - l_m_count) > 7) {
+                    i_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc2));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             32,
+                                                             0));
                     l_reg_count += 2;
-                    l_m_count +=8;
-                } else if( (i_kernelsize.M - l_m_count) > 3 ){
-                    i_kernel.add_instr( InstGen::neon_ld1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc1));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                               i_register,
-                                                               16,
-                                                               0));
+                    l_m_count += 8;
+                } else if ((i_kernelsize.M - l_m_count) > 3) {
+                    i_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc1));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             16,
+                                                             0));
                     l_reg_count += 1;
                     l_m_count += 4;
-                }  else{ 
-                    if( (i_kernelsize.M - l_m_count) > 1){
-                        i_kernel.add_instr( InstGen::neon_ldr( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                        i_register,
-                                                        0,
-                                                        InstGen::arr_spec_t::d ));
-                        i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                                   i_register,
-                                                                   8,
-                                                                   0));
-                        l_m_count +=2;
+                } else {
+                    if ((i_kernelsize.M - l_m_count) > 1) {
+                        i_kernel.add_instr(InstGen::neon_ldr(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                             i_register,
+                                                             0,
+                                                             InstGen::arr_spec_t::d));
+                        i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                                 i_register,
+                                                                 8,
+                                                                 0));
+                        l_m_count += 2;
                     }
-                    if( ((i_kernelsize.M - l_m_count) % 2) == 1){
-                        i_kernel.add_instr( InstGen::neon_ld1_scalar_index( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                            i_register,
-                                                                            (i_kernelsize.M - l_m_count)+1));
-                        i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            4,
-                                                            0));
+                    if (((i_kernelsize.M - l_m_count) % 2) == 1) {
+                        i_kernel.add_instr(InstGen::neon_ld1_scalar_index(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                          i_register,
+                                                                          (i_kernelsize.M % 4 == 3) ? 2 : 0));
+                        i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                                 i_register,
+                                                                 4,
+                                                                 0));
                         l_m_count++;
-
                     }
                     l_reg_count += 1;
                 }
             }
             // Add Leading dimension
-            i_kernel.add_instr( InstGen::base_sub_imm( i_register,
-                                                       i_register,
-                                                       i_kernelsize.M * 4,
-                                                       0 ));
-            i_kernel.add_instr( InstGen::base_add_shifted_register( i_register,
-                                                                    i_register,
-                                                                    Util::LEADING_DIM_C_REG,
-                                                                    0,
-                                                                    0 ));            
+            i_kernel.add_instr(InstGen::base_sub_imm(i_register,
+                                                     i_register,
+                                                     i_kernelsize.M * 4,
+                                                     0));
+            i_kernel.add_instr(InstGen::base_add_shifted_register(i_register,
+                                                                  i_register,
+                                                                  Util::LEADING_DIM_C_REG,
+                                                                  0,
+                                                                  0));
         }
-        // restore Working C reg for now with 
-        i_kernel.add_instr(InstGen::base_sub_shifted_register( i_register, 
-                                                               i_register,
-                                                               HELP_REG_1,
-                                                               0,
-                                                               0));
-        
+        // restore Working C reg for now with
+        i_kernel.add_instr(InstGen::base_sub_shifted_register(i_register,
+                                                              i_register,
+                                                              HELP_REG_1,
+                                                              0,
+                                                              0));
     }
 
-    void Util::generator_store_reg_block( backend::Kernel& i_kernel,
-                                          Util::KernelSize& i_kernelsize,
-                                          InstGen::gpr_t i_register){
+    void Util::generator_store_reg_block(backend::Kernel &i_kernel,
+                                         Util::KernelSize &i_kernelsize,
+                                         InstGen::gpr_t i_register) {
         int32_t l_n_count = 0;
         int32_t l_reg_count = 0;
 
         // prepare C restore register Help 1
-        i_kernel.add_instr(InstGen::base_mov_imm( Util::HELP_REG_1, i_kernelsize.N, 0));
+        i_kernel.add_instr(InstGen::base_mov_imm(Util::HELP_REG_1, i_kernelsize.N, 0));
         i_kernel.add_instr(InstGen::base_mul_reg(Util::HELP_REG_1, Util::HELP_REG_1, Util::LEADING_DIM_C_REG));
 
-        for( ; l_n_count < i_kernelsize.N; l_n_count++){
+        for (; l_n_count < i_kernelsize.N; l_n_count++) {
             int32_t l_m_count = 0;
-            while( l_m_count < i_kernelsize.M ){
-                if( (i_kernelsize.M - l_m_count) > 15 ){
-                    i_kernel.add_instr( InstGen::neon_st1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc4));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            64,
-                                                            0));
+            while (l_m_count < i_kernelsize.M) {
+                if ((i_kernelsize.M - l_m_count) > 15) {
+                    i_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc4));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             64,
+                                                             0));
                     l_reg_count += 4;
                     l_m_count += 16;
-                } else if( (i_kernelsize.M - l_m_count) > 11 ){
-                    i_kernel.add_instr( InstGen::neon_st1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc3));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            48,
-                                                            0));
+                } else if ((i_kernelsize.M - l_m_count) > 11) {
+                    i_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc3));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             48,
+                                                             0));
                     l_reg_count += 3;
                     l_m_count += 12;
-                } else if( (i_kernelsize.M - l_m_count) > 7 ){
-                    i_kernel.add_instr( InstGen::neon_st1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc2));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            32,
-                                                            0));
+                } else if ((i_kernelsize.M - l_m_count) > 7) {
+                    i_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc2));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             32,
+                                                             0));
                     l_reg_count += 2;
-                    l_m_count +=8;
-                } else if( (i_kernelsize.M - l_m_count) > 3 ){
-                    i_kernel.add_instr( InstGen::neon_st1_no_offset( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                    i_register,
-                                                                    InstGen::vector_count_t::vc1));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            16,
-                                                            0));
+                    l_m_count += 8;
+                } else if ((i_kernelsize.M - l_m_count) > 3) {
+                    i_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                   i_register,
+                                                                   InstGen::vector_count_t::vc1));
+                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                             i_register,
+                                                             16,
+                                                             0));
                     l_reg_count += 1;
                     l_m_count += 4;
-                }  else{ 
-                    if( (i_kernelsize.M - l_m_count) > 1){
-                        i_kernel.add_instr( InstGen::neon_str( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                               i_register,
-                                                               0,
-                                                               InstGen::arr_spec_t::d ));
-                    i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                               i_register,
-                                                               8,
-                                                               0));                                                               
-                        l_m_count +=2;
+                } else {
+                    if ((i_kernelsize.M - l_m_count) > 1) {
+                        i_kernel.add_instr(InstGen::neon_str(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                             i_register,
+                                                             0,
+                                                             InstGen::arr_spec_t::d));
+                        i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                                 i_register,
+                                                                 8,
+                                                                 0));
+                        l_m_count += 2;
                     }
-                    if( ((i_kernelsize.M - l_m_count) % 2) == 1){
-                        i_kernel.add_instr( InstGen::neon_st1_scalar_index( static_cast<InstGen::simd_fp_t>(l_reg_count),
-                                                                            i_register,
-                                                                            (i_kernelsize.M - l_m_count)+1));
-                        i_kernel.add_instr( InstGen::base_add_imm( i_register,
-                                                            i_register,
-                                                            4,
-                                                            0));
+                    if (((i_kernelsize.M - l_m_count) % 2) == 1) {
+                        i_kernel.add_instr(InstGen::neon_st1_scalar_index(static_cast<InstGen::simd_fp_t>(l_reg_count),
+                                                                          i_register,
+                                                                          (i_kernelsize.M % 4 == 3) ? 2 : 0));
+                        i_kernel.add_instr(InstGen::base_add_imm(i_register,
+                                                                 i_register,
+                                                                 4,
+                                                                 0));
                         l_m_count++;
                     }
-                    
+
                     l_reg_count += 1;
                 }
             }
             // Add Leading dimension
-            i_kernel.add_instr( InstGen::base_sub_imm( i_register,
-                                                    i_register,
-                                                    i_kernelsize.M * 4,
-                                                    0 ));
-            i_kernel.add_instr( InstGen::base_add_shifted_register( i_register,
-                                                                    i_register,
-                                                                    Util::LEADING_DIM_C_REG,
-                                                                    0,
-                                                                    0 ));            
+            i_kernel.add_instr(InstGen::base_sub_imm(i_register,
+                                                     i_register,
+                                                     i_kernelsize.M * 4,
+                                                     0));
+            i_kernel.add_instr(InstGen::base_add_shifted_register(i_register,
+                                                                  i_register,
+                                                                  Util::LEADING_DIM_C_REG,
+                                                                  0,
+                                                                  0));
         }
-        // restore Working C reg for now with 
-        i_kernel.add_instr(InstGen::base_sub_shifted_register( WORKING_ADDRESS_C_REG, 
-                                                                WORKING_ADDRESS_C_REG,
-                                                                HELP_REG_1,
-                                                                0,
-                                                                0));
+        // restore Working C reg for now with
+        i_kernel.add_instr(InstGen::base_sub_shifted_register(WORKING_ADDRESS_C_REG,
+                                                              WORKING_ADDRESS_C_REG,
+                                                              HELP_REG_1,
+                                                              0,
+                                                              0));
+    }
+
+    void mini_jit::generator::Util::get_kernel_sizes_brgemm(int32_t m,
+                                                            int32_t n,
+                                                            mini_jit::generator::Util::KernelSize &kernelsize_big,
+                                                            mini_jit::generator::Util::KernelSize &kernelsize_small,
+                                                            int32_t &i_used_vector_reg_count_big,
+                                                            int32_t &i_used_vector_reg_count_small) {
+        int32_t max_n_blocking = 30;
+        int32_t m_blocks = 0;
+        if (m > 12) {
+            m_blocks = 4;
+        } else {
+            m_blocks = (m + 3) / 4;  // up_div
+        }
+
+        while (m_blocks * max_n_blocking + m_blocks + 1 > 32) {
+            max_n_blocking--;
+        }
+
+        if (max_n_blocking > n) {
+            max_n_blocking = n;
+        }
+
+        kernelsize_big.M = (m > 15) ? 16 : m;
+        kernelsize_big.N = max_n_blocking;
+        i_used_vector_reg_count_big = m_blocks * max_n_blocking;
+
+        kernelsize_small.M = (m > 15) ? 16 : m;
+        kernelsize_small.N = n % max_n_blocking;
+
+        i_used_vector_reg_count_small = m_blocks * kernelsize_small.N;
     }
 
 }  // namespace mini_jit::generator
