@@ -140,6 +140,7 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
     int reg_count_small = 0;
     int reg_count_reminder_big = 0;
     int reg_count_reminder_small = 0;
+    std::size_t br_loop_pos = 0;
     Util::get_kernel_sizes_brgemm(m, n, kernelsize_big, kernelsize_small, reg_count_big, reg_count_small);
 
     int full_m_loop = m / kernelsize_big.M;
@@ -178,6 +179,17 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
         Util::generator_load_reg_block(m_kernel, kernelsize_big, Util::WORKING_ADDRESS_C_REG);
 
+        if (br_size > 1) {
+            // set BR loop counter
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::BR_LOOP_COUNT_REG, br_size, 0));
+            // sub BR loop register
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::BR_LOOP_COUNT_REG,
+                                                           Util::BR_LOOP_COUNT_REG,
+                                                           1,
+                                                           0));
+            // get BR loop position
+            br_loop_pos = m_kernel.get_size();
+        }
         // set K loop  counter
         m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
         // sub K loop register
@@ -206,28 +218,96 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
                                                        (k_loop_pos - m_kernel.get_size()) / 4 - 1));
 
+        if (br_size > 1) {
+            // adjust Working A
+            // nothing to do because A can continue perfectly
+
+            // adjust Working B
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
+                                                           Util::WORKING_ADDRESS_B_REG,
+                                                           k * 4,
+                                                           0));
+            // add BR stride to Working B
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1, n, 0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_B_REG));
+            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::HELP_REG_1,
+                                                                        0,
+                                                                        0));
+
+            // cbnz BR loop
+            m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::BR_LOOP_COUNT_REG,
+                                                           (br_loop_pos - m_kernel.get_size()) / 4 - 1));
+
+            // restore Working A
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                           br_size,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2,
+                                                           k,
+                                                           0));
+
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::HELP_REG_2));
+
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_A_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::HELP_REG_1,
+                                                                        0,
+                                                                        0));
+            // restore Working B
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                           br_size,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2,
+                                                           n,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::HELP_REG_2));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_B_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::HELP_REG_1,
+                                                                        0,
+                                                                        0));
+        }
+
         Util::generator_store_reg_block(m_kernel, kernelsize_big, Util::WORKING_ADDRESS_C_REG);
 
         // restore Working A
-        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2, k, 0));
-        m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_2,
-                                                       Util::HELP_REG_2,
-                                                       Util::LEADING_DIM_A_REG));
-        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
-                                                                    Util::WORKING_ADDRESS_A_REG,
-                                                                    Util::HELP_REG_2,
-                                                                    0,
-                                                                    0));
+        if (br_size < 2) {
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2, k, 0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_2,
+                                                           Util::HELP_REG_2,
+                                                           Util::LEADING_DIM_A_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::HELP_REG_2,
+                                                                        0,
+                                                                        0));
+        }
         // Adjust A to next M block
         m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG,
                                                        Util::WORKING_ADDRESS_A_REG,
                                                        kernelsize_big.M * 4,
                                                        0));
-        // restore Working B
-        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
-                                                       Util::WORKING_ADDRESS_B_REG,
-                                                       k * 4,
-                                                       0));
+        if (br_size < 2) {
+            // restore Working B
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
+                                                           Util::WORKING_ADDRESS_B_REG,
+                                                           k * 4,
+                                                           0));
+        }
         // restore Working C
         m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_C_REG,
                                                        Util::WORKING_ADDRESS_C_REG,
@@ -239,10 +319,22 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                        (m_loop_pos - m_kernel.get_size()) / 4 - 1));
 
         /****************************/
-        // compute reminder block
+        // compute M reminder block
         /****************************/
         if (rem_m_loop > 0) {
             Util::generator_load_reg_block(m_kernel, kernelsize_reminder_big, Util::WORKING_ADDRESS_C_REG);
+
+            if (br_size > 1) {
+                // set BR loop counter
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::BR_LOOP_COUNT_REG, br_size, 0));
+                // sub BR loop register
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::BR_LOOP_COUNT_REG,
+                                                               Util::BR_LOOP_COUNT_REG,
+                                                               1,
+                                                               0));
+                // get BR loop position
+                br_loop_pos = m_kernel.get_size();
+            }
 
             // set K loop  counter
             m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
@@ -274,6 +366,70 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
             m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
                                                            (k_loop_pos - m_kernel.get_size()) / 4 - 1));
 
+            if (br_size > 1) {
+                // adjust Working A
+                // nothing to do because A can continue perfectly
+
+                // adjust Working B
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
+                                                               Util::WORKING_ADDRESS_B_REG,
+                                                               k * 4,
+                                                               0));
+                // add BR stride to Working B
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1, n, 0));
+                m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                               Util::HELP_REG_1,
+                                                               Util::LEADING_DIM_B_REG));
+                m_kernel.add_instr(inst::InstGen::base_add_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                            Util::WORKING_ADDRESS_B_REG,
+                                                                            Util::HELP_REG_1,
+                                                                            0,
+                                                                            0));
+
+                // cbnz BR loop
+                m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::BR_LOOP_COUNT_REG,
+                                                               (br_loop_pos - m_kernel.get_size()) / 4 - 1));
+
+                // restore Working A
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                               br_size,
+                                                               0));
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2,
+                                                               k,
+                                                               0));
+
+                m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                               Util::HELP_REG_1,
+                                                               Util::HELP_REG_2));
+
+                m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                               Util::HELP_REG_1,
+                                                               Util::LEADING_DIM_A_REG));
+                m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
+                                                                            Util::WORKING_ADDRESS_A_REG,
+                                                                            Util::HELP_REG_1,
+                                                                            0,
+                                                                            0));
+                // restore Working B
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                               br_size,
+                                                               0));
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2,
+                                                               n,
+                                                               0));
+                m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                               Util::HELP_REG_1,
+                                                               Util::HELP_REG_2));
+                m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                               Util::HELP_REG_1,
+                                                               Util::LEADING_DIM_B_REG));
+                m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                            Util::WORKING_ADDRESS_B_REG,
+                                                                            Util::HELP_REG_1,
+                                                                            0,
+                                                                            0));
+            }
+
             Util::generator_store_reg_block(m_kernel, kernelsize_reminder_big, Util::WORKING_ADDRESS_C_REG);
         }
 
@@ -282,7 +438,7 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                             Util::INPUT_ADDRESS_A_REG));
 
         // restore Working B
-        if (rem_m_loop > 0) {
+        if (rem_m_loop > 0 && br_size < 2) {
             m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
                                                            Util::WORKING_ADDRESS_B_REG,
                                                            k * 4,
@@ -305,15 +461,15 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                        Util::WORKING_ADDRESS_C_REG,
                                                        kernelsize_big.M * 4 * full_m_loop,
                                                        0));
-        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_3,
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
                                                        kernelsize_big.N,
                                                        0));
-        m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_3,
-                                                       Util::HELP_REG_3,
+        m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                       Util::HELP_REG_1,
                                                        Util::LEADING_DIM_C_REG));
         m_kernel.add_instr(inst::InstGen::base_add_shifted_register(Util::WORKING_ADDRESS_C_REG,
                                                                     Util::WORKING_ADDRESS_C_REG,
-                                                                    Util::HELP_REG_3,
+                                                                    Util::HELP_REG_1,
                                                                     0,
                                                                     0));
 
@@ -321,6 +477,10 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::N_LOOP_COUNT_REG,
                                                        (n_loop_pos - m_kernel.get_size()) / 4 - 1));
     }
+
+    /****************************/
+    // compute N reminder Block
+    /****************************/
     if (rem_n_loop > 0) {
         // set M loop counter
         m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::M_LOOP_COUNT_REG, full_m_loop, 0));
@@ -333,6 +493,17 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         std::size_t m_loop_pos = m_kernel.get_size();
 
         Util::generator_load_reg_block(m_kernel, kernelsize_small, Util::WORKING_ADDRESS_C_REG);
+        if (br_size > 1) {
+            // set BR loop counter
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::BR_LOOP_COUNT_REG, br_size, 0));
+            // sub BR loop register
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::BR_LOOP_COUNT_REG,
+                                                           Util::BR_LOOP_COUNT_REG,
+                                                           1,
+                                                           0));
+            // get BR loop position
+            br_loop_pos = m_kernel.get_size();
+        }
         // set K loop  counter
         m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
         // sub K loop register
@@ -359,28 +530,97 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
                                                        (k_loop_pos - m_kernel.get_size()) / 4 - 1));
 
+        if (br_size > 1) {
+            // adjust Working A
+            // nothing to do because A can continue perfectly
+
+            // adjust Working B
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
+                                                           Util::WORKING_ADDRESS_B_REG,
+                                                           k * 4,
+                                                           0));
+            // add BR stride to Working B
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1, n, 0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_B_REG));
+            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::HELP_REG_1,
+                                                                        0,
+                                                                        0));
+
+            // cbnz BR loop
+            m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::BR_LOOP_COUNT_REG,
+                                                           (br_loop_pos - m_kernel.get_size()) / 4 - 1));
+
+            // restore Working A
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                           br_size,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2,
+                                                           k,
+                                                           0));
+
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::HELP_REG_2));
+
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_A_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::HELP_REG_1,
+                                                                        0,
+                                                                        0));
+            // restore Working B
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                           br_size,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2,
+                                                           n,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::HELP_REG_2));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_B_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::WORKING_ADDRESS_B_REG,
+                                                                        Util::HELP_REG_1,
+                                                                        0,
+                                                                        0));
+        }
+
         Util::generator_store_reg_block(m_kernel, kernelsize_small, Util::WORKING_ADDRESS_C_REG);
 
         // restore Working A
-        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2, k, 0));
-        m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_2,
-                                                       Util::HELP_REG_2,
-                                                       Util::LEADING_DIM_A_REG));
-        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
-                                                                    Util::WORKING_ADDRESS_A_REG,
-                                                                    Util::HELP_REG_2,
-                                                                    0,
-                                                                    0));
+        if (br_size < 2) {
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_2, k, 0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_2,
+                                                           Util::HELP_REG_2,
+                                                           Util::LEADING_DIM_A_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::WORKING_ADDRESS_A_REG,
+                                                                        Util::HELP_REG_2,
+                                                                        0,
+                                                                        0));
+        }
+
         // Adjust A to next M block
         m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG,
                                                        Util::WORKING_ADDRESS_A_REG,
                                                        kernelsize_small.M * 4,
                                                        0));
         // restore Working B
-        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
-                                                       Util::WORKING_ADDRESS_B_REG,
-                                                       k * 4,
-                                                       0));
+        if (br_size < 2) {
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
+                                                           Util::WORKING_ADDRESS_B_REG,
+                                                           k * 4,
+                                                           0));
+        }
         // restore Working C
         m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_C_REG,
                                                        Util::WORKING_ADDRESS_C_REG,
@@ -392,6 +632,18 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
         if (rem_m_loop > 0) {
             Util::generator_load_reg_block(m_kernel, kernelsize_reminder_small, Util::WORKING_ADDRESS_C_REG);
+
+            if (br_size > 1) {
+                // set BR loop counter
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::BR_LOOP_COUNT_REG, br_size, 0));
+                // sub BR loop register
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::BR_LOOP_COUNT_REG,
+                                                               Util::BR_LOOP_COUNT_REG,
+                                                               1,
+                                                               0));
+                // get BR loop position
+                br_loop_pos = m_kernel.get_size();
+            }
 
             // set K loop  counter
             m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
@@ -423,22 +675,40 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
             m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
                                                            (k_loop_pos - m_kernel.get_size()) / 4 - 1));
 
+            if (br_size > 1) {
+                // adjust Working A
+                // nothing to do because A can continue perfectly
+
+                // adjust Working B
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG,
+                                                               Util::WORKING_ADDRESS_B_REG,
+                                                               k * 4,
+                                                               0));
+                // add BR stride to Working B
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1, n, 0));
+                m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                               Util::HELP_REG_1,
+                                                               Util::LEADING_DIM_B_REG));
+                m_kernel.add_instr(inst::InstGen::base_add_shifted_register(Util::WORKING_ADDRESS_B_REG,
+                                                                            Util::WORKING_ADDRESS_B_REG,
+                                                                            Util::HELP_REG_1,
+                                                                            0,
+                                                                            0));
+
+                // cbnz BR loop
+                m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::BR_LOOP_COUNT_REG,
+                                                               (br_loop_pos - m_kernel.get_size()) / 4 - 1));
+            }
+
             Util::generator_store_reg_block(m_kernel, kernelsize_reminder_small, Util::WORKING_ADDRESS_C_REG);
         }
-        }
+    }
 
     // procedure call standard (load from stack)
     m_kernel.add_instr(0x6CC13FEE);
     m_kernel.add_instr(0x6CC137EC);
     m_kernel.add_instr(0x6CC12FEA);
     m_kernel.add_instr(0x6CC127E8);
-
-    // print out all 4 kernel types:
-    std::cout << "Kernel sizes:" << std::endl;
-    std::cout << "  Big kernel: M = " << kernelsize_big.M << ", N = " << kernelsize_big.N << std::endl;
-    std::cout << "  Reminder big kernel: M = " << kernelsize_reminder_big.M << ", N = " << kernelsize_reminder_big.N << std::endl;
-    std::cout << "  Small kernel: M = " << kernelsize_small.M << ", N = " << kernelsize_small.N << std::endl;
-    std::cout << "  Reminder small kernel: M = " << kernelsize_reminder_small.M << ", N = " << kernelsize_reminder_small.N << std::endl;
 
     // ret
     m_kernel.add_instr(mini_jit::instructions::InstGen::base_ret());

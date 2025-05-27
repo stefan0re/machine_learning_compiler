@@ -29,11 +29,11 @@ namespace mini_jit::generator {
         inline static constexpr mini_jit::instructions::InstGen::gpr_t K_LOOP_COUNT_REG = mini_jit::instructions::InstGen::x10;
         inline static constexpr mini_jit::instructions::InstGen::gpr_t M_LOOP_COUNT_REG = mini_jit::instructions::InstGen::x11;
         inline static constexpr mini_jit::instructions::InstGen::gpr_t N_LOOP_COUNT_REG = mini_jit::instructions::InstGen::x12;
+        inline static constexpr mini_jit::instructions::InstGen::gpr_t BR_LOOP_COUNT_REG = mini_jit::instructions::InstGen::x16;
 
         inline static constexpr mini_jit::instructions::InstGen::gpr_t HELP_REG_1 = mini_jit::instructions::InstGen::x13;
         inline static constexpr mini_jit::instructions::InstGen::gpr_t HELP_REG_2 = mini_jit::instructions::InstGen::x14;
         inline static constexpr mini_jit::instructions::InstGen::gpr_t HELP_REG_3 = mini_jit::instructions::InstGen::x15;
-        inline static constexpr mini_jit::instructions::InstGen::gpr_t HELP_REG_4 = mini_jit::instructions::InstGen::x16;
 
         struct KernelSize {
             int M;
@@ -58,12 +58,12 @@ namespace mini_jit::generator {
                                      int32_t n,
                                      KernelSizes &kernelsizes);
 
-        static void get_kernel_sizes_brgemm( int32_t m,
-                                             int32_t n,
-                                             mini_jit::generator::Util::KernelSize &kernelsize_1,
-                                             mini_jit::generator::Util::KernelSize &kernelsize_2,
-                                             int32_t &i_used_vector_reg_count,
-                                             int32_t &i_used_vector_reg_count_small);
+        static void get_kernel_sizes_brgemm(int32_t m,
+                                            int32_t n,
+                                            mini_jit::generator::Util::KernelSize &kernelsize_1,
+                                            mini_jit::generator::Util::KernelSize &kernelsize_2,
+                                            int32_t &i_used_vector_reg_count,
+                                            int32_t &i_used_vector_reg_count_small);
 
         /**
          * @brief Generate microkernels.
@@ -86,13 +86,13 @@ namespace mini_jit::generator {
          */
         static void gen_c_store(KernelSize kernelsize);
 
-        static void generator_load_reg_block( mini_jit::backend::Kernel &kernel,
-                                              KernelSize& i_kernelsize,
-                                              mini_jit::instructions::InstGen::gpr_t i_register);
+        static void generator_load_reg_block(mini_jit::backend::Kernel &kernel,
+                                             KernelSize &i_kernelsize,
+                                             mini_jit::instructions::InstGen::gpr_t i_register);
 
-        static void generator_store_reg_block( backend::Kernel& i_kernel,
-                                               Util::KernelSize& i_kernelsize,
-                                               mini_jit::instructions::InstGen::gpr_t i_register);
+        static void generator_store_reg_block(backend::Kernel &i_kernel,
+                                              Util::KernelSize &i_kernelsize,
+                                              mini_jit::instructions::InstGen::gpr_t i_register);
     };
 }  // namespace mini_jit::generator
 #endif
