@@ -16,6 +16,7 @@ class mini_jit::generator::Unary {
 
     static int32_t gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize);
     static int32_t gen_unary_relu(mini_jit::generator::Util::KernelSize kernelsize);
+    static void gen_unary_transpose(uint32_t m, uint32_t n);
 
    public:
     int32_t fops = 0;

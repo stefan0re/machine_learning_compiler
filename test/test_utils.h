@@ -49,7 +49,17 @@ namespace test_utils {
      * @param M pointer to the produced matrix.
      * @param set_zero if true, all elements of the produced matrix are set zero.
     */
-    void generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero = false);
+    void generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero = false, bool visualization = false);
+
+    /**
+     @brief Transpose (Identity) a given matrix.
+    *
+    * @param height m dimension of the matrix.
+    * @param width n dimension of the matrix.
+    * @param M pointer to the matrix that should transposed.
+    * @param N pointer to the matrix that holds the final transposed matrix.
+    */
+    void transpose_matrix(uint32_t height, uint32_t width, float* M, float* N);
 
     /**
      @brief Visualize matrix in terminal.
