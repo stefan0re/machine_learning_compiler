@@ -4,6 +4,7 @@
 #include <cstdint>
 
 #include "../backend/Kernel.h"
+#include "Util.h"
 
 #define BRGEMM_EXPECT(cond)                     \
     do {                                        \
@@ -81,6 +82,14 @@ class mini_jit::generator::Brgemm {
      * @return pointer to the generated kernel.
      **/
     kernel_t get_kernel() const;
+
+    /**
+     * @brief Generate the inner microkernel of the matrix multplication
+     *
+     */
+    void gen_microkernel(backend::Kernel& i_kernel,
+                         Util::KernelSize& i_kernelsize,
+                         int32_t used_reg_count);
 };
 
 #endif

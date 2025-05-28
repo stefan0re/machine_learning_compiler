@@ -29,6 +29,7 @@ class einsum::backend::TensorOperation {
         none = 99
     };
 
+
     // dimension type
     enum class dim_t : uint32_t {
         c = 0,  // Dimension in all 3 tensors

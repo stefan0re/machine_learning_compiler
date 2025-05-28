@@ -22,7 +22,7 @@ int test_get_kernel_sizes() {
                                                           Util::KernelSize{10, 8},
                                                           Util::KernelSize{10, 10}};
 
-    Util::get_kernel_sizes(kernelSize.M, kernelSize.N, kernelSizes);
+    Util::get_kernel_sizes(kernelSize.M, kernelSize.N, kernelSizes, false);
 
     bool match = kernelSizes.kernel1.M == ref_kernelSizes.kernel1.M && kernelSizes.kernel1.N == ref_kernelSizes.kernel1.N;
     return match ? 0 : -1;
