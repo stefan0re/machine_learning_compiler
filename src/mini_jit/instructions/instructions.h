@@ -121,9 +121,11 @@ class mini_jit::instructions::InstGen {
 
     //! arrangement specifiers
     typedef enum : uint32_t {
-        s2 = 0x0,
-        s4 = 0x40000000,
-        d2 = 0x40400000
+        b = 0x0,
+        h = 0x40000000,
+        s = 0x80000000,
+        d = 0xc0000000,
+        q = 0x00800000,
     } arr_spec_t;
 
     typedef enum : uint32_t {
@@ -146,9 +148,9 @@ class mini_jit::instructions::InstGen {
     } ld1_t;
 
     typedef enum : uint32_t {
-        vc1 = 0xc00,
-        vc2 = 0x4800,
-        vc3 = 0x1800,
+        vc1 = 0x5800,
+        vc2 = 0x8800,
+        vc3 = 0x4800,
         vc4 = 0x800,
     } vector_count_t;
 
@@ -262,7 +264,13 @@ class mini_jit::instructions::InstGen {
 
     static uint32_t neon_ldr(simd_fp_t reg_dst,
                              gpr_t add_src,
-                             int32_t imm9);
+                             int32_t imm9,
+                             arr_spec_t i_dtype);
+
+    static uint32_t neon_str(simd_fp_t reg_dst,
+                             gpr_t add_src,
+                             int32_t imm9,
+                             arr_spec_t i_dtype);
 
     static uint32_t neon_ld1_no_offset(simd_fp_t reg_dst,
                                        gpr_t add_src,
