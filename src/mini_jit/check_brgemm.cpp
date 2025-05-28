@@ -8,6 +8,11 @@
 // test to check if brgemm works
 
 int main(int argc, char *argv[]) {
+    if (argc < 3) {
+        std::cout << "Usage: " << argv[0] << " <M> <N> [K] [BR_K]" << std::endl;
+        std::cout << "Default K = 1, Default BR_K = 1" << std::endl;
+        return 1;
+    }
     int64_t m = atoi(argv[1]);
     int64_t n = atoi(argv[2]);
     int64_t k = (argc > 3) ? atoi(argv[3]) : 1;
