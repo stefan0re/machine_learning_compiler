@@ -25,12 +25,12 @@ endif()
 
 set_target_properties(mini_jit PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-add_executable(gemm_benchmark benchmark.cpp)
+add_executable(check_brgemm check_brgemm.cpp)
 
-target_link_libraries(gemm_benchmark PRIVATE mini_jit)
+target_link_libraries(check_brgemm PRIVATE mini_jit)
 
 if (CMAKE_RUNTIME_OUTPUT_DIRECTORY)
-    set_target_properties(gemm_benchmark PROPERTIES
+    set_target_properties(check_brgemm PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}
     )
 endif()

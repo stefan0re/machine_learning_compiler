@@ -57,7 +57,9 @@ namespace mini_jit::generator {
         static void get_kernel_sizes(int32_t m,
                                      int32_t n,
                                      KernelSizes &kernelsizes);
-
+        /**
+         * @brief Get the two kernel sizes for the microkernels and the loads/stores for the microkernel BRGEMM.
+         */
         static void get_kernel_sizes_brgemm(int32_t m,
                                             int32_t n,
                                             mini_jit::generator::Util::KernelSize &kernelsize_1,
@@ -86,10 +88,16 @@ namespace mini_jit::generator {
          */
         static void gen_c_store(KernelSize kernelsize);
 
+        /**
+         * @brief Load a block of B with the given kernel size to vector registers
+         */
         static void generator_load_reg_block(mini_jit::backend::Kernel &kernel,
                                              KernelSize &i_kernelsize,
                                              mini_jit::instructions::InstGen::gpr_t i_register);
 
+        /**
+         * @brief Store a block of B with the given kernel size to vector registers
+         */
         static void generator_store_reg_block(backend::Kernel &i_kernel,
                                               Util::KernelSize &i_kernelsize,
                                               mini_jit::instructions::InstGen::gpr_t i_register);
