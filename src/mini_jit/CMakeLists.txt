@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.15)
 set(LIB_SOURCES
     backend/Kernel.cpp
     generator/Brgemm.cpp
-    generator/util.cpp
+    generator/Util.cpp
+    generator/Unary.cpp
     instructions/base.cpp
     instructions/neon.cpp
     include/gemm_ref.cpp

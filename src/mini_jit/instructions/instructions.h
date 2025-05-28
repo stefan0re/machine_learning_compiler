@@ -1,6 +1,8 @@
 #ifndef MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 #define MINI_JIT_INSTRUCTIONS_INSTRUCTIONS_H
 
+#include <math.h>
+
 #include <cstdint>
 #include <string>
 
@@ -140,11 +142,24 @@ class mini_jit::instructions::InstGen {
     } element_spec_t;
 
     typedef enum : uint32_t {
+        S2 = 0x800,
+        S4 = 0x40000800,
+        D2 = 0x40000c00
+    } ld1_t;
+
+    typedef enum : uint32_t {
         vc1 = 0x5800,
         vc2 = 0x8800,
         vc3 = 0x4800,
         vc4 = 0x800,
     } vector_count_t;
+
+    typedef enum : uint32_t {
+        one_regs = 0x7,
+        two_regs = 0xa,
+        three_regs = 0x6,
+        four_regs = 0x2,
+    } ld1_opcode_t;
 
     /**
      * @brief Generates a CBNZ (Compare and Branch on Non-Zero) instruction.
@@ -172,6 +187,10 @@ class mini_jit::instructions::InstGen {
      * @param Wm  -> SRC
      */
     static uint32_t base_mov_register(gpr_t dst_reg, gpr_t src_reg);
+
+    static uint32_t base_movz(gpr_t Xd, uint16_t imm16, uint8_t shift /* must be 0, 16, 32, or 48 */);
+
+    static uint32_t base_movk(gpr_t Xd, uint16_t imm16, uint8_t shift /* must be 0, 16, 32, or 48 */);
 
     /**
      * @brief Generates an ADD (Add Immediate) instruction.
@@ -246,12 +265,12 @@ class mini_jit::instructions::InstGen {
     static uint32_t neon_ldr(simd_fp_t reg_dst,
                              gpr_t add_src,
                              int32_t imm9,
-                             arr_spec_t i_dtype );
+                             arr_spec_t i_dtype);
 
-    static uint32_t neon_str( simd_fp_t reg_dst,
-                              gpr_t add_src,
-                              int32_t imm9,
-                              arr_spec_t i_dtype );
+    static uint32_t neon_str(simd_fp_t reg_dst,
+                             gpr_t add_src,
+                             int32_t imm9,
+                             arr_spec_t i_dtype);
 
     static uint32_t neon_ld1_no_offset(simd_fp_t reg_dst,
                                        gpr_t add_src,
@@ -287,5 +306,29 @@ class mini_jit::instructions::InstGen {
     static uint32_t neon_st1_no_offset(simd_fp_t reg_dst,
                                        gpr_t add_src,
                                        vector_count_t reg_count);
+
+    static uint32_t neon_movi_zero(simd_fp_t reg_dest,
+                                   bool use_full_register,
+                                   bool use_double);
+
+    static uint32_t neon_fmaxnmp_vector(simd_fp_t reg_dest,
+                                        simd_fp_t reg_src1,
+                                        simd_fp_t reg_src2,
+                                        bool is_double_precision);
+
+    static uint32_t neon_fmax_vector(simd_fp_t reg_dest,
+                                     simd_fp_t reg_src1,
+                                     simd_fp_t reg_src2,
+                                     bool is_double_precision);
+
+    static uint32_t neon_ld1_multiple(simd_fp_t base_reg,
+                                      gpr_t src_reg,
+                                      ld1_opcode_t op_code,
+                                      ld1_t element);
+
+    static uint32_t neon_st1_multiple(simd_fp_t base_reg,
+                                      gpr_t src_reg,
+                                      ld1_opcode_t op_code,
+                                      ld1_t element);
 };
 #endif

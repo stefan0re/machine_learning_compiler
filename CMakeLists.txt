@@ -12,5 +12,6 @@ add_subdirectory(./src/mini_jit)
 
 enable_testing()
 add_subdirectory(./test)
+add_subdirectory(./benchmark)
 
 

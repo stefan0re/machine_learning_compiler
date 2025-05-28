@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
+#include <random>
 #include <sstream>
 #include <string>
 
@@ -39,6 +40,48 @@ namespace test_utils {
      * @return if result==expected 0, else 1.
      **/
     int instr_is_correct(std::string call, uint32_t result, uint32_t expected);
+
+    /**
+     @brief Generate a matrix with random numbers (or zeros) as elements.
+     *
+     * @param height m dimension of the produced matrix.
+     * @param width n dimension of the produced matrix.
+     * @param M pointer to the produced matrix.
+     * @param set_zero if true, all elements of the produced matrix are set zero.
+    */
+    void generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero = false, bool visualization = false);
+
+    /**
+     @brief Transpose (Identity) a given matrix.
+    *
+    * @param height m dimension of the matrix.
+    * @param width n dimension of the matrix.
+    * @param M pointer to the matrix that should transposed.
+    * @param N pointer to the matrix that holds the final transposed matrix.
+    */
+    void transpose_matrix(uint32_t height, uint32_t width, float* M, float* N);
+
+    /**
+     @brief Visualize matrix in terminal.
+     *
+     * @param height m dimension of the produced matrix.
+     * @param width n dimension of the produced matrix.
+     * @param M pointer to the produced matrix.
+     * @param name contextual name of the matrix.
+    */
+    void visualize_matrix(uint32_t height, uint32_t width, float* M, std::string name);
+
+    /**
+     @brief Checks if result and expected are equal, and prints and returns the result for unit testing.
+     *
+     * @param height m dimension of the matrices.
+     * @param width n dimension of the matrices.
+     * @param M pointer to the first matrix.
+     * @param C pointer to the second matrix.
+     *
+     * @return if worke correct 1, else 0.
+    */
+    bool compare_matrix(uint32_t height, uint32_t width, float* M, float* C);
 }  // namespace test_utils
 
 #endif

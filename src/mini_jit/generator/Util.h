@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "../backend/Kernel.h"
 #include "../instructions/instructions.h"
@@ -48,7 +49,18 @@ namespace mini_jit::generator {
         };
 
         /**
-         * @brief Get the two kernel sizes for the microkernels.
+         * @brief Get the four subarea sizes for a matrix C.
+         *
+         * @param i_m vertical dimensions of C.
+         * @param i_n horizontal dimensions of C.
+         * @param kernelsizes The size of each area.
+         */
+        static void get_area_sizes(int32_t m,
+                                   int32_t n,
+                                   std::vector<KernelSize> &work_areas);
+
+        /**
+         * @brief Get the four kernel sizes for the microkernels.
          *
          * @param i_m The number of rows in the matrix A.
          * @param i_n The number of columns in the matrix B.
@@ -80,7 +92,7 @@ namespace mini_jit::generator {
          * @param kernel The kernel sizes.
          * @return used vector register count
          */
-        static int32_t gen_c_load(KernelSize kernelsize);
+        static int32_t gen_matrix_load(mini_jit::backend::Kernel &m_kernel, KernelSize kernelsize, mini_jit::instructions::InstGen::gpr_t pointer_register, uint32_t leading_dimension);
 
         /**
          * @brief Store C block for the given kernel sizes.
