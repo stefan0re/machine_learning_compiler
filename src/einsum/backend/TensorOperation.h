@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <span>
+#include <vector>
 
 namespace einsum {
     namespace backend {
@@ -28,7 +29,6 @@ class einsum::backend::TensorOperation {
         brgemm = 4,
         none = 99
     };
-
 
     // dimension type
     enum class dim_t : uint32_t {
