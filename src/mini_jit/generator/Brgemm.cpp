@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "../instructions/instructions.h"
-#include "util.h"
+#include "Util.h"
 
 namespace inst = mini_jit::instructions;
 

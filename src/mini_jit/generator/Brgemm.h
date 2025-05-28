@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "../backend/Kernel.h"
-#include "util.h"
+#include "Util.h"
 
 #define BRGEMM_EXPECT(cond)                     \
     do {                                        \

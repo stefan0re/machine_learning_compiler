@@ -78,6 +78,17 @@ namespace mini_jit::generator {
                                             mini_jit::generator::Util::KernelSize &kernelsize_2,
                                             int32_t &i_used_vector_reg_count,
                                             int32_t &i_used_vector_reg_count_small);
+        /**
+         * @brief Get the four kernel sizes for the microkernels.
+         *
+         * @param i_m The number of rows in the matrix A.
+         * @param i_n The number of columns in the matrix B.
+         * @param kernelsizes The size of each kernel.
+         */
+        static void get_kernel_sizes(int32_t m,
+                                     int32_t n,
+                                     KernelSizes &kernelsizes,
+                                     bool only_square = false);
 
         /**
          * @brief Generate microkernels.
@@ -98,7 +109,7 @@ namespace mini_jit::generator {
          * @brief Store C block for the given kernel sizes.
          * @param kernel The kernel sizes.
          */
-        static void gen_c_store(KernelSize kernelsize);
+        static void gen_matrix_store(mini_jit::backend::Kernel &m_kernel, KernelSize kernelsize, mini_jit::instructions::InstGen::gpr_t pointer_register, uint32_t leading_dimension);
 
         /**
          * @brief Load a block of B with the given kernel size to vector registers
