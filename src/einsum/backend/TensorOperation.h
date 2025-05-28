@@ -5,49 +5,71 @@
 #include <span>
 
 namespace einsum {
-  namespace backend {
-    class TensorOperation;
-  }
-}
+    namespace backend {
+        class TensorOperation;
+    }
+}  // namespace einsum
 
 class einsum::backend::TensorOperation {
-  public:
+   public:
     /// execution type
     enum class exec_t : uint32_t {
-      seq    = 0, 
-      prim   = 1,
-      shared = 2, 
+        seq = 0,
+        prim = 1,
+        shared = 2,
     };
 
     /// primitive type
     enum class prim_t : uint32_t {
-      zero   =  0,
-      copy   =  1,
-      relu   =  2,
-      gemm   =  3,
-      brgemm =  4,
-      none      = 99
+        zero = 0,
+        copy = 1,
+        relu = 2,
+        gemm = 3,
+        brgemm = 4,
+        none = 99
     };
 
-    /// dimension type
+    // dimension type
     enum class dim_t : uint32_t {
-      c         = 0, 
-      m         = 1, 
-      n         = 2, 
-      k         = 3, 
-      undefined = 99
+        c = 0,  // Dimension in all 3 tensors
+        m = 1,  // Dimension in input-tensor 1 (output rows)
+        n = 2,  // Dimension in input-tensor 2 (output cols)
+        k = 3,  // Contraction dimension in input-tensor 1 and 2
+        undefined = 99
     };
 
     /// data type
     enum class dtype_t : uint32_t {
-      fp32 = 0,
-      fp64 = 1
+        fp32 = 0,
+        fp64 = 1
     };
 
     /// error codes
     enum class error_t : int32_t {
-      success = 0
+        success = 0
     };
+
+    // scalars
+    dtype_t _dtype;
+    prim_t _prim_first_touch;
+    prim_t _prim_main;
+    prim_t _prim_last_touch;
+
+    // owned storage
+    std::vector<dim_t> _dim_types_storage;
+    std::vector<exec_t> _exec_types_storage;
+    std::vector<int64_t> _dim_sizes_storage;
+    std::vector<int64_t> _strides_in0_storage;
+    std::vector<int64_t> _strides_in1_storage;
+    std::vector<int64_t> _strides_out_storage;
+
+    // views (spans)
+    std::span<const dim_t> _dim_types;
+    std::span<const exec_t> _exec_types;
+    std::span<const int64_t> _dim_sizes;
+    std::span<const int64_t> _strides_in0;
+    std::span<const int64_t> _strides_in1;
+    std::span<const int64_t> _strides_out;
 
     /**
      * Setup for a binary tensor contraction or a unary tensor operation.
@@ -64,16 +86,16 @@ class einsum::backend::TensorOperation {
      * @param strides_out       Strides of the output tensor.
      * @return error_t::success on success, another error_t value otherwise.
      **/
-    error_t setup( dtype_t                    dtype,
-                   prim_t                     prim_first_touch,
-                   prim_t                     prim_main,
-                   prim_t                     prim_last_touch,
-                   std::span< const dim_t >   dim_types,
-                   std::span< const exec_t >  exec_types,
-                   std::span< const int64_t > dim_sizes,
-                   std::span< const int64_t > strides_in0,
-                   std::span< const int64_t > strides_in1,
-                   std::span< const int64_t > strides_out );
+    error_t setup(dtype_t dtype,
+                  prim_t prim_first_touch,
+                  prim_t prim_main,
+                  prim_t prim_last_touch,
+                  std::span<const dim_t> dim_types,
+                  std::span<const exec_t> exec_types,
+                  std::span<const int64_t> dim_sizes,
+                  std::span<const int64_t> strides_in0,
+                  std::span<const int64_t> strides_in1,
+                  std::span<const int64_t> strides_out);
 
     /**
      * Execute the tensor operation.
@@ -82,10 +104,10 @@ class einsum::backend::TensorOperation {
      * @param tensor_in1 Second input tensor (use nullptr if unary).
      * @param tensor_out Output tensor.
      **/
-    void execute( void const * tensor_in0,
-                  void const * tensor_in1,
-                  void       * tensor_out );
-    
+    void execute(void const* tensor_in0,
+                 void const* tensor_in1,
+                 void* tensor_out);
+
     /**
      * General-purpose loop implementation featuring first and last touch operations.
      * No threading is applied.
@@ -97,12 +119,12 @@ class einsum::backend::TensorOperation {
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
      **/
-    void execute_iter( int64_t         id_loop,
-                       char    const * ptr_in0,
-                       char    const * ptr_in1,
-                       char          * ptr_out,
-                       bool            first_access,
-                       bool            last_access );
+    void execute_iter(int64_t id_loop,
+                      char const* ptr_in0,
+                      char const* ptr_in1,
+                      char* ptr_out,
+                      bool first_access,
+                      bool last_access);
 };
 
 #endif
