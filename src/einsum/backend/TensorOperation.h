@@ -29,12 +29,13 @@ class einsum::backend::TensorOperation {
         none = 99
     };
 
-    /// dimension type
+
+    // dimension type
     enum class dim_t : uint32_t {
-        c = 0,
-        m = 1,
-        n = 2,
-        k = 3,
+        c = 0,  // Dimension in all 3 tensors
+        m = 1,  // Dimension in input-tensor 1 (output rows)
+        n = 2,  // Dimension in input-tensor 2 (output cols)
+        k = 3,  // Contraction dimension in input-tensor 1 and 2
         undefined = 99
     };
 
@@ -48,6 +49,28 @@ class einsum::backend::TensorOperation {
     enum class error_t : int32_t {
         success = 0
     };
+
+    // scalars
+    dtype_t _dtype;
+    prim_t _prim_first_touch;
+    prim_t _prim_main;
+    prim_t _prim_last_touch;
+
+    // owned storage
+    std::vector<dim_t> _dim_types_storage;
+    std::vector<exec_t> _exec_types_storage;
+    std::vector<int64_t> _dim_sizes_storage;
+    std::vector<int64_t> _strides_in0_storage;
+    std::vector<int64_t> _strides_in1_storage;
+    std::vector<int64_t> _strides_out_storage;
+
+    // views (spans)
+    std::span<const dim_t> _dim_types;
+    std::span<const exec_t> _exec_types;
+    std::span<const int64_t> _dim_sizes;
+    std::span<const int64_t> _strides_in0;
+    std::span<const int64_t> _strides_in1;
+    std::span<const int64_t> _strides_out;
 
     /**
      * Setup for a binary tensor contraction or a unary tensor operation.
