@@ -134,8 +134,7 @@ int main() {
     float* l_out_gemm = new float[32 * 32 * 32 * 32];
     float* l_out_einsum = new float[32 * 32 * 32 * 32];
 
-    srand48(0);  // Seed the random number generator
-    // Fill tensors with random values
+    srand48(0);
     for (size_t i = 0; i < 32 * 8 * 32 * 32; ++i) {
         l_ten_1[i] = static_cast<float>(drand48());
     }
@@ -158,18 +157,21 @@ int main() {
 
     // Check if the results are equal
     bool equal = true;
+    double l_max_diff = 0.0;
     for (size_t i = 0; i < 32 * 32 * 32 * 32; ++i) {
         if (std::abs(l_out_scalar[i] - l_out_einsum[i]) > 1e-3f) {
             equal = false;
-            std::cout << "i: " << i << ", scalar: " << l_out_scalar[i] << ", einsum: " << l_out_einsum[i] << std::endl;
-            break;
+            // std::cout << "i: " << i << ", scalar: " << l_out_scalar[i] << ", einsum: " << l_out_einsum[i] << std::endl;
+            l_max_diff = std::max(l_max_diff, static_cast<double>(std::abs(l_out_scalar[i] - l_out_einsum[i])));
         }
     }
+
     if (equal) {
         std::cout << "Results are equal!" << std::endl;
     } else {
         std::cout << "Results are NOT equal!" << std::endl;
     }
+    std::cout << "Max difference: " << l_max_diff << std::endl;
 
     // clean up
     delete[] l_ten_1;

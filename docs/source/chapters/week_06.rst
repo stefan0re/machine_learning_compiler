@@ -160,7 +160,7 @@ Again this implementation is not as optimized as wished as the benchmarking resu
     Throughput:     10.6555 GFLOPS
 
 Identity
-____
+________
 
 We implemented the identity matrix in the simplest possible way: by iterating through the input matrix A element by element and storing each value in B with the corresponding offset based on the size (assuming that A and B are square matrices).
 

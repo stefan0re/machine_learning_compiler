@@ -1,12 +1,49 @@
-#include "TensorOperation.h"
 
-#include <iostream>
+Tensor Operations
+=================
 
-#include "../../mini_jit/generator/Brgemm.h"
+Backend
+-------
 
-#define DEBUG
+This week we move away from just-in-time generated code, and get closer to our tensor compiler.
+The goal is to use configurations like this: 
 
-namespace einsum::backend {
+.. list-table:: 
+   :widths: 40 60
+   :header-rows: 1
+
+   * - Variable
+     - Value
+   * - dtype
+     - FP32
+   * - prim_first_touch
+     - None
+   * - prim_main
+     - GEMM
+   * - prim_last_touch
+     - None
+   * - dim_types
+     - (     M,    N,    K,    M,    N,    K )
+   * - exec_types
+     - (   Seq,  Seq,  Seq, Prim, Prim, Prim )
+   * - dim_sizes
+     - (    32,   32,    8,   32,   32,   32 )
+   * - strides_in0
+     - (  8192,    0, 1024,    1,    0,   32 )
+   * - strides_in1
+     - (     0, 8192, 1024,    0,   32,    1 )
+   * - strides_out
+     - ( 32768, 1024,    0,    1,   32,    0 )
+
+To generate compute the binary tensor contraction which can also be written in einsum as: 
+
+:code:`abdc, ebfd -> aefc`
+
+To pass this configuration to the binary contraction generator we use this setup method:
+
+
+.. code-block:: C++
+    :linenos:
 
     TensorOperation::error_t TensorOperation::setup(dtype_t dtype,
                                                     prim_t prim_first_touch,
@@ -70,13 +107,13 @@ namespace einsum::backend {
 
         // create brgemm_kernel
         _brgemm.generate(_dim_sizes[_id_prim_m],
-                         _dim_sizes[_id_prim_n],
-                         _dim_sizes[_id_prim_k],
-                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,
-                         0,
-                         0,
-                         0,
-                         static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype));
+                        _dim_sizes[_id_prim_n],
+                        _dim_sizes[_id_prim_k],
+                        (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,
+                        0,
+                        0,
+                        0,
+                        static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype));
         _brgemm_kernel = _brgemm.get_kernel();
 
         // set lda, ldb, ldc, in0_br_stride, in1_br_stride
@@ -88,49 +125,22 @@ namespace einsum::backend {
         _in0_br_stride = _strides_in0[_strides_in0.size() - 4];
         _in1_br_stride = _strides_in1[_strides_in1.size() - 4];
 
-#ifdef DEBUG
-        // print all necessary information
-        std::cout << "TensorOperation setup:" << std::endl;
-        std::cout << "  dtype: " << static_cast<int>(_dtype) << std::endl;
-        std::cout << "  prim_first_touch: " << static_cast<int>(_prim_first_touch) << std::endl;
-        std::cout << "  prim_main: " << static_cast<int>(_prim_main) << std::endl;
-        std::cout << "  prim_last_touch: " << static_cast<int>(_prim_last_touch) << std::endl;
-        std::cout << "  id_first_primitive_loop: " << _id_first_primitive_loop << std::endl;
-        std::cout << "  id_prim_m: " << _id_prim_m << std::endl;
-        std::cout << "  id_prim_n: " << _id_prim_n << std::endl;
-        std::cout << "  id_prim_k: " << _id_prim_k << std::endl;
-        std::cout << "  id_prim_br_size: " << _id_prim_br_size << std::endl;
-        std::cout << "  loop_sizes: ";
-        for (const auto& size : _loop_sizes) {
-            std::cout << size << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "M: " << _dim_sizes[_id_prim_m] << std::endl;
-        std::cout << "N: " << _dim_sizes[_id_prim_n] << std::endl;
-        std::cout << "K: " << _dim_sizes[_id_prim_k] << std::endl;
-        std::cout << "BR size: " << ((_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1) << std::endl;
-        std::cout << "lda: " << _lda << std::endl;
-        std::cout << "ldb: " << _ldb << std::endl;
-        std::cout << "ldc: " << _ldc << std::endl;
-        std::cout << "in0_br_stride: " << _in0_br_stride << std::endl;
-        std::cout << "in1_br_stride: " << _in1_br_stride << std::endl;
-
-        std::cout << "***********************" << std::endl;
-#endif
-
         return error_t::success;
     }
-    void TensorOperation::execute(void const* tensor_in0,
-                                  void const* tensor_in1,
-                                  void* tensor_out) {
-        // get pointers to input and output data
-        char const* l_ptr_in0 = static_cast<char const*>(tensor_in0);
-        char const* l_ptr_in1 = static_cast<char const*>(tensor_in1);
-        char* l_ptr_out = static_cast<char*>(tensor_out);
 
-        // execute the operation
-        execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
-    }
+
+In the upper part, the object variables are set first, then from line 35 the loop dimension are detected.
+The IDs of the primitive dimensions are then identified.
+At the end, the JIT kernel (BRGEMM) is generated. In future, the unary kernel for first and last touch should be generated here.
+
+
+To create the loops around the BRGEMM kernel, we have the function :code:`execute_iter` which calls itself recursively until a primitive dimension is reached. 
+Here the recursion breaks off and our BR_GEMM kernel is called.
+In order to pass the correct addresses here, the correct stride for the respective loop is calculated beforehand for the respective tensor. 
+
+.. code-block:: C++
+    :linenos:
+    
     void TensorOperation::execute_iter(int64_t id_loop,
                                        char const* ptr_in0,
                                        char const* ptr_in1,
@@ -162,4 +172,7 @@ namespace einsum::backend {
             }
         }
     }
-}  // namespace einsum::backend
+
+Currently the first and last access are not used, but in the future they should be used to call the unary kernels for first and last touch.
+We still have a bug in our code, which is why the results are not yet correct. That's why we couldn't perform the benchmarks yet.
+Our code can be viewed on `Github <https://github.com/stefan0re/machine_learning_compiler>`_ under version week8.
