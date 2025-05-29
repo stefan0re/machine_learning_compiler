@@ -150,11 +150,10 @@ In order to pass the correct addresses here, the correct stride for the respecti
         int64_t l_size = _loop_sizes[id_loop];
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
-            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop]*4;
-            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop]*4;
-            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop]*4;
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
+            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
 
-            // TODO: handle first and last access
             if (id_loop + 1 < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
                              l_ptr_in0,
@@ -163,18 +162,27 @@ In order to pass the correct addresses here, the correct stride for the respecti
                              first_access,
                              last_access);
             } else {
+                // handle first touch
+                if (first_access && _prim_first_touch != prim_t::none) {
+                    _unary_first_touch_kernel(l_ptr_in0, l_ptr_out, _ldc, _ldc);
+                }
                 _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
                                _lda,
                                _ldb,
                                _ldc,
                                _in0_br_stride,
                                _in1_br_stride);
+
+                // handle last touch
+                if (last_access && _prim_last_touch != prim_t::none) {
+                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
             }
         }
     }
 
-Currently the first and last access are not used, but in the future they should be used to call the unary kernels for first and last touch.
-At the moment our code calculates correctly, but the performance is unfortunately only below 10 GFLOPS for all three implementations.
+Currently the first and last access are not working correctly, but in the future they should be used to call the unary kernels for first and last touch.
+The rest of our code calculates correctly, but the performance is unfortunately only below 10 GFLOPS for all three implementations.
 This indicates that we still have to work on our BRGEMM generator, because it only gives a peak performance of 60 GFLOPS for super sized matrices. 
 We have also tried other settings and found that the primitive dimensions are the decisive ones, if we get large dimension sizes here, our einsum implementation also performs better.
 
