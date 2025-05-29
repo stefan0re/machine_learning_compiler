@@ -5,6 +5,9 @@
 #include <span>
 #include <vector>
 
+#include "../../mini_jit/generator/Brgemm.h"
+#include "../../mini_jit/generator/Unary.h"
+
 namespace einsum {
     namespace backend {
         class TensorOperation;
@@ -55,6 +58,18 @@ class einsum::backend::TensorOperation {
     prim_t _prim_first_touch;
     prim_t _prim_main;
     prim_t _prim_last_touch;
+    int64_t _id_first_primitive_loop;
+
+    int64_t _id_prim_m;
+    int64_t _id_prim_n;
+    int64_t _id_prim_k = 0;
+    int64_t _id_prim_br_size = -1;
+
+    int64_t _lda;
+    int64_t _ldb;
+    int64_t _ldc;
+    int64_t _in0_br_stride;
+    int64_t _in1_br_stride;
 
     // owned storage
     std::vector<dim_t> _dim_types_storage;
@@ -63,6 +78,7 @@ class einsum::backend::TensorOperation {
     std::vector<int64_t> _strides_in0_storage;
     std::vector<int64_t> _strides_in1_storage;
     std::vector<int64_t> _strides_out_storage;
+    std::vector<int64_t> _loop_sizes_storage;
 
     // views (spans)
     std::span<const dim_t> _dim_types;
@@ -71,6 +87,9 @@ class einsum::backend::TensorOperation {
     std::span<const int64_t> _strides_in0;
     std::span<const int64_t> _strides_in1;
     std::span<const int64_t> _strides_out;
+    std::span<const int64_t> _loop_sizes;
+
+    using kernel_t = mini_jit::generator::Brgemm::kernel_t;
 
     /**
      * Setup for a binary tensor contraction or a unary tensor operation.
@@ -126,6 +145,25 @@ class einsum::backend::TensorOperation {
                       char* ptr_out,
                       bool first_access,
                       bool last_access);
+
+    /**
+     * Generates a first touch kernel with the given parameters.
+     */
+    void first_touch_kernel(char* ptr_in,
+                            char* ptr_out);
+
+   private:
+    // BRGEMM
+    mini_jit::generator::Brgemm _brgemm;
+    kernel_t _brgemm_kernel{nullptr};
+
+    // Unary first touch
+    mini_jit::generator::Unary _unary_first_touch;
+    mini_jit::generator::Unary::kernel_t _unary_first_touch_kernel{nullptr};
+
+    // Unary last touch
+    mini_jit::generator::Unary _unary_last_touch;
+    mini_jit::generator::Unary::kernel_t _unary_last_touch_kernel{nullptr};
 };
 
 #endif
