@@ -1,6 +1,10 @@
 #include "TensorOperation.h"
 
-#include "../../src/mini_jit/generator/Brgemm.h"
+#include <iostream>
+
+#include "../../mini_jit/generator/Brgemm.h"
+
+#define DEBUG
 
 namespace einsum::backend {
 
@@ -37,42 +41,124 @@ namespace einsum::backend {
         _strides_in1 = _strides_in1_storage;
         _strides_out = _strides_out_storage;
 
+        // write loop dims to _loop_sizes_storage
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_exec_types[i] != exec_t::prim) {
+                _loop_sizes_storage.push_back(_dim_sizes[i]);
+            } else {
+                _id_first_primitive_loop = i;
+                break;
+            }
+        }
+        _loop_sizes = _loop_sizes_storage;
+
+        // set prim ids
+        for (size_t i = 0; i < _dim_sizes.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _exec_types[i] == exec_t::prim) {
+                _id_prim_m = i;
+            } else if (_dim_types[i] == dim_t::n && _exec_types[i] == exec_t::prim) {
+                _id_prim_n = i;
+            } else if (_dim_types[i] == dim_t::k && _exec_types[i] == exec_t::prim) {
+                if (_id_prim_k == 0) {
+                    _id_prim_k = i;
+                } else {
+                    _id_prim_br_size = _id_prim_k;
+                    _id_prim_k = i;
+                }
+            }
+        }
+
+        // create brgemm_kernel
+        _brgemm.generate(_dim_sizes[_id_prim_m],
+                         _dim_sizes[_id_prim_n],
+                         _dim_sizes[_id_prim_k],
+                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,
+                         0,
+                         0,
+                         0,
+                         static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype));
+        _brgemm_kernel = _brgemm.get_kernel();
+
+        // set lda, ldb, ldc, in0_br_stride, in1_br_stride
+        // TODO: currently assumes primitve types are always the last 3 dimensions
+        _lda = _strides_in0[_strides_in0.size() - 1];
+        _ldb = _strides_in1[_strides_in1.size() - 2];
+        _ldc = _strides_out[_strides_out.size() - 2];
+
+        _in0_br_stride = _strides_in0[_strides_in0.size() - 4];
+        _in1_br_stride = _strides_in1[_strides_in1.size() - 4];
+
+#ifdef DEBUG
+        // print all necessary information
+        std::cout << "TensorOperation setup:" << std::endl;
+        std::cout << "  dtype: " << static_cast<int>(_dtype) << std::endl;
+        std::cout << "  prim_first_touch: " << static_cast<int>(_prim_first_touch) << std::endl;
+        std::cout << "  prim_main: " << static_cast<int>(_prim_main) << std::endl;
+        std::cout << "  prim_last_touch: " << static_cast<int>(_prim_last_touch) << std::endl;
+        std::cout << "  id_first_primitive_loop: " << _id_first_primitive_loop << std::endl;
+        std::cout << "  id_prim_m: " << _id_prim_m << std::endl;
+        std::cout << "  id_prim_n: " << _id_prim_n << std::endl;
+        std::cout << "  id_prim_k: " << _id_prim_k << std::endl;
+        std::cout << "  id_prim_br_size: " << _id_prim_br_size << std::endl;
+        std::cout << "  loop_sizes: ";
+        for (const auto& size : _loop_sizes) {
+            std::cout << size << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "M: " << _dim_sizes[_id_prim_m] << std::endl;
+        std::cout << "N: " << _dim_sizes[_id_prim_n] << std::endl;
+        std::cout << "K: " << _dim_sizes[_id_prim_k] << std::endl;
+        std::cout << "BR size: " << ((_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1) << std::endl;
+        std::cout << "lda: " << _lda << std::endl;
+        std::cout << "ldb: " << _ldb << std::endl;
+        std::cout << "ldc: " << _ldc << std::endl;
+        std::cout << "in0_br_stride: " << _in0_br_stride << std::endl;
+        std::cout << "in1_br_stride: " << _in1_br_stride << std::endl;
+
+        std::cout << "***********************" << std::endl;
+#endif
+
         return error_t::success;
     }
+    void TensorOperation::execute(void const* tensor_in0,
+                                  void const* tensor_in1,
+                                  void* tensor_out) {
+        // get pointers to input and output data
+        char const* l_ptr_in0 = static_cast<char const*>(tensor_in0);
+        char const* l_ptr_in1 = static_cast<char const*>(tensor_in1);
+        char* l_ptr_out = static_cast<char*>(tensor_out);
 
-    /**
-     * General-purpose loop implementation featuring first and last touch operations.
-     * No threading is applied.
-     *
-     * @param id_loop      Dimension id of the loop which is executed.
-     * @param ptr_in0      Pointer to the first input tensor's data.
-     * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
-     * @param ptr_out      Pointer to the output tensor's data.
-     * @param first_access True if first time accessing data of output tensor.
-     * @param last_access  True if last time accessing data of output tensor.
-     **/
-    void execute_iter(int64_t id_loop,
-                      char const* ptr_in0,
-                      char const* ptr_in1,
-                      char* ptr_out,
-                      bool first_access,
-                      bool last_access) {
-        // int64_t l_size = m_loop_sizes[id_loop];
+        // execute the operation
+        execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+    }
+    void TensorOperation::execute_iter(int64_t id_loop,
+                                       char const* ptr_in0,
+                                       char const* ptr_in1,
+                                       char* ptr_out,
+                                       bool first_access,
+                                       bool last_access) {
+        int64_t l_size = _loop_sizes[id_loop];
 
-        // for (int64_t l_it = 0; l_it < l_size; l_it++) {
-        //     // derive if this is first or last access to the output block
+        for (int64_t l_it = 0; l_it < l_size; l_it++) {
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop];
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop];
+            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop];
 
-        //     // update pointer with strides
-
-        //     if (id_loop + 1 < m_id_first_primitive_loop) {
-        //         // recursive function call
-        //     } else {
-        //         // call first touch kernel if necessary
-
-        //         // call main kernel
-
-        //         // call last touch kernel if necessary
-        //     }
-        // }
+            if (id_loop + 1 < _id_first_primitive_loop) {
+                execute_iter(id_loop + 1,
+                             l_ptr_in0,
+                             l_ptr_in1,
+                             l_ptr_out,
+                             first_access,
+                             last_access);
+            } else {
+                _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
+                               _lda,
+                               _ldb,
+                               _ldc,
+                               _in0_br_stride,
+                               _in1_br_stride);
+            }
+        }
     }
 }  // namespace einsum::backend

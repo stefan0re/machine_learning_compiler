@@ -33,9 +33,11 @@
     strides output: 32768 -> 1024 -> 32 -> 1
 */
 
-void run_1_example_scalar(float* i_ten_1,
-                          float* i_ten_2,
-                          float* o_ten) {
+using namespace einsum::backend;
+
+void run_1_example_with_scalar(float* i_ten_1,
+                               float* i_ten_2,
+                               float* o_ten) {
     for (size_t l_oM = 0; l_oM < 32; ++l_oM) {
         for (size_t l_oN = 0; l_oN < 32; ++l_oN) {
             for (size_t l_oK = 0; l_oK < 8; ++l_oK) {
@@ -74,6 +76,53 @@ void run_1_example_with_gemm(float* i_ten_1,
     }
 }
 
+void run_1_example_with_einsum(float* i_ten_1,
+                               float* i_ten_2,
+                               float* o_ten,
+                               bool i_relu,
+                               bool i_first_touch_zero) {
+    TensorOperation l_tensor_op;
+
+    TensorOperation::dtype_t l_dtype = TensorOperation::dtype_t::fp32;
+    TensorOperation::prim_t l_prim_first_touch = TensorOperation::prim_t::none;
+    TensorOperation::prim_t l_prim_main = TensorOperation::prim_t::gemm;
+    TensorOperation::prim_t l_prim_last_touch = TensorOperation::prim_t::none;
+
+    std::vector<TensorOperation::dim_t> l_dim_types = {TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::k,
+                                                       TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::k};
+
+    std::vector<TensorOperation::exec_t> l_exec_types = {TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::prim,
+                                                         TensorOperation::exec_t::prim,
+                                                         TensorOperation::exec_t::prim};
+
+    std::vector<int64_t> l_dim_sizes = {32, 32, 8, 32, 32, 32};
+
+    std::vector<int64_t> l_strides_in0 = {8192, 0, 1024, 1, 0, 32};
+    std::vector<int64_t> l_strides_in1 = {0, 8192, 1024, 0, 32, 1};
+    std::vector<int64_t> l_strides_out = {32768, 1024, 0, 1, 32, 0};
+
+    // Setup the tensor operation
+    auto l_error = l_tensor_op.setup(l_dtype,
+                                     l_prim_first_touch,
+                                     l_prim_main,
+                                     l_prim_last_touch,
+                                     std::span<const TensorOperation::dim_t>(l_dim_types),
+                                     std::span<const TensorOperation::exec_t>(l_exec_types),
+                                     std::span<const int64_t>(l_dim_sizes),
+                                     std::span<const int64_t>(l_strides_in0),
+                                     std::span<const int64_t>(l_strides_in1),
+                                     std::span<const int64_t>(l_strides_out));
+
+    l_tensor_op.execute(i_ten_1, i_ten_2, o_ten);
+}
+
 int main() {
     std::cout << "Benchmarking a few einsum Expressions..." << std::endl;
 
@@ -83,6 +132,7 @@ int main() {
 
     float* l_out_scalar = new float[32 * 32 * 32 * 32];
     float* l_out_gemm = new float[32 * 32 * 32 * 32];
+    float* l_out_einsum = new float[32 * 32 * 32 * 32];
 
     srand48(0);  // Seed the random number generator
     // Fill tensors with random values
@@ -96,18 +146,22 @@ int main() {
     for (size_t i = 0; i < 32 * 32 * 32 * 32; ++i) {
         l_out_scalar[i] = 0.0f;
         l_out_gemm[i] = 0.0f;
+        l_out_einsum[i] = 0.0f;
     }
 
     // run both implementations
-    run_1_example_scalar(l_ten_1, l_ten_2, l_out_scalar);
+    run_1_example_with_scalar(l_ten_1, l_ten_2, l_out_scalar);
     run_1_example_with_gemm(l_ten_1, l_ten_2, l_out_gemm);
+    run_1_example_with_einsum(l_ten_1, l_ten_2, l_out_einsum, false, false);
+
+    std::cout << "Finished tests" << std::endl;
 
     // Check if the results are equal
     bool equal = true;
     for (size_t i = 0; i < 32 * 32 * 32 * 32; ++i) {
-        if (std::abs(l_out_scalar[i] - l_out_gemm[i]) > 1e-3) {
+        if (std::abs(l_out_scalar[i] - l_out_einsum[i]) > 1e-3f) {
             equal = false;
-            std::cout << "i: " << i << ", scalar: " << l_out_scalar[i] << ", gemm: " << l_out_gemm[i] << std::endl;
+            std::cout << "i: " << i << ", scalar: " << l_out_scalar[i] << ", einsum: " << l_out_einsum[i] << std::endl;
             break;
         }
     }
@@ -122,6 +176,7 @@ int main() {
     delete[] l_ten_2;
     delete[] l_out_scalar;
     delete[] l_out_gemm;
+    delete[] l_out_einsum;
 
     std::cout << "Finished benchmarking." << std::endl;
 
