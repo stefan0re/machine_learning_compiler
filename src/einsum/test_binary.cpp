@@ -143,7 +143,8 @@ bool check_diff(float* i_ten_1,
 }
 
 int main() {
-    std::cout << "Testomg a few einsum Expressions..." << std::endl;
+    std::cout << "*******************************************************" << std::endl;
+    std::cout << "Testing a few einsum Expressions..." << std::endl;
 
     // Initialize tensors
     float* l_ten_1 = new float[32 * 8 * 32 * 32];
@@ -229,8 +230,6 @@ int main() {
     delete[] l_out_einsum_1;
     delete[] l_out_einsum_2;
     delete[] l_out_einsum_3;
-
-    std::cout << "Finished benchmarking." << std::endl;
 
     return EXIT_SUCCESS;
 }
