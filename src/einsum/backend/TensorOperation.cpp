@@ -4,7 +4,7 @@
 
 #include "../../mini_jit/generator/Brgemm.h"
 
-#define DEBUG
+// #define DEBUG
 
 namespace einsum::backend {
 
@@ -79,6 +79,27 @@ namespace einsum::backend {
                          static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype));
         _brgemm_kernel = _brgemm.get_kernel();
 
+        // check if we have a first touch primitive
+        if (_prim_first_touch != prim_t::none) {
+            _unary_first_touch.generate(_dim_sizes[_id_prim_m],
+                                        _dim_sizes[_id_prim_m],
+                                        0,
+                                        mini_jit::generator::Unary::dtype_t::fp32,
+
+                                        mini_jit::generator::Unary::ptype_t::zero);
+        }
+        _unary_first_touch_kernel = _unary_first_touch.get_kernel();
+
+        // check if we have a last touch primitive
+        if (_prim_last_touch != prim_t::none) {
+            _unary_last_touch.generate(_dim_sizes[_id_prim_m],
+                                       _dim_sizes[_id_prim_m],
+                                       0,
+                                       mini_jit::generator::Unary::dtype_t::fp32,
+                                       mini_jit::generator::Unary::ptype_t::relu);
+        }
+        _unary_last_touch_kernel = _unary_last_touch.get_kernel();
+
         // set lda, ldb, ldc, in0_br_stride, in1_br_stride
         // TODO: currently assumes primitve types are always the last 3 dimensions
         _lda = _strides_in0[_strides_in0.size() - 1];
@@ -140,9 +161,9 @@ namespace einsum::backend {
         int64_t l_size = _loop_sizes[id_loop];
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
-            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop];
-            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop];
-            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop];
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
+            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
 
             // TODO: handle first and last access
             if (id_loop + 1 < _id_first_primitive_loop) {
@@ -153,12 +174,23 @@ namespace einsum::backend {
                              first_access,
                              last_access);
             } else {
+                // handle first touch
+                if (first_access && _prim_first_touch != prim_t::none) {
+                    // TODO
+                    _unary_first_touch_kernel(l_ptr_in0, l_ptr_out, _ldc, _ldc);
+                }
                 _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
                                _lda,
                                _ldb,
                                _ldc,
                                _in0_br_stride,
                                _in1_br_stride);
+
+                // handle last touch
+                if (last_access && _prim_last_touch != prim_t::none) {
+                    // TODO
+                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
             }
         }
     }

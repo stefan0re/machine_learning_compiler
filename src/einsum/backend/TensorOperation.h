@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "../../mini_jit/generator/Brgemm.h"
+#include "../../mini_jit/generator/Unary.h"
 
 namespace einsum {
     namespace backend {
@@ -152,8 +153,17 @@ class einsum::backend::TensorOperation {
                             char* ptr_out);
 
    private:
+    // BRGEMM
     mini_jit::generator::Brgemm _brgemm;
     kernel_t _brgemm_kernel{nullptr};
+
+    // Unary first touch
+    mini_jit::generator::Unary _unary_first_touch;
+    mini_jit::generator::Unary::kernel_t _unary_first_touch_kernel{nullptr};
+
+    // Unary last touch
+    mini_jit::generator::Unary _unary_last_touch;
+    mini_jit::generator::Unary::kernel_t _unary_last_touch_kernel{nullptr};
 };
 
 #endif
