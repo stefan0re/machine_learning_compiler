@@ -14,3 +14,4 @@ FetchContent_MakeAvailable(Catch2)
 enable_testing()
 
 add_subdirectory(mini_jit/instructions)
+add_subdirectory(mini_jit/generator)

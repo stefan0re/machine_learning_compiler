@@ -14,9 +14,9 @@ namespace TenGen::MiniJit::Generator {
 
     class Unary {
        private:
-        static Kernel m_kernel;
+        Kernel m_kernel;
 
-        static void gen_unary_transpose(uint32_t m, uint32_t n) {
+        void gen_unary_transpose(uint32_t m, uint32_t n) {
             int max_size = m * n;
             int helper = 0;
 
@@ -49,20 +49,16 @@ namespace TenGen::MiniJit::Generator {
             }
         }
 
+        void gen_unary_relu() {
+            // TODO: Implement relu generation
+        }
+
+        void gen_unary_zero() {
+            // TODO: Implement zero generation
+        }
+
        public:
         int32_t fops = 0;
-
-        /**
-         * @brief Get kernel sizes for sub-matrices.
-         * @param m            Number of rows in A and B.
-         * @param n            Number of columns in A and B.
-         * @param kernel_sizes size for each kernel for the sub-matrices.
-         * @return error_t::success on success, another error_t value otherwise.
-         **/
-        static TenGen::Types::error_t get_kernel_sizes(uint32_t m,
-                                                       uint32_t n,
-                                                       KernelSizes& kernel_sizes,
-                                                       bool only_square = false);
 
         /**
          * @brief Generate a kernel for a unary primitive.

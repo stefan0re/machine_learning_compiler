@@ -8,8 +8,8 @@
 using namespace TenGen::Types;
 using namespace TenGen::Structs;
 using namespace TenGen::MiniJit::Instructions::Encoding;
+using namespace TenGen::MiniJit::Generator::Util;
 using Kernel = TenGen::MiniJit::Backend::Kernel;
-using Util = TenGen::MiniJit::Generator::Util;
 
 #define BRGEMM_EXPECT(cond)                     \
     do {                                        \
@@ -22,6 +22,7 @@ namespace TenGen::MiniJit::Generator {
         //! kernel backend
         Kernel m_kernel;
 
+       public:
         /**
          * @brief Generate a kernel for batch-reduce matrix multiplication.
          * @param m number of rows in A and C.
