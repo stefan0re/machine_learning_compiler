@@ -6,7 +6,10 @@
 #include <string>
 #include <vector>
 
-#include "TenGen.h"
+#include "TenGen/mini_jit/backend/Kernel.h"
+#include "TenGen/mini_jit/instructions/Encoding.h"
+#include "TenGen/types/Structs.h"
+#include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
 using namespace TenGen::Structs;

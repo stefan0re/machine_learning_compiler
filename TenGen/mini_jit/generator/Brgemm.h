@@ -3,7 +3,11 @@
 
 #include <cstdint>
 
-#include "TenGen.h"
+#include "TenGen/mini_jit/backend/Kernel.h"
+#include "TenGen/mini_jit/generator/Util.h"
+#include "TenGen/mini_jit/instructions/Encoding.h"
+#include "TenGen/types/Structs.h"
+#include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
 using namespace TenGen::Structs;
@@ -11,9 +15,9 @@ using namespace TenGen::MiniJit::Instructions::Encoding;
 using namespace TenGen::MiniJit::Generator::Util;
 using Kernel = TenGen::MiniJit::Backend::Kernel;
 
-#define BRGEMM_EXPECT(cond)                     \
-    do {                                        \
-        if (!(cond)) return error_t::bad_param; \
+#define BRGEMM_EXPECT(cond)                                    \
+    do {                                                       \
+        if (!(cond)) return TenGen::Types::error_t::bad_param; \
     } while (0)
 
 namespace TenGen::MiniJit::Generator {
@@ -650,7 +654,7 @@ namespace TenGen::MiniJit::Generator {
 
             m_kernel.write("output_test.bin");
 
-            return error_t::success;
+            return TenGen::Types::error_t::success;
         }
 
         /*

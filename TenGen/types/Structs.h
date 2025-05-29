@@ -5,7 +5,7 @@
 #include <span>
 #include <vector>
 
-#include "TenGen.h"
+#include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
 

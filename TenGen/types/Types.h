@@ -3,7 +3,8 @@
 
 #include <cstdint>
 
-// Note: Implicit conversion to integers.
+// Note: Implicit conversion to integers without the enum class keyword
+// is used to allow for easier arithmetic operations and comparisons.
 
 namespace TenGen::Types {
     //! general-purpose registers
@@ -78,26 +79,26 @@ namespace TenGen::Types {
     };
 
     // Alias for general-purpose registers
-    constexpr gpr_t INPUT_ADDRESS_A_REG = x0;
-    constexpr gpr_t INPUT_ADDRESS_B_REG = x1;
-    constexpr gpr_t INPUT_ADDRESS_C_REG = x2;
+    constexpr gpr_t INPUT_ADDRESS_A_REG = gpr_t::x0;
+    constexpr gpr_t INPUT_ADDRESS_B_REG = gpr_t::x1;
+    constexpr gpr_t INPUT_ADDRESS_C_REG = gpr_t::x2;
 
-    constexpr gpr_t WORKING_ADDRESS_A_REG = x7;
-    constexpr gpr_t WORKING_ADDRESS_B_REG = x8;
-    constexpr gpr_t WORKING_ADDRESS_C_REG = x9;
+    constexpr gpr_t WORKING_ADDRESS_A_REG = gpr_t::x7;
+    constexpr gpr_t WORKING_ADDRESS_B_REG = gpr_t::x8;
+    constexpr gpr_t WORKING_ADDRESS_C_REG = gpr_t::x9;
 
-    constexpr gpr_t LEADING_DIM_A_REG = x3;
-    constexpr gpr_t LEADING_DIM_B_REG = x4;
-    constexpr gpr_t LEADING_DIM_C_REG = x5;
+    constexpr gpr_t LEADING_DIM_A_REG = gpr_t::x3;
+    constexpr gpr_t LEADING_DIM_B_REG = gpr_t::x4;
+    constexpr gpr_t LEADING_DIM_C_REG = gpr_t::x5;
 
-    constexpr gpr_t K_LOOP_COUNT_REG = x10;
-    constexpr gpr_t M_LOOP_COUNT_REG = x11;
-    constexpr gpr_t N_LOOP_COUNT_REG = x12;
-    constexpr gpr_t BR_LOOP_COUNT_REG = x16;
+    constexpr gpr_t K_LOOP_COUNT_REG = gpr_t::x10;
+    constexpr gpr_t M_LOOP_COUNT_REG = gpr_t::x11;
+    constexpr gpr_t N_LOOP_COUNT_REG = gpr_t::x12;
+    constexpr gpr_t BR_LOOP_COUNT_REG = gpr_t::x16;
 
-    constexpr gpr_t HELP_REG_1 = x13;
-    constexpr gpr_t HELP_REG_2 = x14;
-    constexpr gpr_t HELP_REG_3 = x15;
+    constexpr gpr_t HELP_REG_1 = gpr_t::x13;
+    constexpr gpr_t HELP_REG_2 = gpr_t::x14;
+    constexpr gpr_t HELP_REG_3 = gpr_t::x15;
 
     //! simd&fp registers
     enum simd_fp_t : uint32_t {
@@ -178,33 +179,33 @@ namespace TenGen::Types {
     };
 
     // data type
-    enum dtype_t : uint32_t {
+    enum class dtype_t : uint32_t {
         fp32 = 0,
         fp64 = 1
     };
 
     // primitive type
-    enum ptype_t : uint32_t {
+    enum class ptype_t : uint32_t {
         zero = 0,
         identity = 1,
         relu = 2
     };
 
     // error codes
-    enum error_t : int32_t {
+    enum class error_t : int32_t {
         success = 0,
         bad_param = -1
     };
 
     /// execution type
-    enum exec_t : uint32_t {
+    enum class exec_t : uint32_t {
         seq = 0,
         prim = 1,
         shared = 2,
     };
 
     /// primitive type
-    enum prim_t : uint32_t {
+    enum class prim_t : uint32_t {
         zero = 0,
         copy = 1,
         relu = 2,
@@ -214,7 +215,7 @@ namespace TenGen::Types {
     };
 
     // dimension type
-    enum dim_t : uint32_t {
+    enum class dim_t : uint32_t {
         c = 0,  // Dimension in all 3 tensors
         m = 1,  // Dimension in input-tensor 1 (output rows)
         n = 2,  // Dimension in input-tensor 2 (output cols)

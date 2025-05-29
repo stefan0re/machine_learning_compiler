@@ -3,7 +3,10 @@
 
 #include <cstdint>
 
-#include "TenGen.h"
+#include "TenGen/mini_jit/backend/Kernel.h"
+#include "TenGen/mini_jit/instructions/Encoding.h"
+#include "TenGen/types/Structs.h"
+#include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
 using namespace TenGen::Structs;
@@ -257,7 +260,7 @@ namespace TenGen::MiniJit::Generator {
 
             m_kernel.write("output_test.bin");
 
-            return error_t::success;
+            return TenGen::Types::error_t::success;
         }
 
         /*

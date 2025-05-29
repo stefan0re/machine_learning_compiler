@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <string>
 
-#include "TenGen.h"
+#include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
 

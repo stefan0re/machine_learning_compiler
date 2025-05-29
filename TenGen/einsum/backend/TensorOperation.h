@@ -5,7 +5,8 @@
 #include <span>
 #include <vector>
 
-#include "TenGen.h"
+#include "TenGen/types/Structs.h"
+#include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
 using namespace TenGen::Structs;
@@ -46,7 +47,7 @@ namespace TenGen::Einsum::Backend::TensorOperation {
         op.strides_in1 = op.strides_in1_storage;
         op.strides_out = op.strides_out_storage;
 
-        return error_t::success;
+        return TenGen::Types::error_t::success;
     }
 
     // Function to execute a tensor operation

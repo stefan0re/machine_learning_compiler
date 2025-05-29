@@ -7,7 +7,8 @@
 #include <sstream>
 #include <string>
 
-#include "TenGenTestsHelper.h"
+#include "TenGen.h"
+#include "TenGenTests/TenGenTestsHelper.h"
 
 using namespace TenGen::Types;
 using namespace TenGen::MiniJit::Instructions::Encoding;

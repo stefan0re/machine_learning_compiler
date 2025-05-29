@@ -1,10 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
 
 #include "TenGen.h"
-#include "TenGenTestsHelper.h"
+#include "TenGenTests/TenGenTestsHelper.h"
+
+using Brgemm = TenGen::MiniJit::Generator::Brgemm;
 
 TEST_CASE("MiniJit::Brgemm::FP32 test", "[MiniJit][Brgemm][FP32]") {
     int64_t m = GENERATE(8, 16);
