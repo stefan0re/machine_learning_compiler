@@ -1,5 +1,7 @@
 #include "TensorOperation.h"
 
+#include "../../src/mini_jit/generator/Brgemm.h"
+
 namespace einsum::backend {
 
     TensorOperation::error_t TensorOperation::setup(dtype_t dtype,
@@ -55,22 +57,22 @@ namespace einsum::backend {
                       char* ptr_out,
                       bool first_access,
                       bool last_access) {
-        int64_t l_size = m_loop_sizes[id_loop];
+        // int64_t l_size = m_loop_sizes[id_loop];
 
-        for (int64_t l_it = 0; l_it < l_size; l_it++) {
-            // derive if this is first or last access to the output block
+        // for (int64_t l_it = 0; l_it < l_size; l_it++) {
+        //     // derive if this is first or last access to the output block
 
-            // update pointer with strides
+        //     // update pointer with strides
 
-            if (id_loop + 1 < m_id_first_primitive_loop) {
-                // recursive function call
-            } else {
-                // call first touch kernel if necessary
+        //     if (id_loop + 1 < m_id_first_primitive_loop) {
+        //         // recursive function call
+        //     } else {
+        //         // call first touch kernel if necessary
 
-                // call main kernel
+        //         // call main kernel
 
-                // call last touch kernel if necessary
-            }
-        }
+        //         // call last touch kernel if necessary
+        //     }
+        // }
     }
 }  // namespace einsum::backend
