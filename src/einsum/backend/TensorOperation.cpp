@@ -41,26 +41,40 @@ namespace einsum::backend {
         _strides_in1 = _strides_in1_storage;
         _strides_out = _strides_out_storage;
 
-        // write loop dims to _loop_sizes_storage
+        // extract the sizes of the sequential loops
+        // till we reach the first primitive loop
         for (size_t i = 0; i < _dim_types.size(); i++) {
+            // if the execution type is not a primitive,
+            // we add the size to the loop sizes storage
             if (_exec_types[i] != exec_t::prim) {
                 _loop_sizes_storage.push_back(_dim_sizes[i]);
+                // otherwise, we set the id of the first primitive loop
+                // and break the loop
             } else {
                 _id_first_primitive_loop = i;
                 break;
             }
         }
+
+        // remap the loop sizes to a span
         _loop_sizes = _loop_sizes_storage;
 
-        // set prim ids
+        // again, go through the dimensions and now only
+        // do something if the execution type is a primitive
         for (size_t i = 0; i < _dim_sizes.size(); i++) {
+            // check if the dimension is a primitive and if it is the m loop
             if (_dim_types[i] == dim_t::m && _exec_types[i] == exec_t::prim) {
                 _id_prim_m = i;
+                // check if the dimension is a primitive and if it is the n loop
             } else if (_dim_types[i] == dim_t::n && _exec_types[i] == exec_t::prim) {
                 _id_prim_n = i;
+                // check if the dimension is a primitive and if it is the k loop
             } else if (_dim_types[i] == dim_t::k && _exec_types[i] == exec_t::prim) {
+                // if we have not set the id of the k loop yet, we set it
                 if (_id_prim_k == 0) {
                     _id_prim_k = i;
+                    // if we set it already and encounter a new k loop
+                    // we know that we have a batch-reduced size
                 } else {
                     _id_prim_br_size = _id_prim_k;
                     _id_prim_k = i;
@@ -68,11 +82,11 @@ namespace einsum::backend {
             }
         }
 
-        // create brgemm_kernel
+        // create brgemm_kernel form that primitives above
         _brgemm.generate(_dim_sizes[_id_prim_m],
                          _dim_sizes[_id_prim_n],
                          _dim_sizes[_id_prim_k],
-                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,
+                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
                          0,
                          0,
                          0,
@@ -80,6 +94,7 @@ namespace einsum::backend {
         _brgemm_kernel = _brgemm.get_kernel();
 
         // check if we have a first touch primitive
+        // for now this only applys to zero
         if (_prim_first_touch != prim_t::none) {
             _unary_first_touch.generate(_dim_sizes[_id_prim_m],
                                         _dim_sizes[_id_prim_m],
@@ -91,6 +106,7 @@ namespace einsum::backend {
         _unary_first_touch_kernel = _unary_first_touch.get_kernel();
 
         // check if we have a last touch primitive
+        // for now this only applys to relu
         if (_prim_last_touch != prim_t::none) {
             _unary_last_touch.generate(_dim_sizes[_id_prim_m],
                                        _dim_sizes[_id_prim_m],
@@ -109,6 +125,7 @@ namespace einsum::backend {
         _in0_br_stride = _strides_in0[_strides_in0.size() - 4];
         _in1_br_stride = _strides_in1[_strides_in1.size() - 4];
 
+// this is really cool
 #ifdef DEBUG
         // print all necessary information
         std::cout << "TensorOperation setup:" << std::endl;
@@ -158,14 +175,17 @@ namespace einsum::backend {
                                        char* ptr_out,
                                        bool first_access,
                                        bool last_access) {
+        // go through each sequential loop (M, N, K) recursively
         int64_t l_size = _loop_sizes[id_loop];
-
+        // apply the loop
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
+            // calculate the pointers for the current iteration
             char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
             char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
             char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
 
             // TODO: handle first and last access
+            // if alle squential loops are applied, we can execute the primitive
             if (id_loop + 1 < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
                              l_ptr_in0,
@@ -179,6 +199,7 @@ namespace einsum::backend {
                     // TODO
                     _unary_first_touch_kernel(l_ptr_in0, l_ptr_out, _ldc, _ldc);
                 }
+                // do the brgemm operation
                 _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
                                _lda,
                                _ldb,
