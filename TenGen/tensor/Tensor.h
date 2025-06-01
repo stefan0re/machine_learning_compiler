@@ -7,8 +7,6 @@
 #include <iostream>
 #include <numeric>
 
-#include "Fastor/Fastor.h"
-
 namespace TenGen {
     // e.g. Tensor<float, 3, 3, 4>
     template <typename T, size_t... Dims>
@@ -115,8 +113,8 @@ namespace TenGen {
             _data = new_data;
         }
 
-        void fromFastor(const Fastor::Tensor<T, Dims...>& fastor_tensor) {
-            std::copy_n(fastor_tensor.data(), _data.size(), _data.data());
+        void fromXTensor(const xt::xarray<T>& xtensor) {
+            std::copy_n(xtensor.data(), _data.size(), _data.data());
         }
 
         //
