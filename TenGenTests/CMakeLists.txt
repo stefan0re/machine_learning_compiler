@@ -33,3 +33,4 @@ enable_testing()
 
 add_subdirectory(mini_jit/instructions)
 add_subdirectory(mini_jit/generator)
+add_subdirectory(tensor)

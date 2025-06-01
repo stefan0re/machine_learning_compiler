@@ -10,8 +10,15 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <xtensor/xarray.hpp>
 
 namespace TenGenTestsHelper {
+
+    template <typename T, size_t... Dims>
+    void fromXTensor(const xt::xarray<T>& xtensor, TenGen::Tensor<T, Dims...>& tensor) {
+        std::copy_n(xtensor.data(), tensor.size(), tensor.data());
+    }
+
     /**
      * @brief Generates machine code for an assembly instruction in form of a string.
      *

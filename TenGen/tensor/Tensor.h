@@ -113,10 +113,6 @@ namespace TenGen {
             _data = new_data;
         }
 
-        void fromXTensor(const xt::xarray<T>& xtensor) {
-            std::copy_n(xtensor.data(), _data.size(), _data.data());
-        }
-
         //
         // -------------------------------- DEBUG -----------------------------------
         //
