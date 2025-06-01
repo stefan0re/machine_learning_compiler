@@ -11,6 +11,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
+FetchContent_Declare(
+  fastor
+  GIT_REPOSITORY https://github.com/romeric/Fastor.git
+  GIT_TAG master  
+)
+
+FetchContent_MakeAvailable(fastor)
+
 enable_testing()
 
 add_subdirectory(mini_jit/instructions)
