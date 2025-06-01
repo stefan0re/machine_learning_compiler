@@ -5,8 +5,6 @@
 #include "TenGen.h"
 #include "TenGenTests/TenGenTestsHelper.h"
 
-using namespace Fastor;
-
 TEST_CASE("Fastor Tensor == TenGen Tensor", "[Tensor][Tensor]") {
     // create a TenGen tensor and fill it with random values
     TenGen::Tensor<float, 2, 2> tenGenTensor1;

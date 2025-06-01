@@ -12,6 +12,13 @@ namespace TenGen {
     template <typename T, size_t... Dims>
     class Tensor {
        public:
+        Tensor(fill_random = false) {
+            // if fill_random is true, fill the tensor with random values
+            if (fill_random) {
+                fillRandom();
+            }
+        }
+
         //
         // --------------------- Define some tensor attributes ---------------------
         //
@@ -24,7 +31,7 @@ namespace TenGen {
 
         // e.g. Tensor<float, 2, 3, 4>::Dims == {2, 3, 4}
         // storage for the elements
-        static constexpr std::array<T, size> _data;
+        std::array<T, size> _data{};
 
         // store the shape of the tensor
         static constexpr std::array<size_t, sizeof...(Dims)> shape = {Dims...};
@@ -87,6 +94,10 @@ namespace TenGen {
                     _data[i] = static_cast<dtype>(rand() % 100);  // e.g. integer in [0, 99]
                 }
             }
+        }
+
+        bool operator==(const Tensor& other) const {
+            return _data == other._data;
         }
 
         //
