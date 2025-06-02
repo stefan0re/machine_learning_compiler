@@ -22,20 +22,55 @@ namespace TenGen::Einsum::Backend {
 
     class TensorOperation {
        public:
-        Brgemm brgemm;
-        Brgemm::kernel_t brgemm_kernel{nullptr};
+        // scalars
+        dtype_t _dtype;
+        prim_t _prim_first_touch;
+        prim_t _prim_main;
+        prim_t _prim_last_touch;
+        int64_t _id_first_primitive_loop;
+
+        int64_t _id_prim_m;
+        int64_t _id_prim_n;
+        int64_t _id_prim_k = 0;
+        int64_t _id_prim_br_size = -1;
+
+        int64_t _lda;
+        int64_t _ldb;
+        int64_t _ldc;
+        int64_t _in0_br_stride;
+        int64_t _in1_br_stride;
+
+        // owned storage
+        std::vector<dim_t> _dim_types_storage;
+        std::vector<exec_t> _exec_types_storage;
+        std::vector<int64_t> _dim_sizes_storage;
+        std::vector<int64_t> _strides_in0_storage;
+        std::vector<int64_t> _strides_in1_storage;
+        std::vector<int64_t> _strides_out_storage;
+        std::vector<int64_t> _loop_sizes_storage;
+
+        // views (spans)
+        std::span<const dim_t> _dim_types;
+        std::span<const exec_t> _exec_types;
+        std::span<const int64_t> _dim_sizes;
+        std::span<const int64_t> _strides_in0;
+        std::span<const int64_t> _strides_in1;
+        std::span<const int64_t> _strides_out;
+        std::span<const int64_t> _loop_sizes;
+
+        Brgemm _brgemm;
+        Brgemm::kernel_t _brgemm_kernel{nullptr};
 
         // Unary first touch
-        Unary unary_first_touch;
-        Unary::kernel_t unary_first_touch_kernel{nullptr};
+        Unary _unary_first_touch;
+        Unary::kernel_t _unary_first_touch_kernel{nullptr};
 
         // Unary last touch
-        Unary unary_last_touch;
-        Unary::kernel_t unary_last_touch_kernel{nullptr};
+        Unary _unary_last_touch;
+        Unary::kernel_t _unary_last_touch_kernel{nullptr};
 
         // Function to initialize a TensorOperation
-        TenGen::Types::error_t setup(TensorConfig& op,
-                                     dtype_t dtype,
+        TenGen::Types::error_t setup(dtype_t dtype,
                                      prim_t prim_first_touch,
                                      prim_t prim_main,
                                      prim_t prim_last_touch,
@@ -46,138 +81,138 @@ namespace TenGen::Einsum::Backend {
                                      std::vector<int64_t> strides_in1,
                                      std::vector<int64_t> strides_out) {
             // Store scalars
-            op.dtype = dtype;
-            op.prim_first_touch = prim_first_touch;
-            op.prim_main = prim_main;
-            op.prim_last_touch = prim_last_touch;
+            _dtype = dtype;
+            _prim_first_touch = prim_first_touch;
+            _prim_main = prim_main;
+            _prim_last_touch = prim_last_touch;
 
             // safely copies all input arrays so they outlive setup()
             // 1. copy data into owned storage
-            op._dim_types_storage.assign(dim_types.begin(), dim_types.end());
-            op._exec_types_storage.assign(exec_types.begin(), exec_types.end());
-            op._dim_sizes_storage.assign(dim_sizes.begin(), dim_sizes.end());
-            op._strides_in0_storage.assign(strides_in0.begin(), strides_in0.end());
-            op._strides_in1_storage.assign(strides_in1.begin(), strides_in1.end());
-            op._strides_out_storage.assign(strides_out.begin(), strides_out.end());
+            _dim_types_storage.assign(dim_types.begin(), dim_types.end());
+            _exec_types_storage.assign(exec_types.begin(), exec_types.end());
+            _dim_sizes_storage.assign(dim_sizes.begin(), dim_sizes.end());
+            _strides_in0_storage.assign(strides_in0.begin(), strides_in0.end());
+            _strides_in1_storage.assign(strides_in1.begin(), strides_in1.end());
+            _strides_out_storage.assign(strides_out.begin(), strides_out.end());
 
             // 2. set spans to refer to owned data
-            op.dim_types = op._dim_types_storage;
-            op.exec_types = op._exec_types_storage;
-            op.dim_sizes = op._dim_sizes_storage;
-            op.strides_in0 = op._strides_in0_storage;
-            op.strides_in1 = op._strides_in1_storage;
-            op.strides_out = op._strides_out_storage;
+            _dim_types = _dim_types_storage;
+            _exec_types = _exec_types_storage;
+            _dim_sizes = _dim_sizes_storage;
+            _strides_in0 = _strides_in0_storage;
+            _strides_in1 = _strides_in1_storage;
+            _strides_out = _strides_out_storage;
 
             // extract the sizes of the sequential loops
             // till we reach the first primitive loop
-            for (size_t i = 0; i < op.dim_types.size(); i++) {
+            for (size_t i = 0; i < _dim_types.size(); i++) {
                 // if the execution type is not a primitive,
                 // we add the size to the loop sizes storage
-                if (op.exec_types[i] != exec_t::prim) {
-                    op._loop_sizes_storage.push_back(op.dim_sizes[i]);
+                if (_exec_types[i] != exec_t::prim) {
+                    _loop_sizes_storage.push_back(_dim_sizes[i]);
                     // otherwise, we set the id of the first primitive loop
                     // and break the loop
                 } else {
-                    op.id_first_primitive_loop = i;
+                    _id_first_primitive_loop = i;
                     break;
                 }
             }
 
             // remap the loop sizes to a span
-            op.loop_sizes = op._loop_sizes_storage;
+            _loop_sizes = _loop_sizes_storage;
 
             // again, go through the dimensions and now only
             // do something if the execution type is a primitive
-            for (size_t i = 0; i < op.dim_sizes.size(); i++) {
+            for (size_t i = 0; i < _dim_sizes.size(); i++) {
                 // check if the dimension is a primitive and if it is the m loop
-                if (op.dim_types[i] == dim_t::m && op.exec_types[i] == exec_t::prim) {
-                    op.id_prim_m = i;
+                if (_dim_types[i] == dim_t::m && _exec_types[i] == exec_t::prim) {
+                    _id_prim_m = i;
                     // check if the dimension is a primitive and if it is the n loop
-                } else if (op.dim_types[i] == dim_t::n && op.exec_types[i] == exec_t::prim) {
-                    op.id_prim_n = i;
+                } else if (_dim_types[i] == dim_t::n && _exec_types[i] == exec_t::prim) {
+                    _id_prim_n = i;
                     // check if the dimension is a primitive and if it is the k loop
-                } else if (op.dim_types[i] == dim_t::k && op.exec_types[i] == exec_t::prim) {
+                } else if (_dim_types[i] == dim_t::k && _exec_types[i] == exec_t::prim) {
                     // if we have not set the id of the k loop yet, we set it
-                    if (op.id_prim_k == 0) {
-                        op.id_prim_k = i;
+                    if (_id_prim_k == 0) {
+                        _id_prim_k = i;
                         // if we set it already and encounter a new k loop
                         // we know that we have a batch-reduced size
                     } else {
-                        op.id_prim_br_size = op.id_prim_k;
-                        op.id_prim_k = i;
+                        _id_prim_br_size = _id_prim_k;
+                        _id_prim_k = i;
                     }
                 }
             }
 
             // create brgemm_kernel form that primitives above
-            brgemm.generate(op.dim_sizes[op.id_prim_m],
-                            op.dim_sizes[op.id_prim_n],
-                            op.dim_sizes[op.id_prim_k],
-                            (op.id_prim_br_size > -1) ? op.dim_sizes[op.id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
-                            0,
-                            0,
-                            0,
-                            static_cast<dtype_t>(op.dtype));
-            brgemm_kernel = brgemm.get_kernel();
+            _brgemm.generate(_dim_sizes[_id_prim_m],
+                             _dim_sizes[_id_prim_n],
+                             _dim_sizes[_id_prim_k],
+                             (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
+                             0,
+                             0,
+                             0,
+                             static_cast<dtype_t>(_dtype));
+            _brgemm_kernel = _brgemm.get_kernel();
 
             // check if we have a first touch primitive
             // for now this only applys to zero
-            if (op.prim_first_touch != prim_t::none) {
-                unary_first_touch.generate(op.dim_sizes[op.id_prim_m],
-                                           op.dim_sizes[op.id_prim_m],
-                                           0,
-                                           dtype_t::fp32,
-                                           ptype_t::zero);
+            if (_prim_first_touch != prim_t::none) {
+                _unary_first_touch.generate(_dim_sizes[_id_prim_m],
+                                            _dim_sizes[_id_prim_m],
+                                            0,
+                                            dtype_t::fp32,
+                                            ptype_t::zero);
             }
-            unary_first_touch_kernel = unary_first_touch.get_kernel();
+            _unary_first_touch_kernel = _unary_first_touch.get_kernel();
 
             // check if we have a last touch primitive
             // for now this only applys to relu
-            if (op.prim_last_touch != prim_t::none) {
-                unary_last_touch.generate(op.dim_sizes[op.id_prim_m],
-                                          op.dim_sizes[op.id_prim_m],
-                                          0,
-                                          dtype_t::fp32,
-                                          ptype_t::relu);
+            if (_prim_last_touch != prim_t::none) {
+                _unary_last_touch.generate(_dim_sizes[_id_prim_m],
+                                           _dim_sizes[_id_prim_m],
+                                           0,
+                                           dtype_t::fp32,
+                                           ptype_t::relu);
             }
-            unary_last_touch_kernel = unary_last_touch.get_kernel();
+            _unary_last_touch_kernel = _unary_last_touch.get_kernel();
 
             // set lda, ldb, ldc, in0_br_stride, in1_br_stride
             // TODO: currently assumes primitve types are always the last 3 dimensions
-            op.lda = op.strides_in0[op.strides_in0.size() - 1];
-            op.ldb = op.strides_in1[op.strides_in1.size() - 2];
-            op.ldc = op.strides_out[op.strides_out.size() - 2];
+            _lda = _strides_in0[_strides_in0.size() - 1];
+            _ldb = _strides_in1[_strides_in1.size() - 2];
+            _ldc = _strides_out[_strides_out.size() - 2];
 
-            op.in0_br_stride = op.strides_in0[op.strides_in0.size() - 4];
-            op.in1_br_stride = op.strides_in1[op.strides_in1.size() - 4];
+            _in0_br_stride = _strides_in0[_strides_in0.size() - 4];
+            _in1_br_stride = _strides_in1[_strides_in1.size() - 4];
 
 // this is really cool
 #ifdef DEBUG
             // print all necessary information
             std::cout << "TensorOperation setup:" << std::endl;
-            std::cout << "  dtype: " << static_cast<int>(op.dtype) << std::endl;
-            std::cout << "  prim_first_touch: " << static_cast<int>(op.prim_first_touch) << std::endl;
-            std::cout << "  prim_main: " << static_cast<int>(op.prim_main) << std::endl;
-            std::cout << "  prim_last_touch: " << static_cast<int>(op.prim_last_touch) << std::endl;
-            std::cout << "  id_first_primitive_loop: " << op.id_first_primitive_loop << std::endl;
-            std::cout << "  id_prim_m: " << op.id_prim_m << std::endl;
-            std::cout << "  id_prim_n: " << op.id_prim_n << std::endl;
-            std::cout << "  id_prim_k: " << op.id_prim_k << std::endl;
-            std::cout << "  id_prim_br_size: " << op.id_prim_br_size << std::endl;
+            std::cout << "  dtype: " << static_cast<int>(_dtype) << std::endl;
+            std::cout << "  prim_first_touch: " << static_cast<int>(_prim_first_touch) << std::endl;
+            std::cout << "  prim_main: " << static_cast<int>(_prim_main) << std::endl;
+            std::cout << "  prim_last_touch: " << static_cast<int>(_prim_last_touch) << std::endl;
+            std::cout << "  id_first_primitive_loop: " << _id_first_primitive_loop << std::endl;
+            std::cout << "  id_prim_m: " << _id_prim_m << std::endl;
+            std::cout << "  id_prim_n: " << _id_prim_n << std::endl;
+            std::cout << "  id_prim_k: " << _id_prim_k << std::endl;
+            std::cout << "  id_prim_br_size: " << _id_prim_br_size << std::endl;
             std::cout << "  loop_sizes: ";
-            for (const auto& size : op.loop_sizes) {
+            for (const auto& size : _loop_sizes) {
                 std::cout << size << " ";
             }
             std::cout << std::endl;
-            std::cout << "M: " << op.dim_sizes[op.id_prim_m] << std::endl;
-            std::cout << "N: " << op.dim_sizes[op.id_prim_n] << std::endl;
-            std::cout << "K: " << op.dim_sizes[op.id_prim_k] << std::endl;
-            std::cout << "BR size: " << ((op.id_prim_br_size > -1) ? op.dim_sizes[op.id_prim_br_size] : 1) << std::endl;
-            std::cout << "lda: " << op.lda << std::endl;
-            std::cout << "ldb: " << op.ldb << std::endl;
-            std::cout << "ldc: " << op.ldc << std::endl;
-            std::cout << "in0_br_stride: " << op.in0_br_stride << std::endl;
-            std::cout << "in1_br_stride: " << op.in1_br_stride << std::endl;
+            std::cout << "M: " << _dim_sizes[_id_prim_m] << std::endl;
+            std::cout << "N: " << _dim_sizes[_id_prim_n] << std::endl;
+            std::cout << "K: " << _dim_sizes[_id_prim_k] << std::endl;
+            std::cout << "BR size: " << ((_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1) << std::endl;
+            std::cout << "lda: " << _lda << std::endl;
+            std::cout << "ldb: " << _ldb << std::endl;
+            std::cout << "ldc: " << _ldc << std::endl;
+            std::cout << "in0_br_stride: " << _in0_br_stride << std::endl;
+            std::cout << "in1_br_stride: " << _in1_br_stride << std::endl;
 
             std::cout << "***********************" << std::endl;
 #endif
@@ -186,8 +221,7 @@ namespace TenGen::Einsum::Backend {
         }
 
         // Function to execute a tensor operation
-        void execute(const TensorConfig& op,
-                     const void* tensor_in0,
+        void execute(const void* tensor_in0,
                      const void* tensor_in1,
                      void* tensor_out) {
             // get pointers to input and output data
@@ -196,31 +230,29 @@ namespace TenGen::Einsum::Backend {
             char* l_ptr_out = static_cast<char*>(tensor_out);
 
             // execute the operation
-            execute_iter(op, 0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+            execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
         }
 
         // Recursive loop execution function
-        void execute_iter(const TensorConfig& op,
-                          int64_t id_loop,
+        void execute_iter(int64_t id_loop,
                           const char* ptr_in0,
                           const char* ptr_in1,
                           char* ptr_out,
                           bool first_access,
                           bool last_access) {
             // go through each sequential loop (M, N, K) recursively
-            int64_t l_size = op.loop_sizes[id_loop];
+            int64_t l_size = _loop_sizes[id_loop];
             // apply the loop
             for (int64_t l_it = 0; l_it < l_size; l_it++) {
                 // calculate the pointers for the current iteration
-                char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * op.strides_in0[id_loop] * 4;
-                char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * op.strides_in1[id_loop] * 4;
-                char* l_ptr_out = ptr_out + l_it * op.strides_out[id_loop] * 4;
+                char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
+                char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
+                char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
 
                 // TODO: handle first and last access
                 // if alle squential loops are applied, we can execute the primitive
-                if (id_loop + 1 < op.id_first_primitive_loop) {
-                    execute_iter(op,
-                                 id_loop + 1,
+                if (id_loop + 1 < _id_first_primitive_loop) {
+                    execute_iter(id_loop + 1,
                                  l_ptr_in0,
                                  l_ptr_in1,
                                  l_ptr_out,
@@ -228,22 +260,22 @@ namespace TenGen::Einsum::Backend {
                                  last_access);
                 } else {
                     // handle first touch
-                    if (first_access && op.prim_first_touch != prim_t::none) {
+                    if (first_access && _prim_first_touch != prim_t::none) {
                         // TODO
-                        unary_first_touch_kernel(l_ptr_in0, l_ptr_out, op.ldc, op.ldc);
+                        _unary_first_touch_kernel(l_ptr_in0, l_ptr_out, _ldc, _ldc);
                     }
                     // do the brgemm operation
-                    brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
-                                  op.lda,
-                                  op.ldb,
-                                  op.ldc,
-                                  op.in0_br_stride,
-                                  op.in1_br_stride);
+                    _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
+                                   _lda,
+                                   _ldb,
+                                   _ldc,
+                                   _in0_br_stride,
+                                   _in1_br_stride);
 
                     // handle last touch
-                    if (last_access && op.prim_last_touch != prim_t::none) {
+                    if (last_access && _prim_last_touch != prim_t::none) {
                         // TODO
-                        unary_last_touch_kernel(l_ptr_out, l_ptr_out, op.ldc, op.ldc);
+                        _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                     }
                 }
             }
