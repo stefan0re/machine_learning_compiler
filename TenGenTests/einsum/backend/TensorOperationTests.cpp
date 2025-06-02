@@ -52,29 +52,21 @@ TEST_CASE("Example 1", "[Einsum][Backend][TensorOperation]") {
     //
     //
 
-    std::vector<dim_t> l_dim_types = {dim_t::m, dim_t::n, dim_t::k, dim_t::m, dim_t::n, dim_t::k};
-    std::vector<exec_t> l_exec_types = {exec_t::seq, exec_t::seq, exec_t::seq, exec_t::prim, exec_t::prim, exec_t::prim};
-    std::vector<int64_t> l_dim_sizes = {
-        tenGenTensor1.shape[0], tenGenTensor1.shape[1], tenGenTensor1.shape[2],
-        tenGenTensor2.shape[0], tenGenTensor2.shape[1], tenGenTensor2.shape[2]};
-
     TensorOperation to;
-    TensorConfig op{};
 
     // Setup the tensor operation
-    auto l_error = to.setup(op,
-                            dtype_t::fp32,
+    auto l_error = to.setup(dtype_t::fp32,
                             prim_t::none,
                             prim_t::gemm,
                             prim_t::none,
-                            l_dim_types,
-                            l_exec_types,
-                            l_dim_sizes,
-                            std::vector<int64_t>{tenGenTensor1.strides.begin(), tenGenTensor1.strides.end()},
-                            std::vector<int64_t>{tenGenTensor2.strides.begin(), tenGenTensor2.strides.end()},
-                            std::vector<int64_t>{tenGenTensor3.strides.begin(), tenGenTensor3.strides.end()});
+                            std::vector<dim_t>{dim_t::m, dim_t::n, dim_t::k, dim_t::m, dim_t::n, dim_t::k},
+                            std::vector<exec_t>{exec_t::seq, exec_t::seq, exec_t::seq, exec_t::prim, exec_t::prim, exec_t::prim},
+                            std::vector<int64_t>{
+                                tenGenTensor1.shape[0], tenGenTensor1.shape[1], tenGenTensor1.shape[2],
+                                tenGenTensor2.shape[0], tenGenTensor2.shape[1], tenGenTensor2.shape[2]},
+                            std::vector<int64_t>{tenGenTensor1.strides.begin(), tenGenTensor1.strides.end()}, std::vector<int64_t>{tenGenTensor2.strides.begin(), tenGenTensor2.strides.end()}, std::vector<int64_t>{tenGenTensor3.strides.begin(), tenGenTensor3.strides.end()});
 
-    to.execute(op, tenGenTensor1.exportPointer(), tenGenTensor2.exportPointer(), tenGenTensor3.exportPointer());
+    to.execute(tenGenTensor1.exportPointer(), tenGenTensor2.exportPointer(), tenGenTensor3.exportPointer());
 
     //
     //
