@@ -34,6 +34,12 @@ using TensorOperation = TenGen::Einsum::Backend::TensorOperation;
     aufbau output: 32x32x32x32 -> aefc
 */
 
+/*
+- The math is preserved under reordering.
+- Precision may vary slightly.
+- Performance can vary a lot.
+*/
+
 TEST_CASE("Example 1", "[Einsum][Backend][TensorOperation]") {
     // create a TenGen tensor and fill it with random values
     TenGen::Tensor<float, 32, 8, 32, 32> tenGenTensor1(true);
@@ -41,14 +47,21 @@ TEST_CASE("Example 1", "[Einsum][Backend][TensorOperation]") {
     TenGen::Tensor<float, 32, 32, 32, 32> tenGenTensor3(true);
     TenGen::Tensor<float, 32, 32, 32, 32> tenGenTensor4;
 
+    // idx_1 = l_oM * 8192 + l_oK * 1024 + l_iK * 32 + l_iM * 1;
+    // idx_2 = l_oN * 8192 + l_oK * 1024 + l_iN * 32 + l_iK * 1;
+    // idx_out = l_oM * 32768 + l_oN * 1024 + l_iN * 32 + l_iM * 1;
+
     // create xtensor tensors with the same shape
     // Note: xtensor uses row major layout by default, so we specify it explicitly
-    xt::xtensor<float, 4, xt::layout_type::column_major> xt_tensor1 = xt::xtensor<float, 4, xt::layout_type::column_major>::from_shape({32, 8, 32, 32});
-    xt::xtensor<float, 4, xt::layout_type::column_major> xt_tensor2 = xt::xtensor<float, 4, xt::layout_type::column_major>::from_shape({32, 8, 32, 32});
+    std::vector<size_t> shape = {32, 8, 32, 32};
+    std::vector<size_t> strides_in0 = {8192, 0, 1024, 1};
+    std::vector<size_t> strides_in1 = {0, 8192, 1024, 1};
 
-    // copy the data from the TenGen tensors to the xtensor tensors
-    std::copy(tenGenTensor1.exportPointer(), tenGenTensor1.exportPointer() + tenGenTensor1.size, xt_tensor1.data());
-    std::copy(tenGenTensor2.exportPointer(), tenGenTensor2.exportPointer() + tenGenTensor2.size, xt_tensor2.data());
+    auto xt_tensor1 = xt::adapt(tenGenTensor1.exportPointer(), tenGenTensor1.size,
+                                xt::no_ownership(), shape, strides_in0);
+
+    auto xt_tensor2 = xt::adapt(tenGenTensor2.exportPointer(), tenGenTensor2.size,
+                                xt::no_ownership(), shape, strides_in1);
 
     //
     //
