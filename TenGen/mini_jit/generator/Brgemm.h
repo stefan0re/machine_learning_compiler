@@ -23,7 +23,7 @@ using Kernel = TenGen::MiniJit::Backend::Kernel;
 namespace TenGen::MiniJit::Generator {
     class Brgemm {
        private:
-        //! kernel backend
+        //! kernel backen
         Kernel m_kernel;
 
        public:

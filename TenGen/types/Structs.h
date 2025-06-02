@@ -1,5 +1,5 @@
-#ifndef TENGEN_Structs_H
-#define TENGEN_Structs_H
+#ifndef TENGEN_STRUCTS_H
+#define TENGEN_STRUCTS_H
 
 #include <cstdint>
 #include <span>
@@ -8,8 +8,6 @@
 #include "TenGen/types/Types.h"
 
 using namespace TenGen::Types;
-using Brgemm = TenGen::MiniJit::Generator::Brgemm;
-using Unary = TenGen::MiniJit::Generator::Unary;
 
 namespace TenGen::Structs {
     struct KernelSize {
@@ -69,19 +67,8 @@ namespace TenGen::Structs {
         std::span<const int64_t> strides_in1;
         std::span<const int64_t> strides_out;
         std::span<const int64_t> loop_sizes;
-
-        Brgemm brgemm;
-        TenGen::MiniJit::Generator::Brgemm::kernel_t brgemm_kernel{nullptr};
-
-        // Unary first touch
-        Unary unary_first_touch;
-        TenGen::MiniJit::Generator::Unary::kernel_t unary_first_touch_kernel{nullptr};
-
-        // Unary last touch
-        Unary unary_last_touch;
-        TenGen::MiniJit::Generator::Unary::kernel_t unary_last_touch_kernel{nullptr};
     };
 
 }  // namespace TenGen::Structs
 
-#endif  // TENGEN_Structs_H
+#endif  // TENGEN_STRUCTS_H

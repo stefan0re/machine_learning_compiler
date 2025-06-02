@@ -12,7 +12,7 @@ namespace TenGen {
     template <typename T, size_t... Dims>
     class Tensor {
        public:
-        Tensor(fill_random = false) {
+        Tensor(bool fill_random = false) {
             // if fill_random is true, fill the tensor with random values
             if (fill_random) {
                 fillRandom();

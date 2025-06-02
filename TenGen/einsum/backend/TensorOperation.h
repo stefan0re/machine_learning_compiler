@@ -5,6 +5,8 @@
 #include <span>
 #include <vector>
 
+#include "TenGen/mini_jit/generator/Brgemm.h"
+#include "TenGen/mini_jit/generator/Unary.h"
 #include "TenGen/types/Structs.h"
 #include "TenGen/types/Types.h"
 
@@ -20,6 +22,17 @@ namespace TenGen::Einsum::Backend {
 
     class TensorOperation {
        public:
+        Brgemm brgemm;
+        Brgemm::kernel_t brgemm_kernel{nullptr};
+
+        // Unary first touch
+        Unary unary_first_touch;
+        Unary::kernel_t unary_first_touch_kernel{nullptr};
+
+        // Unary last touch
+        Unary unary_last_touch;
+        Unary::kernel_t unary_last_touch_kernel{nullptr};
+
         // Function to initialize a TensorOperation
         TenGen::Types::error_t setup(TensorConfig& op,
                                      dtype_t dtype,
@@ -97,37 +110,37 @@ namespace TenGen::Einsum::Backend {
             }
 
             // create brgemm_kernel form that primitives above
-            op.brgemm.generate(op.dim_sizes[op.id_prim_m],
-                               op.dim_sizes[op.id_prim_n],
-                               op.dim_sizes[op.id_prim_k],
-                               (op.id_prim_br_size > -1) ? op.dim_sizes[op.id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
-                               0,
-                               0,
-                               0,
-                               static_cast<dtype_t>(op.dtype));
-            op.brgemm_kernel = op.brgemm.get_kernel();
+            brgemm.generate(op.dim_sizes[op.id_prim_m],
+                            op.dim_sizes[op.id_prim_n],
+                            op.dim_sizes[op.id_prim_k],
+                            (op.id_prim_br_size > -1) ? op.dim_sizes[op.id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
+                            0,
+                            0,
+                            0,
+                            static_cast<dtype_t>(op.dtype));
+            brgemm_kernel = brgemm.get_kernel();
 
             // check if we have a first touch primitive
             // for now this only applys to zero
             if (op.prim_first_touch != prim_t::none) {
-                op.unary_first_touch.generate(op.dim_sizes[op.id_prim_m],
-                                              op.dim_sizes[op.id_prim_m],
-                                              0,
-                                              dtype_t::fp32,
-                                              ptype_t::zero);
+                unary_first_touch.generate(op.dim_sizes[op.id_prim_m],
+                                           op.dim_sizes[op.id_prim_m],
+                                           0,
+                                           dtype_t::fp32,
+                                           ptype_t::zero);
             }
-            op.unary_first_touch_kernel = op.unary_first_touch.get_kernel();
+            unary_first_touch_kernel = unary_first_touch.get_kernel();
 
             // check if we have a last touch primitive
             // for now this only applys to relu
             if (op.prim_last_touch != prim_t::none) {
-                op.unary_last_touch.generate(op.dim_sizes[op.id_prim_m],
-                                             op.dim_sizes[op.id_prim_m],
-                                             0,
-                                             dtype_t::fp32,
-                                             ptype_t::relu);
+                unary_last_touch.generate(op.dim_sizes[op.id_prim_m],
+                                          op.dim_sizes[op.id_prim_m],
+                                          0,
+                                          dtype_t::fp32,
+                                          ptype_t::relu);
             }
-            op.unary_last_touch_kernel = op.unary_last_touch.get_kernel();
+            unary_last_touch_kernel = unary_last_touch.get_kernel();
 
             // set lda, ldb, ldc, in0_br_stride, in1_br_stride
             // TODO: currently assumes primitve types are always the last 3 dimensions
@@ -169,7 +182,7 @@ namespace TenGen::Einsum::Backend {
             std::cout << "***********************" << std::endl;
 #endif
 
-            return error_t::success;
+            return TenGen::Types::error_t::success;
         }
 
         // Function to execute a tensor operation
@@ -217,20 +230,20 @@ namespace TenGen::Einsum::Backend {
                     // handle first touch
                     if (first_access && op.prim_first_touch != prim_t::none) {
                         // TODO
-                        op.unary_first_touch_kernel(l_ptr_in0, l_ptr_out, op.ldc, op.ldc);
+                        unary_first_touch_kernel(l_ptr_in0, l_ptr_out, op.ldc, op.ldc);
                     }
                     // do the brgemm operation
-                    op.brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
-                                     op.lda,
-                                     op.ldb,
-                                     op.ldc,
-                                     op.in0_br_stride,
-                                     op.in1_br_stride);
+                    brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
+                                  op.lda,
+                                  op.ldb,
+                                  op.ldc,
+                                  op.in0_br_stride,
+                                  op.in1_br_stride);
 
                     // handle last touch
                     if (last_access && op.prim_last_touch != prim_t::none) {
                         // TODO
-                        op.unary_last_touch_kernel(l_ptr_out, l_ptr_out, op.ldc, op.ldc);
+                        unary_last_touch_kernel(l_ptr_out, l_ptr_out, op.ldc, op.ldc);
                     }
                 }
             }
