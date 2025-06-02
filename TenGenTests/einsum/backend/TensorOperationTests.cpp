@@ -74,15 +74,17 @@ TEST_CASE("Example 1", "[Einsum][Backend][TensorOperation]") {
     //
     //
 
-    // abdc, ebfd -> aefc
+    // abdc, ebfd -> acef
     auto result = xt::linalg::tensordot(xt_tensor1, xt_tensor2, std::vector<size_t>{1, 2}, std::vector<size_t>{1, 3});
+    // aefc
+    auto out = xt::transpose(result, {0, 2, 3, 1});
 
     //
     //
     //
 
     // make sure the result is in column major order
-    xt::xtensor<float, 4, xt::layout_type::column_major> output(result);
+    xt::xtensor<float, 4, xt::layout_type::column_major> output(out);
 
     // copy the result to the TenGen tensor
     std::copy(output.data(), output.data() + output.size(), tenGenTensor4.exportPointer());
