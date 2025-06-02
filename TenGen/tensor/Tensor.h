@@ -13,6 +13,8 @@ namespace TenGen {
     class Tensor {
        public:
         Tensor(bool fill_random = false) {
+            _data.resize(size);
+
             // if fill_random is true, fill the tensor with random values
             if (fill_random) {
                 fillRandom();
@@ -31,10 +33,11 @@ namespace TenGen {
 
         // e.g. Tensor<float, 2, 3, 4>::Dims == {2, 3, 4}
         // storage for the elements
-        std::array<T, size> _data{};
+        // use vector to store big data
+        std::vector<T> _data;
 
         // store the shape of the tensor
-        static constexpr std::array<size_t, sizeof...(Dims)> shape = {Dims...};
+        static constexpr std::array<int64_t, sizeof...(Dims)> shape = {Dims...};
 
         // store the rank of the tensor, e.g. Tensor<float, 2, 3, 4>::rank  // == 3
         static constexpr size_t rank = shape.size();
@@ -44,9 +47,9 @@ namespace TenGen {
         // S2 = 1                   last dimension stride is always 1
         // S1 = D2 * S2 = 4 * 1 = 4
         // S0 = D1 * S1 = 3 * 4 = 12
-        static constexpr std::array<size_t, rank> strides = [] {
-            std::array<size_t, rank> s = {};
-            size_t stride = 1;
+        static constexpr std::array<int64_t, rank> strides = [] {
+            std::array<int64_t, rank> s{};
+            int64_t stride = 1;
             for (size_t i = rank; i-- > 0;) {
                 s[i] = stride;
                 stride *= shape[i];
@@ -62,6 +65,11 @@ namespace TenGen {
         // returns a reference to the underlying data element at that index (flat)
         T& operator[](size_t index) {
             return _data[index];
+        }
+
+        bool operator==(const Tensor& other) const {
+            // Compare data
+            return _data == other._data;
         }
 
         //
@@ -94,10 +102,6 @@ namespace TenGen {
                     _data[i] = static_cast<dtype>(rand() % 100);  // e.g. integer in [0, 99]
                 }
             }
-        }
-
-        bool operator==(const Tensor& other) const {
-            return _data == other._data;
         }
 
         //

@@ -39,12 +39,12 @@ namespace TenGen::Einsum::Backend {
                                      prim_t prim_first_touch,
                                      prim_t prim_main,
                                      prim_t prim_last_touch,
-                                     std::span<const dim_t> dim_types,
-                                     std::span<const exec_t> exec_types,
-                                     std::span<const int64_t> dim_sizes,
-                                     std::span<const int64_t> strides_in0,
-                                     std::span<const int64_t> strides_in1,
-                                     std::span<const int64_t> strides_out) {
+                                     std::vector<dim_t> dim_types,
+                                     std::vector<exec_t> exec_types,
+                                     std::vector<int64_t> dim_sizes,
+                                     std::vector<int64_t> strides_in0,
+                                     std::vector<int64_t> strides_in1,
+                                     std::vector<int64_t> strides_out) {
             // Store scalars
             op.dtype = dtype;
             op.prim_first_touch = prim_first_touch;
