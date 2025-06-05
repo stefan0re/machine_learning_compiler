@@ -11,7 +11,14 @@
 #include <sstream>
 #include <string>
 
+#include "TenGen.h"
+
+using Brgemm = TenGen::MiniJit::Generator::Brgemm;
+using TensorOperation = TenGen::Einsum::Backend::TensorOperation;
+using namespace TenGen::Types;
+
 namespace TenGenTestsHelper {
+
     /**
      * @brief Generates machine code for an assembly instruction in form of a string.
      *
@@ -199,6 +206,113 @@ namespace TenGenTestsHelper {
                     }
                 }
             }
+        }
+    }
+
+    void run_1_example_with_scalar(float* i_ten_1,
+                                   float* i_ten_2,
+                                   float* o_ten) {
+        for (size_t l_oM = 0; l_oM < 32; ++l_oM) {
+            for (size_t l_oN = 0; l_oN < 32; ++l_oN) {
+                for (size_t l_oK = 0; l_oK < 8; ++l_oK) {
+                    for (size_t l_iM = 0; l_iM < 32; ++l_iM) {
+                        for (size_t l_iN = 0; l_iN < 32; ++l_iN) {
+                            for (size_t l_iK = 0; l_iK < 32; ++l_iK) {
+                                size_t l_idx_1 = l_oM * 8192 + l_oK * 1024 + l_iK * 32 + l_iM;
+                                size_t l_idx_2 = l_oN * 8192 + l_oK * 1024 + l_iN * 32 + l_iK;
+                                size_t l_idx_out = l_oM * 32768 + l_oN * 1024 + l_iN * 32 + l_iM;
+
+                                o_ten[l_idx_out] += i_ten_1[l_idx_1] * i_ten_2[l_idx_2];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void run_1_example_with_gemm(float* i_ten_1,
+                                 float* i_ten_2,
+                                 float* o_ten) {
+        Brgemm l_brgemm;
+        l_brgemm.generate(32, 32, 32, 1, 0, 0, 0, dtype_t::fp32);
+        Brgemm::kernel_t l_kernel = l_brgemm.get_kernel();
+
+        for (size_t l_oM = 0; l_oM < 32; ++l_oM) {
+            for (size_t l_oN = 0; l_oN < 32; ++l_oN) {
+                for (size_t l_oK = 0; l_oK < 8; ++l_oK) {
+                    float* l_a = &i_ten_1[l_oM * 8192 + l_oK * 1024];
+                    float* l_b = &i_ten_2[l_oN * 8192 + l_oK * 1024];
+                    float* l_c = &o_ten[l_oM * 32768 + l_oN * 1024];
+                    l_kernel(l_a, l_b, l_c, 32, 32, 32, 8192, 8192);
+                }
+            }
+        }
+    }
+
+    void run_example_with_einsum(float* i_ten_1,
+                                 float* i_ten_2,
+                                 float* o_ten,
+                                 bool br_gemm,
+                                 bool i_relu,
+                                 bool i_first_touch_zero) {
+        TensorOperation l_tensor_op;
+
+        dtype_t l_dtype = dtype_t::fp32;
+        prim_t l_prim_first_touch = i_first_touch_zero ? prim_t::zero : prim_t::none;
+        prim_t l_prim_main = br_gemm ? prim_t::brgemm : prim_t::gemm;
+        prim_t l_prim_last_touch = i_relu ? prim_t::relu : prim_t::none;
+
+        std::vector<dim_t> l_dim_types = {dim_t::m,
+                                          dim_t::n,
+                                          dim_t::k,
+                                          dim_t::m,
+                                          dim_t::n,
+                                          dim_t::k};
+
+        std::vector<exec_t> l_exec_types = {exec_t::seq,
+                                            exec_t::seq,
+                                            br_gemm ? exec_t::prim : exec_t::seq,
+                                            exec_t::prim,
+                                            exec_t::prim,
+                                            exec_t::prim};
+
+        std::vector<int64_t> l_dim_sizes = {32, 32, 8, 32, 32, 32};
+
+        std::vector<int64_t> l_strides_in0 = {8192, 0, 1024, 1, 0, 32};
+        std::vector<int64_t> l_strides_in1 = {0, 8192, 1024, 0, 32, 1};
+        std::vector<int64_t> l_strides_out = {32768, 1024, 0, 1, 32, 0};
+
+        // Setup the tensor operation
+        auto l_error = l_tensor_op.setup(l_dtype,
+                                         l_prim_first_touch,
+                                         l_prim_main,
+                                         l_prim_last_touch,
+                                         l_dim_types,
+                                         l_exec_types,
+                                         l_dim_sizes,
+                                         l_strides_in0,
+                                         l_strides_in1,
+                                         l_strides_out);
+
+        l_tensor_op.execute(i_ten_1, i_ten_2, o_ten);
+    }
+
+    bool check_diff(float* i_ten_1,
+                    float* i_ten_2,
+                    size_t i_size) {
+        bool l_equal = true;
+        double l_max_diff = 0.0;
+        for (size_t i = 0; i < i_size; ++i) {
+            if (std::abs(i_ten_1[i] - i_ten_2[i]) > 1e-3f) {
+                l_equal = false;
+                l_max_diff = std::max(l_max_diff, static_cast<double>(std::abs(i_ten_1[i] - i_ten_2[i])));
+            }
+        }
+        if (l_equal) {
+            return true;
+        } else {
+            return false;
         }
     }
 

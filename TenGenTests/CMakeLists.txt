@@ -11,7 +11,34 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(Catch2)
 
-enable_testing()
+# Fetch xtl first
+FetchContent_Declare(
+  xtl
+  GIT_REPOSITORY https://github.com/xtensor-stack/xtl.git
+  GIT_TAG master  
+)
+
+FetchContent_MakeAvailable(xtl)
+
+# Fetch xtensor
+FetchContent_Declare(
+  xtensor
+  GIT_REPOSITORY https://github.com/xtensor-stack/xtensor.git
+  GIT_TAG master  
+)
+
+FetchContent_MakeAvailable(xtensor)
+
+# Fetch xtensor-blas
+FetchContent_Declare(
+  xtensor-blas
+  GIT_REPOSITORY https://github.com/xtensor-stack/xtensor-blas.git
+  GIT_TAG master
+)
+
+FetchContent_MakeAvailable(xtensor-blas)
 
 add_subdirectory(mini_jit/instructions)
 add_subdirectory(mini_jit/generator)
+add_subdirectory(einsum/backend)
+add_subdirectory(tensor)

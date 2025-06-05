@@ -1,5 +1,5 @@
-#ifndef TENGEN_Structs_H
-#define TENGEN_Structs_H
+#ifndef TENGEN_STRUCTS_H
+#define TENGEN_STRUCTS_H
 
 #include <cstdint>
 #include <span>
@@ -31,30 +31,6 @@ namespace TenGen::Structs {
         KernelSize kernelsize;
     };
 
-    struct TensorConfig {
-        // scalars
-        dtype_t dtype;
-        prim_t prim_first_touch;
-        prim_t prim_main;
-        prim_t prim_last_touch;
-
-        // owned storage
-        std::vector<dim_t> dim_types_storage;
-        std::vector<exec_t> exec_types_storage;
-        std::vector<int64_t> dim_sizes_storage;
-        std::vector<int64_t> strides_in0_storage;
-        std::vector<int64_t> strides_in1_storage;
-        std::vector<int64_t> strides_out_storage;
-
-        // views (spans)
-        std::span<const dim_t> dim_types;
-        std::span<const exec_t> exec_types;
-        std::span<const int64_t> dim_sizes;
-        std::span<const int64_t> strides_in0;
-        std::span<const int64_t> strides_in1;
-        std::span<const int64_t> strides_out;
-    };
-
 }  // namespace TenGen::Structs
 
-#endif  // TENGEN_Structs_H
+#endif  // TENGEN_STRUCTS_H

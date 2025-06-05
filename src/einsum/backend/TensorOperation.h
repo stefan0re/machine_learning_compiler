@@ -208,6 +208,21 @@ class einsum::backend::TensorOperation {
     void first_touch_kernel(char* ptr_in,
                             char* ptr_out);
 
+    /**
+     * General-purpose loop implementation featuring first and last touch operations with OMP parallelization.
+     *
+     * @param ptr_in0      Pointer to the first input tensor's data.
+     * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
+     * @param ptr_out      Pointer to the output tensor's data.
+     * @param first_access True if first time accessing data of output tensor.
+     * @param last_access  True if last time accessing data of output tensor.
+     **/
+    void execute_iter_parallel(char const* ptr_in0,
+                               char const* ptr_in1,
+                               char* ptr_out,
+                               bool first_access,
+                               bool last_access);
+
    private:
     // BRGEMM
     mini_jit::generator::Brgemm _brgemm;

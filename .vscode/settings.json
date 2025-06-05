@@ -80,6 +80,11 @@
         "cfenv": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "hash_map": "cpp",
+        "regex": "cpp",
+        "generator": "cpp",
+        "shared_mutex": "cpp",
+        "typeindex": "cpp"
     }
 }
