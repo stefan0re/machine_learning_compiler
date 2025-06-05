@@ -60,10 +60,54 @@ As you can see, at the point where the new sizes are set, we also set the stride
 Dimension fusion
 ----------------
 
+To fuse dimensions we set a threshold of 16. Each dimension that is smaller then 16 is looking for an appropriate dimension to fuse with.
+Therefore, we look for the next surrounding dimension that is of the same type.
+If there is one we fuse the two dimensions by multiplying their sizes and setting the stride of the new dimension to the sum of the two strides.
+
+Here you can see our code implementation for the M dimension fusion:
+
+.. code-block:: C++
+    :linenos:
+
+        std::vector<int64_t> m_loop_ids;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m) {
+                m_loop_ids.push_back(i);
+            }
+        }
+
+        for (size_t i = 0; i < m_loop_ids.size(); i++) {
+            if (_dim_sizes[m_loop_ids[i]] < 16) {
+
+                if (i + 1 < m_loop_ids.size() && _dim_types[m_loop_ids[i + 1]] == dim_t::m) {
+                    // fuse the two M dimensions
+                    _dim_sizes_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
+
+                    // remove the next M dimension
+                    _dim_types_storage.erase(_dim_types_storage.begin() + m_loop_ids[i + 1]);
+                    _dim_sizes_storage.erase(_dim_sizes_storage.begin() + m_loop_ids[i + 1]);
+
+                    _strides_in0_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
+                    _strides_in0_storage.erase(_strides_in0_storage.begin() + m_loop_ids[i + 1]);
+
+                    _strides_out_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
+                    _strides_out_storage.erase(_strides_out_storage.begin() + m_loop_ids[i + 1]);
+                }
+            }
+        }
+  
+As a disclaimer this function isn't really well test in practice therefore we started investigating into bigger contractions with more dimension. 
+Also important to say, this function is called before the split optimization, therefore we have more options to split into nice dimensions.
+
 Primitive identification
 ------------------------
 
-TODO!!
+Before the correct loop sequence can be defined, the execution types are now defined. To find the M dimension for the BRGEMM, we simply search for the stride an M dimension in the left input tensor and in the output tensor.
+For the K dimension we do the same only this time in the right and in the output tensor.
+For the N dimension we select the one with the minimal stride, so we can be sure that the GEMM dimensions are not too far apart in memory.
+As BR dimension we then look for a second K dimension and again take the one with the smallest stride.
+If we do not find a stride 1 dimension for M and K an error is thrown.
+The implementation of this looks pretty boring, which is why we won't show it here. :D
 
 Dimension reordering
 --------------------
@@ -304,12 +348,30 @@ The resulting setup that was printed by our code:
     Setting 2 completed.
     ************************
 
-And the third setup that we tried had the setup:
+And this is the third setup that we tried, which is a big tensor contraction with the following dimensions and strides:
 
-.. .. list-table:: Tensor contraction example.
-..    :widths: 30 70
-..    :header-rows: 1
 
+.. list-table:: Big Tensor contraction example.
+   :widths: 30 70
+   :header-rows: 1
+
+    * - Variable
+      - Value
+    * - dim_types
+      - (   M,    M,    M,     N,    N,    N,     K,     K,     K )
+    * - exec_types
+      - ( Seq,  Seq,  Seq,   Seq,  Seq,  Seq,   Seq,   Seq,   Seq )
+    * - dim_sizes
+      - (   2,    4,   48,     3,    7,   64,    16,    16,    96 )
+    * - strides_in0
+      - ( 192,   48,    1,     0,    0,    0,   384,  6144, 98304 )
+    * - strides_in1
+      - (   0,    0,    0, 2064384, 688128, 98304, 1536,   96,     1 )
+    * - strides_out
+      - ( 192,   48,    1, 258048, 86016, 12288,     0,     0,     0 )
+  
+Unfortunately, this large tensor contraction has shown us the limits of our implementation.
+This is because an unauthorized memory access has occurred.
 
 Benchmarks
 ----------
