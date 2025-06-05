@@ -428,11 +428,11 @@ namespace einsum::backend {
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
      **/
-    void execute_iter_parallel(const void* ptr_in0,
-                               const void* ptr_in1,
-                               void* ptr_out,
-                               bool first_access,
-                               bool last_access) {
+    void TensorOperation::execute_iter_parallel(const char* ptr_in0,
+                                                const char* ptr_in1,
+                                                char* ptr_out,
+                                                bool first_access,
+                                                bool last_access) {
         int64_t num_parallel_loops = 0;
         int64_t size_parallel_loops = 1;
         for (exec_t dim : _exec_types) {
@@ -474,7 +474,8 @@ namespace einsum::backend {
                          temp_ptr_in1,
                          temp_ptr_out,
                          thread_first_access,
-                         thread_last_access);
+                         thread_last_access,
+                         0);  // Added missing argument for loop_count
         }
     }
 }  // namespace einsum::backend
