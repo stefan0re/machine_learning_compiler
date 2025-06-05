@@ -50,7 +50,11 @@ class einsum::backend::TensorOperation {
 
     /// error codes
     enum class error_t : int32_t {
-        success = 0
+        success = 0,
+        optimize_failed = 1,
+        setup_failed = 2,
+        compile_failed = 3,
+        execute_failed = 4
     };
 
     // scalars
@@ -62,7 +66,8 @@ class einsum::backend::TensorOperation {
 
     int64_t _id_prim_m;
     int64_t _id_prim_n;
-    int64_t _id_prim_k = 0;
+    int64_t _id_prim_k;
+    int64_t _id_prim_br;
     int64_t _id_prim_br_size = -1;
 
     int64_t _lda;
@@ -79,6 +84,7 @@ class einsum::backend::TensorOperation {
     std::vector<int64_t> _strides_in1_storage;
     std::vector<int64_t> _strides_out_storage;
     std::vector<int64_t> _loop_sizes_storage;
+    std::vector<int64_t> _loop_order_storage;
 
     // views (spans)
     std::span<const dim_t> _dim_types;
@@ -88,6 +94,7 @@ class einsum::backend::TensorOperation {
     std::span<const int64_t> _strides_in1;
     std::span<const int64_t> _strides_out;
     std::span<const int64_t> _loop_sizes;
+    std::span<const int64_t> _loop_order;
 
     using kernel_t = mini_jit::generator::Brgemm::kernel_t;
 
@@ -118,6 +125,54 @@ class einsum::backend::TensorOperation {
                   std::span<const int64_t> strides_out);
 
     /**
+     * @brief Optimizes tensor contraction for efficient computation.
+     *
+     * This function performs several optimization techniques to improve
+     * the performance of tensor operations, including:
+     * - Dimension splitting
+     * - Dimension fusion
+     * - Dimension reordering
+     * - Primitive identification
+     * - Shared memory parallelization
+     *
+     * @return An error_t value indicating the success or failure of the
+     *         optimization process.
+     */
+    error_t optimize();
+
+    /**
+     * @brief Splits dimensions to improve parallelism and memory access patterns.
+     *
+     * splitting M and K dims because more relevant for brgemm
+     *
+     */
+    error_t split_dimensions();
+
+    /**
+     * Fuses dimensions to reduce the number of loops and improve efficiency.
+     *
+     */
+    error_t fuse_dimensions();
+
+    /**
+     * Reorders dimensions to optimize memory access patterns and computation.
+     *
+     */
+    error_t reorder_dimensions();
+
+    /**
+     * Identifies primitives for efficient computation based on tensor properties.
+     *
+     */
+    error_t identify_primitives();
+
+    /**
+     *  @brief compile function that set all parameter for the loop over GEMM
+     *
+     */
+    error_t compile();
+
+    /**
      * Execute the tensor operation.
      *
      * @param tensor_in0 First input tensor.
@@ -144,7 +199,8 @@ class einsum::backend::TensorOperation {
                       char const* ptr_in1,
                       char* ptr_out,
                       bool first_access,
-                      bool last_access);
+                      bool last_access,
+                      int64_t loop_count);
 
     /**
      * Generates a first touch kernel with the given parameters.

@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "../../mini_jit/generator/Brgemm.h"
+#include "../include/einsum_ref.h"
 
 // #define DEBUG
 
@@ -41,52 +42,325 @@ namespace einsum::backend {
         _strides_in1 = _strides_in1_storage;
         _strides_out = _strides_out_storage;
 
-        // extract the sizes of the sequential loops
-        // till we reach the first primitive loop
-        for (size_t i = 0; i < _dim_types.size(); i++) {
-            // if the execution type is not a primitive,
-            // we add the size to the loop sizes storage
-            if (_exec_types[i] != exec_t::prim) {
-                _loop_sizes_storage.push_back(_dim_sizes[i]);
-                // otherwise, we set the id of the first primitive loop
-                // and break the loop
+        return error_t::success;
+    }
+    void TensorOperation::execute(void const* tensor_in0,
+                                  void const* tensor_in1,
+                                  void* tensor_out) {
+        // get pointers to input and output data
+        char const* l_ptr_in0 = static_cast<char const*>(tensor_in0);
+        char const* l_ptr_in1 = static_cast<char const*>(tensor_in1);
+        char* l_ptr_out = static_cast<char*>(tensor_out);
+
+        // execute the operation
+        execute_iter(_loop_order[0], l_ptr_in0, l_ptr_in1, l_ptr_out, false, false, 0);
+    }
+    void TensorOperation::execute_iter(int64_t id_loop,
+                                       char const* ptr_in0,
+                                       char const* ptr_in1,
+                                       char* ptr_out,
+                                       bool first_access,
+                                       bool last_access,
+                                       int64_t loop_count) {
+        int64_t l_size = _loop_sizes[id_loop];
+        loop_count++;
+
+        for (int64_t l_it = 0; l_it < l_size; l_it++) {
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
+            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
+
+            if (loop_count < _loop_order.size()) {
+                execute_iter(_loop_order[loop_count],
+                             l_ptr_in0,
+                             l_ptr_in1,
+                             l_ptr_out,
+                             first_access,
+                             last_access,
+                             loop_count);
+
             } else {
-                _id_first_primitive_loop = i;
-                break;
+                // handle first touch
+                _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
+                               _lda,
+                               _ldb,
+                               _ldc,
+                               _in0_br_stride,
+                               _in1_br_stride);
+
+                // TODO: handle last touch
+            }
+        }
+    }
+
+    TensorOperation::error_t TensorOperation::optimize() {
+        split_dimensions();
+        fuse_dimensions();
+        identify_primitives();
+        reorder_dimensions();
+
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::split_dimensions() {
+        // get M loop IDs
+        std::vector<int64_t> m_loop_ids;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m) {
+                m_loop_ids.push_back(i);
             }
         }
 
-        // remap the loop sizes to a span
-        _loop_sizes = _loop_sizes_storage;
+        // Split M dimension if it is bigger that 64
+        for (size_t i = 0; i < m_loop_ids.size(); i++) {
+            if (_dim_sizes[m_loop_ids[i]] > 64) {
+                std::vector<int64_t> prims = prime_factors(_dim_sizes[m_loop_ids[i]]);
 
-        // again, go through the dimensions and now only
-        // do something if the execution type is a primitive
-        for (size_t i = 0; i < _dim_sizes.size(); i++) {
-            // check if the dimension is a primitive and if it is the m loop
-            if (_dim_types[i] == dim_t::m && _exec_types[i] == exec_t::prim) {
-                _id_prim_m = i;
-                // check if the dimension is a primitive and if it is the n loop
-            } else if (_dim_types[i] == dim_t::n && _exec_types[i] == exec_t::prim) {
-                _id_prim_n = i;
-                // check if the dimension is a primitive and if it is the k loop
-            } else if (_dim_types[i] == dim_t::k && _exec_types[i] == exec_t::prim) {
-                // if we have not set the id of the k loop yet, we set it
-                if (_id_prim_k == 0) {
-                    _id_prim_k = i;
-                    // if we set it already and encounter a new k loop
-                    // we know that we have a batch-reduced size
-                } else {
-                    _id_prim_br_size = _id_prim_k;
-                    _id_prim_k = i;
+                // select prime factor smaller than 64
+                int64_t new_size = find_new_size(prims);
+
+                int64_t other_size = _dim_sizes[m_loop_ids[i]] / new_size;
+
+                // insert dimension type
+                _dim_types_storage.insert(_dim_types_storage.begin() + m_loop_ids[i] + 1, dim_t::m);
+                _dim_types = _dim_types_storage;
+
+                // insert dimension size
+                _dim_sizes_storage.insert(_dim_sizes_storage.begin() + m_loop_ids[i], other_size);
+                _dim_sizes_storage.insert(_dim_sizes_storage.begin() + m_loop_ids[i] + 1, new_size);
+                _dim_sizes_storage.erase(_dim_sizes_storage.begin() + m_loop_ids[i] + 2);
+                _dim_sizes = _dim_sizes_storage;
+
+                // insert stride in0
+                _strides_in0_storage.insert(_strides_in0_storage.begin() + m_loop_ids[i], new_size * _strides_in0[m_loop_ids[i]]);
+                _strides_in0 = _strides_in0_storage;
+
+                // insert stride in1
+                _strides_in1_storage.insert(_strides_in1_storage.begin() + m_loop_ids[i] + 1, 0);
+                _strides_in1 = _strides_in1_storage;
+
+                // insert stride out
+                _strides_out_storage.insert(_strides_out_storage.begin() + m_loop_ids[i], new_size * _strides_out[m_loop_ids[i]]);
+                _strides_out = _strides_out_storage;
+            }
+        }
+
+        // get K loop IDs
+        std::vector<int64_t> k_loop_ids;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k) {
+                k_loop_ids.push_back(i);
+            }
+        }
+        // Split K dimension if it is bigger that 128
+        for (size_t i = 0; i < k_loop_ids.size(); i++) {
+            if (_dim_sizes[k_loop_ids[i]] > 128) {
+                std::vector<int64_t> prims = prime_factors(_dim_sizes[k_loop_ids[i]]);
+
+                // select prime factor smaller than 128
+                int64_t new_size = find_new_size(prims);
+
+                int64_t other_size = _dim_sizes[k_loop_ids[i]] / new_size;
+
+                // insert dimension type
+                _dim_types_storage.insert(_dim_types_storage.begin() + k_loop_ids[i] + 1, dim_t::k);
+                _dim_types = _dim_types_storage;
+
+                // insert dimension size
+                _dim_sizes_storage.insert(_dim_sizes_storage.begin() + k_loop_ids[i], new_size);
+                _dim_sizes_storage.insert(_dim_sizes_storage.begin() + k_loop_ids[i] + 1, other_size);
+                _dim_sizes_storage.erase(_dim_sizes_storage.begin() + k_loop_ids[i] + 2);
+                _dim_sizes = _dim_sizes_storage;
+
+                // insert stride in0
+                _strides_in0_storage.insert(_strides_in0_storage.begin() + k_loop_ids[i], new_size * _strides_in0[k_loop_ids[i]]);
+                _strides_in0 = _strides_in0_storage;
+
+                // insert stride in1
+                _strides_in1_storage.insert(_strides_in1_storage.begin() + k_loop_ids[i] + 1, new_size * _strides_in1[k_loop_ids[i]]);
+                _strides_in1 = _strides_in1_storage;
+
+                // insert stride out
+                _strides_out_storage.insert(_strides_out_storage.begin() + k_loop_ids[i], new_size * _strides_out[k_loop_ids[i]]);
+                _strides_out = _strides_out_storage;
+            }
+        }
+
+        // get N loop IDs
+        std::vector<int64_t> n_loop_ids;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::n) {
+                n_loop_ids.push_back(i);
+            }
+        }
+
+        // Split N dimension if it is bigger that 64
+        for (size_t i = 0; i < n_loop_ids.size(); i++) {
+            if (_dim_sizes[n_loop_ids[i]] > 64) {
+                std::vector<int64_t> prims = prime_factors(_dim_sizes[n_loop_ids[i]]);
+
+                // select prime factor smaller than 64
+                int64_t new_size = find_new_size(prims);
+
+                int64_t other_size = _dim_sizes[n_loop_ids[i]] / new_size;
+
+                // insert dimension type
+                _dim_types_storage.insert(_dim_types_storage.begin() + n_loop_ids[i] + 1, dim_t::n);
+                _dim_types = _dim_types_storage;
+
+                // insert dimension size
+                _dim_sizes_storage.insert(_dim_sizes_storage.begin() + n_loop_ids[i], new_size);
+                _dim_sizes_storage.insert(_dim_sizes_storage.begin() + n_loop_ids[i] + 1, other_size);
+                _dim_sizes_storage.erase(_dim_sizes_storage.begin() + n_loop_ids[i] + 2);
+                _dim_sizes = _dim_sizes_storage;
+
+                // insert stride in0
+                _strides_in0_storage.insert(_strides_in0_storage.begin() + n_loop_ids[i], 0);
+                _strides_in0 = _strides_in0_storage;
+
+                // insert stride in1
+                _strides_in1_storage.insert(_strides_in1_storage.begin() + n_loop_ids[i] + 1, new_size * _strides_in1[n_loop_ids[i]]);
+                _strides_in1 = _strides_in1_storage;
+
+                // insert stride out
+                _strides_out_storage.insert(_strides_out_storage.begin() + n_loop_ids[i], new_size * _strides_out[n_loop_ids[i]]);
+                _strides_out = _strides_out_storage;
+            }
+        }
+
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::fuse_dimensions() {
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::reorder_dimensions() {
+        // count number of loop dimensions
+        int64_t num_loops = 0;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_exec_types[i] == exec_t::seq) {
+                num_loops++;
+            }
+        }
+
+        if (num_loops < 1) {
+            return TensorOperation::error_t::success;
+        }
+
+        _loop_order_storage.clear();
+        _loop_order_storage.resize(num_loops);
+
+        // put seq id loops inside loop order structure
+        int64_t loop_id = 0;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_exec_types[i] == exec_t::seq) {
+                _loop_order_storage[loop_id] = i;
+                loop_id++;
+            }
+        }
+
+        // interleave M and N loops
+        for (size_t i = 0; i < _loop_order_storage.size(); i++) {
+            if (_dim_types[_loop_order_storage[i]] == dim_t::m) {
+                for (size_t j = i + 1; j < _loop_order_storage.size(); j++) {
+                    if (_dim_types[_loop_order_storage[j]] == dim_t::n) {
+                        std::swap(_loop_order_storage[i], _loop_order_storage[j]);
+                        break;
+                    }
                 }
             }
         }
 
-        // create brgemm_kernel form that primitives above
+        _loop_order = _loop_order_storage;
+
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::identify_primitives() {
+        // set all dimensions to seq type
+        _exec_types_storage.clear();
+        _exec_types_storage.resize(_dim_types.size(), exec_t::seq);
+
+        // find stride 1 M dimension left input tensor
+        _id_prim_m = -1;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _strides_in0[i] == 1 && _strides_out[i] == 1) {
+                _id_prim_m = i;
+                _exec_types_storage[i] = exec_t::prim;
+                break;
+            }
+        }
+        _id_prim_k = -1;
+        // find stride 1 K dimension in right input tensor
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k && _strides_in1[i] == 1) {
+                _id_prim_k = i;
+                _exec_types_storage[i] = exec_t::prim;
+                break;
+            }
+        }
+
+        // find N dimension with lowest stride in right input tensor
+        _id_prim_n = -1;
+        int64_t min_stride = std::numeric_limits<int64_t>::max();
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::n && _strides_in1[i] < min_stride) {
+                min_stride = _strides_in1[i];
+                _id_prim_n = i;
+            }
+        }
+        _exec_types_storage[_id_prim_n] = exec_t::prim;
+
+        // find BR dimension be aware of found K dimension with lovest stride
+        _id_prim_br = -1;
+        min_stride = std::numeric_limits<int64_t>::max();
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k && _strides_in1[i] < min_stride && i != _id_prim_k) {
+                min_stride = _strides_in1[i];
+                _id_prim_br = i;
+            }
+        }
+        if (_id_prim_br != -1) {
+            _exec_types_storage[_id_prim_br] = exec_t::prim;
+            _id_prim_br_size = _dim_sizes[_id_prim_br];
+        }
+
+        if (_id_prim_m == -1) {
+            std::cerr << "Error: No stride 1 M dimension found in left input tensor." << std::endl;
+            return TensorOperation::error_t::optimize_failed;
+        } else if (_id_prim_k == -1) {
+            std::cerr << "Error: No stride 1 K dimension found in right input tensor." << std::endl;
+            return TensorOperation::error_t::optimize_failed;
+        } else if (_id_prim_n == -1) {
+            std::cerr << "Error: No stride N dimension found in right input tensor." << std::endl;
+            return TensorOperation::error_t::optimize_failed;
+        }
+
+        // set loop sizes array
+        _loop_sizes_storage.clear();
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_exec_types_storage[i] == exec_t::seq) {
+                _loop_sizes_storage.push_back(_dim_sizes[i]);
+            } else {
+                _loop_sizes_storage.push_back(1);
+            }
+        }
+
+        // TODO: identfy parallel dimensions
+
+        _loop_sizes = _loop_sizes_storage;
+        _exec_types = _exec_types_storage;
+
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::compile() {
+        // create brgemm_kernel
         _brgemm.generate(_dim_sizes[_id_prim_m],
                          _dim_sizes[_id_prim_n],
                          _dim_sizes[_id_prim_k],
-                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
+                         (_id_prim_br > -1) ? _dim_sizes[_id_prim_br] : 1,  // todo: be carefull currently there is no size!! just an ID
                          0,
                          0,
                          0,
@@ -103,8 +377,8 @@ namespace einsum::backend {
                                         mini_jit::generator::Unary::dtype_t::fp32,
 
                                         mini_jit::generator::Unary::ptype_t::zero);
+            _unary_first_touch_kernel = _unary_first_touch.get_kernel();
         }
-        _unary_first_touch_kernel = _unary_first_touch.get_kernel();
 
         // check if we have a last touch primitive
         // for now this only applys to relu
@@ -114,154 +388,35 @@ namespace einsum::backend {
                                        0,
                                        mini_jit::generator::Unary::dtype_t::fp32,
                                        mini_jit::generator::Unary::ptype_t::relu);
+            _unary_last_touch_kernel = _unary_last_touch.get_kernel();
         }
-        _unary_last_touch_kernel = _unary_last_touch.get_kernel();
-
-        // set lda, ldb, ldc, in0_br_stride, in1_br_stride
-        // TODO: currently assumes primitve types are always the last 3 dimensions
-        _lda = _strides_in0[_strides_in0.size() - 1];
-        _ldb = _strides_in1[_strides_in1.size() - 2];
-        _ldc = _strides_out[_strides_out.size() - 2];
-
-        _in0_br_stride = _strides_in0[_strides_in0.size() - 4];
-        _in1_br_stride = _strides_in1[_strides_in1.size() - 4];
-
-// this is really cool
-#ifdef DEBUG
-        // print all necessary information
-        std::cout << "TensorOperation setup:" << std::endl;
-        std::cout << "  dtype: " << static_cast<int>(_dtype) << std::endl;
-        std::cout << "  prim_first_touch: " << static_cast<int>(_prim_first_touch) << std::endl;
-        std::cout << "  prim_main: " << static_cast<int>(_prim_main) << std::endl;
-        std::cout << "  prim_last_touch: " << static_cast<int>(_prim_last_touch) << std::endl;
-        std::cout << "  id_first_primitive_loop: " << _id_first_primitive_loop << std::endl;
-        std::cout << "  id_prim_m: " << _id_prim_m << std::endl;
-        std::cout << "  id_prim_n: " << _id_prim_n << std::endl;
-        std::cout << "  id_prim_k: " << _id_prim_k << std::endl;
-        std::cout << "  id_prim_br_size: " << _id_prim_br_size << std::endl;
-        std::cout << "  loop_sizes: ";
-        for (const auto& size : _loop_sizes) {
-            std::cout << size << " ";
-        }
-        std::cout << std::endl;
-        std::cout << "M: " << _dim_sizes[_id_prim_m] << std::endl;
-        std::cout << "N: " << _dim_sizes[_id_prim_n] << std::endl;
-        std::cout << "K: " << _dim_sizes[_id_prim_k] << std::endl;
-        std::cout << "BR size: " << ((_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1) << std::endl;
-        std::cout << "lda: " << _lda << std::endl;
-        std::cout << "ldb: " << _ldb << std::endl;
-        std::cout << "ldc: " << _ldc << std::endl;
-        std::cout << "in0_br_stride: " << _in0_br_stride << std::endl;
-        std::cout << "in1_br_stride: " << _in1_br_stride << std::endl;
-
-        std::cout << "***********************" << std::endl;
-#endif
-
-        return error_t::success;
-    }
-
-    void TensorOperation::execute(void const* tensor_in0,
-                                  void const* tensor_in1,
-                                  void* tensor_out) {
-        // get pointers to input and output data
-        char const* l_ptr_in0 = static_cast<char const*>(tensor_in0);
-        char const* l_ptr_in1 = static_cast<char const*>(tensor_in1);
-        char* l_ptr_out = static_cast<char*>(tensor_out);
-
-        // execute the operation
-        execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
-    }
-
-    void TensorOperation::execute_iter(int64_t id_loop,
-                                       char const* ptr_in0,
-                                       char const* ptr_in1,
-                                       char* ptr_out,
-                                       bool first_access,
-                                       bool last_access) {
-        // go through each sequential loop (M, N, K) recursively
-        // with l_size beeing the size of each dimension (dim_t)
-        int64_t l_size = _loop_sizes[id_loop];
-
-        // apply the loop
-        for (int64_t l_it = 0; l_it < l_size; l_it++) {
-            // calculate the pointers for the current iteration
-            // if the stride is 0, we do not need to add anything
-            // otherwise we add the stride multiplied by the iteration index
-            // and the size of the data type (4 for fp32, 8 for fp64)
-            // we use const_cast to remove the constness of the pointers
-            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
-            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
-            char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
-
-            // because this supports brgemms and brgemms gets 3D tensors as
-            // an input and outputs a 2D tensor, applying the first and last
-            // touch operations that only works with 2D tensors would mean
-            // to apply them to the first and last touch of the 2D output tensor
-
-            // the brgemm is being called multiple times per output location,
-            // once for each chunk along the K dimension so
-            // the output buffer l_ptr_out must accumulate results from each brgemm call and
-            // only after the final K iteration, the full result is available in l_ptr_out.
-
-            // BRGEMM does get the K dimension for the contraction, but only up to a limit
-            // typically a fixed small block size (e.g., 32, 64) but
-            // if K is too large, then you must call BRGEMM multiple times,
-            // each with a slice of K, and accumulate into the same output
-
-            // check if current loop is the first (outer) K loop
-            // or in other words the last sequential loop before the primitive loops
-            if (id_loop + 1 == _id_first_primitive_loop && _exec_types[id_loop] == exec_t::seq) {
-                // _id_outer_k_loop is the loop index of the first outer K dimension
-                first_access = (l_it == 0);
-                last_access = (l_it == l_size - 1);
-            }
-
-            // if all sequential loops are applied, we can execute the primitive
-            // so if id_loop + 1 would access the first prim loop
-            if (id_loop + 1 < _id_first_primitive_loop) {
-                execute_iter(id_loop + 1,
-                             l_ptr_in0,
-                             l_ptr_in1,
-                             l_ptr_out,
-                             first_access,
-                             last_access);
-            } else {
-                // so if id_loop + 1 would access the first prim loop
-                // this means we are at the brgemm level
-                // for m -> for n -> for k -> brgemm
-
-                // handle first touch
-                if (first_access && _prim_first_touch != prim_t::none) {
-                    // TODO
-                    _unary_first_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
-                }
-                // do the brgemm operation
-                // BRGEMM operation performs a contraction over the batch dimension B
-                // and the shared inner dimension K for each pair:
-                // C = sum over B for A[b; m, k] * B[b; k, n]
-                // where A is shaped [B, M, K] and B is shaped [B, K, N]
-                // and C is shaped [M, N]
-                // compared to a gemm, the brgemm gets the K dimension
-                // and an input parameter and therefore there is one outer loop less
-                // while a gemm would run B times more often but accumulates also
-                // onto the output tensor
-                _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
-                               _lda,
-                               _ldb,
-                               _ldc,
-                               _in0_br_stride,
-                               _in1_br_stride);
-
-                // handle last touch
-                if (last_access && _prim_last_touch != prim_t::none) {
-                    // TODO
-                    // ldc is the leading dimension of the output tensor
-                    // and the size of the kernel is the same as the size of the output tensor
-                    // at _dim_sizes[_id_prim_m] * _dim_sizes[_id_prim_n]
-                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
-                }
+        // check if other prim M dimension have the stride of prim M dimension size in the left input tensor
+        _lda = _dim_sizes[_id_prim_m];
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _strides_in0[i] == _lda) {
+                _lda *= _dim_sizes[i];
             }
         }
+        // check if other prim K dimension have the stride of prim K dimension size right input tensor
+        _ldb = _dim_sizes[_id_prim_k];
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k && _strides_in1[i] == _ldb) {
+                _ldb *= _dim_sizes[i];
+            }
+        }
+
+        // check if other prim M dimension have the stride of prim M dimension size in the output tensor
+        _ldc = _dim_sizes[_id_prim_m];
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _strides_out[i] == _ldc) {
+                _ldc *= _dim_sizes[i];
+            }
+        }
+
+        _in0_br_stride = _strides_in0[_id_prim_br];
+        _in1_br_stride = _strides_in1[_id_prim_br];
+
+        return TensorOperation::error_t::success;
     }
 
     /**
@@ -273,11 +428,11 @@ namespace einsum::backend {
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
      **/
-    void execute_iter_parallel(const void* ptr_in0,
-                               const void* ptr_in1,
-                               void* ptr_out,
-                               bool first_access,
-                               bool last_access) {
+    void TensorOperation::execute_iter_parallel(const char* ptr_in0,
+                                                const char* ptr_in1,
+                                                char* ptr_out,
+                                                bool first_access,
+                                                bool last_access) {
         int64_t num_parallel_loops = 0;
         int64_t size_parallel_loops = 1;
         for (exec_t dim : _exec_types) {
@@ -319,7 +474,8 @@ namespace einsum::backend {
                          temp_ptr_in1,
                          temp_ptr_out,
                          thread_first_access,
-                         thread_last_access);
+                         thread_last_access,
+                         0);  // Added missing argument for loop_count
         }
     }
 }  // namespace einsum::backend

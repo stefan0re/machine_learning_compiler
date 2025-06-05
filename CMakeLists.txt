@@ -17,3 +17,4 @@ enable_testing()
 # Subprojects
 add_subdirectory(TenGen)
 add_subdirectory(TenGenTests)
+
