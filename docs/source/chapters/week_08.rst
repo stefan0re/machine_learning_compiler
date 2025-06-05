@@ -376,6 +376,22 @@ This is because an unauthorized memory access has occurred.
 Benchmarks
 ----------
 
+.. make a small table for setup 1 and two to show GFLOPS and measured time
+
+.. list-table:: Benchmarks for setup 1 and 2.
+   :widths: 20 20 20
+   :header-rows: 1
+
+   * - Setup
+     - GFLOPS
+     - Time (ms)
+   * - Setup 1
+     - 57.55
+     - 14.23
+   * - Setup 2
+     - 40.4211
+     - 20.2666
+
 
 
 Our code can be viewed on `Github <https://github.com/stefan0re/machine_learning_compiler>`_ under version week8.

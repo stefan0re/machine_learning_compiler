@@ -165,7 +165,20 @@ void run_setting_1() {
     std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
 #endif
 
+    // benchmark the execution
     l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 100; ++i) {
+        l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = end - start;
+    double flops = (2.0 * 1600 * 1600 * 1600) * 100;  // 2 * M * N * K for GEMM
+    double gflops = flops / (elapsed.count() * 1e9);  // convert to GFLOPS
+
+    std::cout << "Execution time for 100 iterations: " << elapsed.count() << " seconds" << std::endl;
+    std::cout << "GFLOPS: " << gflops << std::endl;
 
     // clean up
     delete[] l_ten_1;
@@ -468,7 +481,18 @@ void run_setting_3() {
     std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
 #endif
 
-    l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    // benchmark the execution
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 100; ++i) {
+        l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+
+    double flops = (2.0 * 64 * 25 * 64 * 25 * 64 * 25) * 100;  // 2 * M * N * K for GEMM
+    double gflops = flops / (elapsed.count() * 1e9);           // convert to GFLOPS
+    std::cout << "Execution time for 100 iterations: " << elapsed.count() << " seconds" << std::endl;
+    std::cout << "GFLOPS: " << gflops << std::endl;
 
     // clean up
     delete[] l_ten_1;
