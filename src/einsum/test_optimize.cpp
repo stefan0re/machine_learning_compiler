@@ -165,7 +165,20 @@ void run_setting_1() {
     std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
 #endif
 
+    // benchmark the execution
     l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 100; ++i) {
+        l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = end - start;
+    double flops = (2.0 * 1600 * 1600 * 1600) * 100;  // 2 * M * N * K for GEMM
+    double gflops = flops / (elapsed.count() * 1e9);  // convert to GFLOPS
+
+    std::cout << "Execution time for 100 iterations: " << elapsed.count() << " seconds" << std::endl;
+    std::cout << "GFLOPS: " << gflops << std::endl;
 
     // clean up
     delete[] l_ten_1;
@@ -464,7 +477,178 @@ void run_setting_3() {
     std::cout << "lda: " << l_tensor_op._lda << std::endl;
     std::cout << "ldb: " << l_tensor_op._ldb << std::endl;
     std::cout << "ldc: " << l_tensor_op._ldc << std::endl;
+    std::cout << "in0_br_stride: " << l_tensor_op._in0_br_stride << std::endl;
+    std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
+#endif
 
+    // benchmark the execution
+    auto start = std::chrono::high_resolution_clock::now();
+    for (int i = 0; i < 100; ++i) {
+        l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+
+    double flops = (2.0 * 64 * 25 * 64 * 25 * 64 * 25) * 100;  // 2 * M * N * K for GEMM
+    double gflops = flops / (elapsed.count() * 1e9);           // convert to GFLOPS
+    std::cout << "Execution time for 100 iterations: " << elapsed.count() << " seconds" << std::endl;
+    std::cout << "GFLOPS: " << gflops << std::endl;
+
+    // clean up
+    delete[] l_ten_1;
+    delete[] l_ten_2;
+    delete[] l_out_scalar;
+    delete[] l_out_einsum_1;
+    std::cout << "Setting 3 completed." << std::endl;
+    std::cout << "************************" << std::endl;
+}
+
+/** Setting 4
+ * dim_types ( M, M, M, N, N, N, K, K, K )
+ * exec_types ( Seq, Seq, Seq, Seq, Seq, Seq, Seq, Seq, Seq )
+ * dim_sizes ( 2, 4, 48, 3, 7, 64, 16, 16, 96)
+ * strides_in0 ( 192, 48, 1, 0, 0, 0, 384, 6144, 98304 )
+ * strides_in1 ( 0, 0, 0, 2064384, 688128, 98304, 1536, 96, 1 )
+ * strides_out ( 192, 48, 1, 258048, 86016, 12288, 0, 0, 0 )
+ *
+ */
+
+void run_setting_4() {
+    std::cout << "Testing Setting 4" << std::endl;
+
+    int64_t ten1_size = 2 * 4 * 48 * 16 * 16 * 96;
+    int64_t ten2_size = 3 * 7 * 64 * 16 * 16 * 96;
+    int64_t tenO_size = 2 * 4 * 48 * 3 * 7 * 64;
+
+    float* l_ten_1 = new float[ten1_size];
+    float* l_ten_2 = new float[ten2_size];
+    float* l_out_scalar = new float[tenO_size];
+    float* l_out_einsum_1 = new float[tenO_size];
+
+    srand48(0);
+    for (size_t i = 0; i < (ten1_size); ++i) {
+        l_ten_1[i] = (10.0f * static_cast<float>(drand48())) - 5.0f;
+    }
+    for (size_t i = 0; i < (ten2_size); ++i) {
+        l_ten_2[i] = (10.0f * static_cast<float>(drand48())) - 5.0f;
+    }
+    // Initialize output tensors to zero
+    for (size_t i = 0; i < (tenO_size); ++i) {
+        l_out_scalar[i] = static_cast<float>(0.0);
+        l_out_einsum_1[i] = static_cast<float>(0.0);
+    }
+
+    TensorOperation l_tensor_op;
+    TensorOperation::dtype_t l_dtype = TensorOperation::dtype_t::fp32;
+    TensorOperation::prim_t l_prim_first_touch = TensorOperation::prim_t::none;
+    TensorOperation::prim_t l_prim_main = TensorOperation::prim_t::gemm;
+    TensorOperation::prim_t l_prim_last_touch = TensorOperation::prim_t::none;
+
+    std::vector<TensorOperation::dim_t> l_dim_types = {TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::k,
+                                                       TensorOperation::dim_t::k,
+                                                       TensorOperation::dim_t::k};
+    std::vector<TensorOperation::exec_t> l_exec_types = {TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq,
+                                                         TensorOperation::exec_t::seq};
+
+    std::vector<int64_t> l_dim_sizes = {2, 4, 48, 3, 7, 64, 16, 16, 96};
+    std::vector<int64_t> l_strides_in0 = {192, 48, 1, 0, 0, 0, 384, 6144, 98304};         // M, N, K
+    std::vector<int64_t> l_strides_in1 = {0, 0, 0, 2064384, 688128, 98304, 1536, 96, 1};  // N, K, M
+    std::vector<int64_t> l_strides_out = {192, 48, 1, 258048, 86016, 12288, 0, 0, 0};     // M, N, K
+    // Setup the tensor operation
+    auto l_error = l_tensor_op.setup(l_dtype,
+                                     l_prim_first_touch,
+                                     l_prim_main,
+                                     l_prim_last_touch,
+                                     std::span<const TensorOperation::dim_t>(l_dim_types),
+                                     std::span<const TensorOperation::exec_t>(l_exec_types),
+                                     std::span<const int64_t>(l_dim_sizes),
+                                     std::span<const int64_t>(l_strides_in0),
+                                     std::span<const int64_t>(l_strides_in1),
+                                     std::span<const int64_t>(l_strides_out));
+
+    l_tensor_op.optimize();
+#ifdef DEBUG
+    // print all necessary information
+    std::cout << "***********************" << std::endl;
+    std::cout << "TensorOperation setup:" << std::endl;
+    std::cout << "  dtype: " << static_cast<int>(l_dtype) << std::endl;
+    std::cout << "  prim_first_touch: " << static_cast<int>(l_prim_first_touch) << std::endl;
+    std::cout << "  prim_main: " << static_cast<int>(l_prim_main) << std::endl;
+    std::cout << "  prim_last_touch: " << static_cast<int>(l_prim_last_touch) << std::endl;
+    std::cout << "  id_prim_m: " << l_tensor_op._id_prim_m << std::endl;
+    std::cout << "  id_prim_n: " << l_tensor_op._id_prim_n << std::endl;
+    std::cout << "  id_prim_k: " << l_tensor_op._id_prim_k << std::endl;
+    std::cout << "  id_prim_br: " << l_tensor_op._id_prim_br << std::endl;
+
+    // print all strides
+    std::cout << "  strides_in0: ";
+    for (const auto& stride : l_tensor_op._strides_in0) {
+        std::cout << stride << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  strides_in1: ";
+    for (const auto& stride : l_tensor_op._strides_in1) {
+        std::cout << stride << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  strides_out: ";
+    for (const auto& stride : l_tensor_op._strides_out) {
+        std::cout << stride << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  dim_types: ";
+    for (const auto& type : l_tensor_op._dim_types) {
+        std::cout << static_cast<int>(type) << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  dim_sizes: ";
+    for (const auto& size : l_tensor_op._dim_sizes) {
+        std::cout << size << " ";
+    }
+    std::cout << std::endl;
+
+    // print execution types
+    std::cout << "  exec_types: ";
+    for (const auto& exec_type : l_tensor_op._exec_types) {
+        std::cout << static_cast<int>(exec_type) << " ";
+    }
+    std::cout << std::endl;
+
+    // print loop sizes
+    std::cout << "  loop_sizes: ";
+    for (const auto& size : l_tensor_op._loop_sizes) {
+        std::cout << size << " ";
+    }
+    std::cout << std::endl;
+
+    // print loop order
+    std::cout << "  loop_order: ";
+    for (const auto& order : l_tensor_op._loop_order) {
+        std::cout << order << " ";
+    }
+    std::cout << std::endl;
+
+#endif
+
+    l_tensor_op.compile();
+
+#ifdef DEBUG
+    std::cout << "lda: " << l_tensor_op._lda << std::endl;
+    std::cout << "ldb: " << l_tensor_op._ldb << std::endl;
+    std::cout << "ldc: " << l_tensor_op._ldc << std::endl;
     std::cout << "in0_br_stride: " << l_tensor_op._in0_br_stride << std::endl;
     std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
 #endif
@@ -476,7 +660,7 @@ void run_setting_3() {
     delete[] l_ten_2;
     delete[] l_out_scalar;
     delete[] l_out_einsum_1;
-    std::cout << "Setting 3 completed." << std::endl;
+    std::cout << "Setting 4 completed." << std::endl;
     std::cout << "************************" << std::endl;
 }
 
@@ -484,7 +668,7 @@ int main() {
     run_setting_1();
     run_setting_2();
     run_setting_3();
+    // run_setting_4();
 
-    std::cout << "Test passed successfully!" << std::endl;
     return 0;
 }

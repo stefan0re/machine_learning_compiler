@@ -94,8 +94,8 @@ namespace einsum::backend {
     }
 
     TensorOperation::error_t TensorOperation::optimize() {
-        split_dimensions();
         fuse_dimensions();
+        split_dimensions();
         identify_primitives();
         reorder_dimensions();
 
@@ -232,6 +232,34 @@ namespace einsum::backend {
     }
 
     TensorOperation::error_t TensorOperation::fuse_dimensions() {
+        // get M loop IDs
+        std::vector<int64_t> m_loop_ids;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m) {
+                m_loop_ids.push_back(i);
+            }
+        }
+
+        for (size_t i = 0; i < m_loop_ids.size(); i++) {
+            if (_dim_sizes[m_loop_ids[i]] < 16) {
+                if (i + 1 < m_loop_ids.size() && _dim_types[m_loop_ids[i + 1]] == dim_t::m) {
+                    _dim_sizes_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
+
+                    _dim_types_storage.erase(_dim_types_storage.begin() + m_loop_ids[i + 1]);
+                    _dim_sizes_storage.erase(_dim_sizes_storage.begin() + m_loop_ids[i + 1]);
+
+                    _strides_in0_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
+                    _strides_in0_storage.erase(_strides_in0_storage.begin() + m_loop_ids[i + 1]);
+
+                    _strides_out_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
+                    _strides_out_storage.erase(_strides_out_storage.begin() + m_loop_ids[i + 1]);
+                }
+            }
+        }
+
+        // TODO: better fusing
+        // TOOD: fuse other dim types like N and K
+
         return TensorOperation::error_t::success;
     }
 
@@ -419,15 +447,6 @@ namespace einsum::backend {
         return TensorOperation::error_t::success;
     }
 
-    /**
-     * General-purpose loop implementation featuring first and last touch operations with OMP parallelization.
-     *
-     * @param ptr_in0      Pointer to the first input tensor's data.
-     * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
-     * @param ptr_out      Pointer to the output tensor's data.
-     * @param first_access True if first time accessing data of output tensor.
-     * @param last_access  True if last time accessing data of output tensor.
-     **/
     void TensorOperation::execute_iter_parallel(const char* ptr_in0,
                                                 const char* ptr_in1,
                                                 char* ptr_out,
