@@ -352,23 +352,23 @@ And this is the third setup that we tried, which is a big tensor contraction wit
 
 
 .. list-table:: Big Tensor contraction example.
-   :widths: 30 70
-   :header-rows: 1
+  :widths: 30 70
+  :header-rows: 1
 
-    * - Variable
-      - Value
-    * - dim_types
-      - (   M,    M,    M,     N,    N,    N,     K,     K,     K )
-    * - exec_types
-      - ( Seq,  Seq,  Seq,   Seq,  Seq,  Seq,   Seq,   Seq,   Seq )
-    * - dim_sizes
-      - (   2,    4,   48,     3,    7,   64,    16,    16,    96 )
-    * - strides_in0
-      - ( 192,   48,    1,     0,    0,    0,   384,  6144, 98304 )
-    * - strides_in1
-      - (   0,    0,    0, 2064384, 688128, 98304, 1536,   96,     1 )
-    * - strides_out
-      - ( 192,   48,    1, 258048, 86016, 12288,     0,     0,     0 )
+  * - Variable
+    - Value
+  * - dim_types
+    - (   M,    M,    M,     N,    N,    N,     K,     K,     K )
+  * - exec_types
+    - ( Seq,  Seq,  Seq,   Seq,  Seq,  Seq,   Seq,   Seq,   Seq )
+  * - dim_sizes
+    - (   2,    4,   48,     3,    7,   64,    16,    16,    96 )
+  * - strides_in0
+    - ( 192,   48,    1,     0,    0,    0,   384,  6144, 98304 )
+  * - strides_in1
+    - (   0,    0,    0, 2064384, 688128, 98304, 1536,   96,     1 )
+  * - strides_out
+    - ( 192,   48,    1, 258048, 86016, 12288,     0,     0,     0 )
   
 Unfortunately, this large tensor contraction has shown us the limits of our implementation.
 This is because an unauthorized memory access has occurred.

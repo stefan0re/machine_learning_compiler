@@ -251,6 +251,8 @@ namespace einsum::backend {
                     _strides_in0_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
                     _strides_in0_storage.erase(_strides_in0_storage.begin() + m_loop_ids[i + 1]);
 
+                    _strides_in1_storage.erase(_strides_in1_storage.begin() + m_loop_ids[i + 1]);
+
                     _strides_out_storage[m_loop_ids[i]] *= _dim_sizes[m_loop_ids[i + 1]];
                     _strides_out_storage.erase(_strides_out_storage.begin() + m_loop_ids[i + 1]);
                 }
