@@ -419,15 +419,6 @@ namespace einsum::backend {
         return TensorOperation::error_t::success;
     }
 
-    /**
-     * General-purpose loop implementation featuring first and last touch operations with OMP parallelization.
-     *
-     * @param ptr_in0      Pointer to the first input tensor's data.
-     * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
-     * @param ptr_out      Pointer to the output tensor's data.
-     * @param first_access True if first time accessing data of output tensor.
-     * @param last_access  True if last time accessing data of output tensor.
-     **/
     void TensorOperation::execute_iter_parallel(const char* ptr_in0,
                                                 const char* ptr_in1,
                                                 char* ptr_out,
