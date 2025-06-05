@@ -41,26 +41,40 @@ namespace einsum::backend {
         _strides_in1 = _strides_in1_storage;
         _strides_out = _strides_out_storage;
 
-        // write loop dims to _loop_sizes_storage
+        // extract the sizes of the sequential loops
+        // till we reach the first primitive loop
         for (size_t i = 0; i < _dim_types.size(); i++) {
+            // if the execution type is not a primitive,
+            // we add the size to the loop sizes storage
             if (_exec_types[i] != exec_t::prim) {
                 _loop_sizes_storage.push_back(_dim_sizes[i]);
+                // otherwise, we set the id of the first primitive loop
+                // and break the loop
             } else {
                 _id_first_primitive_loop = i;
                 break;
             }
         }
+
+        // remap the loop sizes to a span
         _loop_sizes = _loop_sizes_storage;
 
-        // set prim ids
+        // again, go through the dimensions and now only
+        // do something if the execution type is a primitive
         for (size_t i = 0; i < _dim_sizes.size(); i++) {
+            // check if the dimension is a primitive and if it is the m loop
             if (_dim_types[i] == dim_t::m && _exec_types[i] == exec_t::prim) {
                 _id_prim_m = i;
+                // check if the dimension is a primitive and if it is the n loop
             } else if (_dim_types[i] == dim_t::n && _exec_types[i] == exec_t::prim) {
                 _id_prim_n = i;
+                // check if the dimension is a primitive and if it is the k loop
             } else if (_dim_types[i] == dim_t::k && _exec_types[i] == exec_t::prim) {
+                // if we have not set the id of the k loop yet, we set it
                 if (_id_prim_k == 0) {
                     _id_prim_k = i;
+                    // if we set it already and encounter a new k loop
+                    // we know that we have a batch-reduced size
                 } else {
                     _id_prim_br_size = _id_prim_k;
                     _id_prim_k = i;
@@ -68,11 +82,11 @@ namespace einsum::backend {
             }
         }
 
-        // create brgemm_kernel
+        // create brgemm_kernel form that primitives above
         _brgemm.generate(_dim_sizes[_id_prim_m],
                          _dim_sizes[_id_prim_n],
                          _dim_sizes[_id_prim_k],
-                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,
+                         (_id_prim_br_size > -1) ? _dim_sizes[_id_prim_br_size] : 1,  // batch-reduce size or gemm if no br size
                          0,
                          0,
                          0,
@@ -80,9 +94,11 @@ namespace einsum::backend {
         _brgemm_kernel = _brgemm.get_kernel();
 
         // check if we have a first touch primitive
+        // for now this only applys to zero
+        // using the size of the output tensor as value for m and n
         if (_prim_first_touch != prim_t::none) {
             _unary_first_touch.generate(_dim_sizes[_id_prim_m],
-                                        _dim_sizes[_id_prim_m],
+                                        _dim_sizes[_id_prim_n],
                                         0,
                                         mini_jit::generator::Unary::dtype_t::fp32,
 
@@ -91,9 +107,10 @@ namespace einsum::backend {
         _unary_first_touch_kernel = _unary_first_touch.get_kernel();
 
         // check if we have a last touch primitive
+        // for now this only applys to relu
         if (_prim_last_touch != prim_t::none) {
             _unary_last_touch.generate(_dim_sizes[_id_prim_m],
-                                       _dim_sizes[_id_prim_m],
+                                       _dim_sizes[_id_prim_n],
                                        0,
                                        mini_jit::generator::Unary::dtype_t::fp32,
                                        mini_jit::generator::Unary::ptype_t::relu);
@@ -109,6 +126,7 @@ namespace einsum::backend {
         _in0_br_stride = _strides_in0[_strides_in0.size() - 4];
         _in1_br_stride = _strides_in1[_strides_in1.size() - 4];
 
+// this is really cool
 #ifdef DEBUG
         // print all necessary information
         std::cout << "TensorOperation setup:" << std::endl;
@@ -141,6 +159,7 @@ namespace einsum::backend {
 
         return error_t::success;
     }
+
     void TensorOperation::execute(void const* tensor_in0,
                                   void const* tensor_in1,
                                   void* tensor_out) {
@@ -152,20 +171,53 @@ namespace einsum::backend {
         // execute the operation
         execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
     }
+
     void TensorOperation::execute_iter(int64_t id_loop,
                                        char const* ptr_in0,
                                        char const* ptr_in1,
                                        char* ptr_out,
                                        bool first_access,
                                        bool last_access) {
+        // go through each sequential loop (M, N, K) recursively
+        // with l_size beeing the size of each dimension (dim_t)
         int64_t l_size = _loop_sizes[id_loop];
 
+        // apply the loop
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
+            // calculate the pointers for the current iteration
+            // if the stride is 0, we do not need to add anything
+            // otherwise we add the stride multiplied by the iteration index
+            // and the size of the data type (4 for fp32, 8 for fp64)
+            // we use const_cast to remove the constness of the pointers
             char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _strides_in0[id_loop] * 4;
             char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _strides_in1[id_loop] * 4;
             char* l_ptr_out = ptr_out + l_it * _strides_out[id_loop] * 4;
 
-            // TODO: handle first and last access
+            // because this supports brgemms and brgemms gets 3D tensors as
+            // an input and outputs a 2D tensor, applying the first and last
+            // touch operations that only works with 2D tensors would mean
+            // to apply them to the first and last touch of the 2D output tensor
+
+            // the brgemm is being called multiple times per output location,
+            // once for each chunk along the K dimension so
+            // the output buffer l_ptr_out must accumulate results from each brgemm call and
+            // only after the final K iteration, the full result is available in l_ptr_out.
+
+            // BRGEMM does get the K dimension for the contraction, but only up to a limit
+            // typically a fixed small block size (e.g., 32, 64) but
+            // if K is too large, then you must call BRGEMM multiple times,
+            // each with a slice of K, and accumulate into the same output
+
+            // check if current loop is the first (outer) K loop
+            // or in other words the last sequential loop before the primitive loops
+            if (id_loop + 1 == _id_first_primitive_loop && _exec_types[id_loop] == exec_t::seq) {
+                // _id_outer_k_loop is the loop index of the first outer K dimension
+                first_access = (l_it == 0);
+                last_access = (l_it == l_size - 1);
+            }
+
+            // if all sequential loops are applied, we can execute the primitive
+            // so if id_loop + 1 would access the first prim loop
             if (id_loop + 1 < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
                              l_ptr_in0,
@@ -174,11 +226,25 @@ namespace einsum::backend {
                              first_access,
                              last_access);
             } else {
+                // so if id_loop + 1 would access the first prim loop
+                // this means we are at the brgemm level
+                // for m -> for n -> for k -> brgemm
+
                 // handle first touch
                 if (first_access && _prim_first_touch != prim_t::none) {
                     // TODO
-                    _unary_first_touch_kernel(l_ptr_in0, l_ptr_out, _ldc, _ldc);
+                    _unary_first_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                 }
+                // do the brgemm operation
+                // BRGEMM operation performs a contraction over the batch dimension B
+                // and the shared inner dimension K for each pair:
+                // C = sum over B for A[b; m, k] * B[b; k, n]
+                // where A is shaped [B, M, K] and B is shaped [B, K, N]
+                // and C is shaped [M, N]
+                // compared to a gemm, the brgemm gets the K dimension
+                // and an input parameter and therefore there is one outer loop less
+                // while a gemm would run B times more often but accumulates also
+                // onto the output tensor
                 _brgemm_kernel(l_ptr_in0, l_ptr_in1, l_ptr_out,
                                _lda,
                                _ldb,
@@ -189,6 +255,9 @@ namespace einsum::backend {
                 // handle last touch
                 if (last_access && _prim_last_touch != prim_t::none) {
                     // TODO
+                    // ldc is the leading dimension of the output tensor
+                    // and the size of the kernel is the same as the size of the output tensor
+                    // at _dim_sizes[_id_prim_m] * _dim_sizes[_id_prim_n]
                     _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                 }
             }

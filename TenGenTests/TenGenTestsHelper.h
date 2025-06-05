@@ -11,7 +11,10 @@
 #include <sstream>
 #include <string>
 
+#include "TenGen.h"
+
 namespace TenGenTestsHelper {
+
     /**
      * @brief Generates machine code for an assembly instruction in form of a string.
      *
