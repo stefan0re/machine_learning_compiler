@@ -39,6 +39,8 @@ bool check_diff(float* i_ten_1,
  */
 
 void run_setting_1() {
+    std::cout << "Testing Setting 1" << std::endl;
+
     float* l_ten_1 = new float[1600 * 1600];
     float* l_ten_2 = new float[1600 * 1600];
     float* l_out_scalar = new float[1600 * 1600];
@@ -154,6 +156,15 @@ void run_setting_1() {
 
     l_tensor_op.compile();
 
+#ifdef DEBUG
+    std::cout << "lda: " << l_tensor_op._lda << std::endl;
+    std::cout << "ldb: " << l_tensor_op._ldb << std::endl;
+    std::cout << "ldc: " << l_tensor_op._ldc << std::endl;
+
+    std::cout << "in0_br_stride: " << l_tensor_op._in0_br_stride << std::endl;
+    std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
+#endif
+
     l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
 
     // clean up
@@ -162,6 +173,7 @@ void run_setting_1() {
     delete[] l_out_scalar;
     delete[] l_out_einsum_1;
     std::cout << "Setting 1 completed." << std::endl;
+    std::cout << "************************" << std::endl;
 }
 
 /**
@@ -179,6 +191,8 @@ void run_setting_1() {
  */
 
 void run_setting_2() {
+    std::cout << "Testing Setting 2" << std::endl;
+
     float* l_ten_1 = new float[32 * 8 * 32 * 32];
     float* l_ten_2 = new float[32 * 8 * 32 * 32];
     float* l_out_scalar = new float[32 * 32 * 32 * 32];
@@ -296,6 +310,14 @@ void run_setting_2() {
 
     l_tensor_op.compile();
 
+#ifdef DEBUG
+    std::cout << "lda: " << l_tensor_op._lda << std::endl;
+    std::cout << "ldb: " << l_tensor_op._ldb << std::endl;
+    std::cout << "ldc: " << l_tensor_op._ldc << std::endl;
+    std::cout << "in0_br_stride: " << l_tensor_op._in0_br_stride << std::endl;
+    std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
+#endif
+
     l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
 
     // cleab up
@@ -304,6 +326,7 @@ void run_setting_2() {
     delete[] l_out_scalar;
     delete[] l_out_einsum_1;
     std::cout << "Setting 2 completed." << std::endl;
+    std::cout << "************************" << std::endl;
 }
 
 /** Setting 3
@@ -316,6 +339,8 @@ void run_setting_2() {
  */
 
 void run_setting_3() {
+    std::cout << "Testing Setting 3" << std::endl;
+
     float* l_ten_1 = new float[64 * 25 * 64 * 25];
     float* l_ten_2 = new float[64 * 25 * 64 * 25];
     float* l_out_scalar = new float[64 * 25 * 64 * 25];
@@ -434,6 +459,16 @@ void run_setting_3() {
 #endif
 
     l_tensor_op.compile();
+
+#ifdef DEBUG
+    std::cout << "lda: " << l_tensor_op._lda << std::endl;
+    std::cout << "ldb: " << l_tensor_op._ldb << std::endl;
+    std::cout << "ldc: " << l_tensor_op._ldc << std::endl;
+
+    std::cout << "in0_br_stride: " << l_tensor_op._in0_br_stride << std::endl;
+    std::cout << "in1_br_stride: " << l_tensor_op._in1_br_stride << std::endl;
+#endif
+
     l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
 
     // clean up
@@ -442,13 +477,12 @@ void run_setting_3() {
     delete[] l_out_scalar;
     delete[] l_out_einsum_1;
     std::cout << "Setting 3 completed." << std::endl;
+    std::cout << "************************" << std::endl;
 }
 
 int main() {
-    std::cout << "Running first setting." << std::endl;
-
-    // run_setting_1();
-    // run_setting_2();
+    run_setting_1();
+    run_setting_2();
     run_setting_3();
 
     std::cout << "Test passed successfully!" << std::endl;

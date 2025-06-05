@@ -386,14 +386,31 @@ namespace einsum::backend {
                                        mini_jit::generator::Unary::ptype_t::relu);
             _unary_last_touch_kernel = _unary_last_touch.get_kernel();
         }
+        // check if other prim M dimension have the stride of prim M dimension size in the left input tensor
+        _lda = _dim_sizes[_id_prim_m];
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _strides_in0[i] == _lda) {
+                _lda *= _dim_sizes[i];
+            }
+        }
+        // check if other prim K dimension have the stride of prim K dimension size right input tensor
+        _ldb = _dim_sizes[_id_prim_k];
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k && _strides_in1[i] == _ldb) {
+                _ldb *= _dim_sizes[i];
+            }
+        }
 
-        // TODO: set lda, ldb, ldc, in0_br_stride, in1_br_stride
-        _lda = 1600;
-        _ldb = 1600;
-        _ldc = 1600;
+        // check if other prim M dimension have the stride of prim M dimension size in the output tensor
+        _ldc = _dim_sizes[_id_prim_m];
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _strides_out[i] == _ldc) {
+                _ldc *= _dim_sizes[i];
+            }
+        }
 
-        _in0_br_stride = 40000;
-        _in1_br_stride = 40000;
+        _in0_br_stride = _strides_in0[_id_prim_br];
+        _in1_br_stride = _strides_in1[_id_prim_br];
 
         return TensorOperation::error_t::success;
     }
