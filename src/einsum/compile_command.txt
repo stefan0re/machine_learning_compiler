@@ -1,1 +1,0 @@
-g++ -std=c++20 test_optimize.cpp -o optimize_test ../mini_jit/generator/Brgemm.cpp ../mini_jit/generator/Util.cpp ../mini_jit/backend/Kernel.cpp ../mini_jit/instructions/neon.cpp ../mini_jit/instructions/base.cpp backend/TensorOperation.cpp ../mini_jit/generator/Unary.cpp include/einsum_ref.cpp ../mini_jit/include/gemm_ref.cpp 
