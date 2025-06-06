@@ -664,11 +664,149 @@ void run_setting_4() {
     std::cout << "************************" << std::endl;
 }
 
+void run_setting_5() {
+    std::cout << "Testing Setting 5" << std::endl;
+    float* l_ten_1 = new float[4 * 2 * 2];
+    float* l_ten_2 = new float[6 * 2 * 2];
+    float* l_out_scalar = new float[4 * 2 * 6 * 2];
+    float* l_out_einsum_1 = new float[4 * 2 * 6 * 2];
+
+    srand48(0);
+    for (size_t i = 0; i < (4 * 2 * 6 * 2); ++i) {
+        l_ten_1[i] = (10.0f * static_cast<float>(drand48())) - 5.0f;
+    }
+    for (size_t i = 0; i < (6 * 2 * 2 * 4); ++i) {
+        l_ten_2[i] = (10.0f * static_cast<float>(drand48())) - 5.0f;
+    }
+    // Initialize output tensors to zero
+    for (size_t i = 0; i < (4 * 2 * 6 * 2); ++i) {
+        l_out_scalar[i] = static_cast<float>(0.0);
+        l_out_einsum_1[i] = static_cast<float>(0.0);
+    }
+
+    TensorOperation l_tensor_op;
+    TensorOperation::dtype_t l_dtype = TensorOperation::dtype_t::fp32;
+    TensorOperation::prim_t l_prim_first_touch = TensorOperation::prim_t::none;
+    TensorOperation::prim_t l_prim_main = TensorOperation::prim_t::gemm;
+    TensorOperation::prim_t l_prim_last_touch = TensorOperation::prim_t::none;
+
+    std::vector<TensorOperation::dim_t> l_dim_types = {TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::m,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::n,
+                                                       TensorOperation::dim_t::k};
+    std::vector<TensorOperation::exec_t> l_exec_types = {TensorOperation::exec_t::shared,
+                                                         TensorOperation::exec_t::prim,
+                                                         TensorOperation::exec_t::shared,
+                                                         TensorOperation::exec_t::prim,
+                                                         TensorOperation::exec_t::prim};
+
+    std::vector<int64_t> l_dim_sizes = {4, 2, 6, 2, 2};
+    std::vector<int64_t> l_strides_in0 = {2, 1, 0, 0, 8};  // M, N, K
+    std::vector<int64_t> l_strides_in1 = {0, 0, 4, 2, 1};  // N, K, M
+    std::vector<int64_t> l_strides_out = {2, 1, 8, 4, 0};  // M, N, K
+
+    // Setup the tensor operation
+    auto l_error = l_tensor_op.setup(l_dtype,
+                                     l_prim_first_touch,
+                                     l_prim_main,
+                                     l_prim_last_touch,
+                                     std::span<const TensorOperation::dim_t>(l_dim_types),
+                                     std::span<const TensorOperation::exec_t>(l_exec_types),
+                                     std::span<const int64_t>(l_dim_sizes),
+                                     std::span<const int64_t>(l_strides_in0),
+                                     std::span<const int64_t>(l_strides_in1),
+                                     std::span<const int64_t>(l_strides_out));
+
+    l_tensor_op.optimize();
+
+    // l_tensor_op._loop_order_storage = {0, 2};
+    // l_tensor_op._loop_order = l_tensor_op._loop_order_storage;
+    l_tensor_op._num_parallel_loops = 2;
+
+    l_tensor_op.compile();
+
+    l_tensor_op.execute(l_ten_1, l_ten_2, l_out_einsum_1);
+
+#ifdef DEBUG
+    // print all necessary information
+    std::cout << "***********************" << std::endl;
+    std::cout << "TensorOperation setup:" << std::endl;
+    std::cout << "  dtype: " << static_cast<int>(l_dtype) << std::endl;
+    std::cout << "  prim_first_touch: " << static_cast<int>(l_prim_first_touch) << std::endl;
+    std::cout << "  prim_main: " << static_cast<int>(l_prim_main) << std::endl;
+    std::cout << "  prim_last_touch: " << static_cast<int>(l_prim_last_touch) << std::endl;
+    std::cout << "  id_first_primitive_loop: " << l_tensor_op._id_first_primitive_loop << std::endl;
+    std::cout << "  id_prim_m: " << l_tensor_op._id_prim_m << std::endl;
+    std::cout << "  id_prim_n: " << l_tensor_op._id_prim_n << std::endl;
+    std::cout << "  id_prim_k: " << l_tensor_op._id_prim_k << std::endl;
+    std::cout << "  id_prim_br: " << l_tensor_op._id_prim_br << std::endl;
+
+    // print all strides
+    std::cout << "  strides_in0: ";
+    for (const auto& stride : l_tensor_op._strides_in0) {
+        std::cout << stride << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  strides_in1: ";
+    for (const auto& stride : l_tensor_op._strides_in1) {
+        std::cout << stride << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  strides_out: ";
+    for (const auto& stride : l_tensor_op._strides_out) {
+        std::cout << stride << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  dim_types: ";
+    for (const auto& type : l_tensor_op._dim_types) {
+        std::cout << static_cast<int>(type) << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "  dim_sizes: ";
+    for (const auto& size : l_tensor_op._dim_sizes) {
+        std::cout << size << " ";
+    }
+    std::cout << std::endl;
+
+    // print execution types
+    std::cout << "  exec_types: ";
+    for (const auto& exec_type : l_tensor_op._exec_types) {
+        std::cout << static_cast<int>(exec_type) << " ";
+    }
+    std::cout << std::endl;
+
+    // print loop sizes
+    std::cout << "  loop_sizes: ";
+    for (const auto& size : l_tensor_op._loop_sizes) {
+        std::cout << size << " ";
+    }
+    std::cout << std::endl;
+
+    // print loop order
+    std::cout << "  loop_order: ";
+    for (const auto& order : l_tensor_op._loop_order) {
+        std::cout << order << " ";
+    }
+    std::cout << std::endl;
+
+#endif
+
+    // clean up
+    delete[] l_ten_1;
+    delete[] l_ten_2;
+    delete[] l_out_scalar;
+    delete[] l_out_einsum_1;
+    std::cout << "Setting 4 completed." << std::endl;
+    std::cout << "************************" << std::endl;
+}
+
 int main() {
-    run_setting_1();
-    run_setting_2();
-    run_setting_3();
+    // run_setting_1();
+    // run_setting_2();
+    // run_setting_3();
     // run_setting_4();
+    run_setting_5();
 
     return 0;
 }
