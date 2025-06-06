@@ -5,8 +5,6 @@
 #include "generator/Brgemm.h"
 #include "include/gemm_ref.h"
 
-// test to check if brgemm works
-
 int main(int argc, char *argv[]) {
     if (argc < 3) {
         std::cout << "Usage: " << argv[0] << " <M> <N> [K] [BR_K]" << std::endl;
@@ -24,7 +22,16 @@ int main(int argc, char *argv[]) {
     const int64_t br_stride_a = lda * k;
     const int64_t br_stride_b = ldb * n;
 
-    std::cout << "Dimensions: M = " << m << ", N = " << n << ", K = " << k << ", BR_K = " << br_k << std::endl;
+    std::cout << "Dimensions: "<< std::endl;
+    std::cout << " M = " << m << std::endl;
+    std::cout << " N = " << n << std::endl;
+    std::cout << " K = " << k << std::endl;
+    std::cout << " BR_K = " << br_k << std::endl;
+    std::cout << " LDA = " << lda << std::endl;
+    std::cout << " LDB = " << ldb << std::endl;
+    std::cout << " LDC = " << ldc << std::endl;
+    std::cout << " BR_STRIDE_A = " << br_stride_a << std::endl;
+    std::cout << " BR_STRIDE_B = " << br_stride_b << std::endl;
 
     mini_jit::generator::Brgemm l_brgemm;
     l_brgemm.generate(m, n, k, br_k, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);

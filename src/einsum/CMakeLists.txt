@@ -15,7 +15,7 @@ include_directories(
 
 # Source files
 set(SOURCES
-    test_optimize.cpp
+    check_einsum.cpp
     ../mini_jit/generator/Brgemm.cpp
     ../mini_jit/generator/Util.cpp
     ../mini_jit/backend/Kernel.cpp
@@ -28,4 +28,4 @@ set(SOURCES
 )
 
 # Add executable
-add_executable(einsum_test ${SOURCES})
+add_executable(check_einsum ${SOURCES})
