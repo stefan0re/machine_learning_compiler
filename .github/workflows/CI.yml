@@ -3,6 +3,7 @@ run-name: CI Pipeline triggered by ${{ github.actor }}
 on:
   push:
     branches:
+      - main
   pull_request:
     branches:
       - main
