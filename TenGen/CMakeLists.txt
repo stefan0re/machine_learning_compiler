@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.27.7)
 project(TenGenLib)
 
 # All headers are in this folder or subfolders
