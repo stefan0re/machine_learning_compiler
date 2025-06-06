@@ -63,6 +63,7 @@ class einsum::backend::TensorOperation {
     prim_t _prim_main;
     prim_t _prim_last_touch;
     int64_t _id_first_primitive_loop;
+    int64_t _num_parallel_loops;
 
     int64_t _id_prim_m;
     int64_t _id_prim_n;
