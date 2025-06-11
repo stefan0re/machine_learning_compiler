@@ -10,7 +10,6 @@ einsum::trees::EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t
 
     this->root = new TreeNode{
         {},       // notation
-        false,    // is_binary
         true,     // is_leaf
         nullptr,  // parent
         nullptr,  // left_child
@@ -26,7 +25,6 @@ einsum::trees::EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t
                 this->size++;
                 TreeNode* new_node = new TreeNode{
                     {},       // notation
-                    false,    // is_binary
                     true,     // is_leaf
                     nullptr,  // parent
                     nullptr,  // left_child
@@ -42,7 +40,6 @@ einsum::trees::EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t
                 this->size++;
                 TreeNode* new_node = new TreeNode{
                     {},       // notation
-                    false,    // is_binary
                     true,     // is_leaf
                     nullptr,  // parent
                     nullptr,  // left_child

@@ -15,7 +15,6 @@ class einsum::trees::EinsumTree {
    private:
     struct TreeNode {
         std::vector<uint32_t> notation;
-        bool is_binary;
         bool is_leaf;
         TreeNode* parent;
         TreeNode* left_child;
