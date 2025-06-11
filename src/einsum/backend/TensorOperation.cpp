@@ -53,7 +53,7 @@ namespace einsum::backend {
         char* l_ptr_out = static_cast<char*>(tensor_out);
 
         // execute the operation
-        execute_iter(_loop_order[0], l_ptr_in0, l_ptr_in1, l_ptr_out, false, false, 0);
+        execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
     }
     void TensorOperation::execute_iter(int64_t id_loop,
                                        char const* ptr_in0,
@@ -372,6 +372,9 @@ namespace einsum::backend {
         for (size_t i = 0; i < _dim_types.size(); i++) {
             if (_exec_types_storage[i] == exec_t::seq) {
                 _loop_sizes_storage.push_back(_dim_sizes[i]);
+                if (_dim_types[i] != dim_t::k) {
+                    _exec_types_storage[i] = exec_t::shared;
+                }
             } else {
                 _loop_sizes_storage.push_back(1);
             }
@@ -454,49 +457,60 @@ namespace einsum::backend {
                                                 char* ptr_out,
                                                 bool first_access,
                                                 bool last_access) {
-        int64_t num_parallel_loops = 0;
         int64_t size_parallel_loops = 1;
-        for (exec_t dim : _exec_types) {
-            if (dim == exec_t::shared) {
-                size_parallel_loops *= _loop_sizes[num_parallel_loops];
-                num_parallel_loops++;
-            }
+        std::cout << "_num_parallel_loops: " << _num_parallel_loops << std::endl;
+        std::cout << "  dim_types: ";
+        for (const auto& type : _dim_types) {
+            std::cout << static_cast<int>(type) << " ";
         }
-#pragma omp parallel for
+        std::cout << std::endl;
+        std::cout << "  dim_sizes: ";
+        for (const auto& size : _dim_sizes) {
+            std::cout << size << " ";
+        }
+        std::cout << std::endl;
+        std::cout << "  loop_order: ";
+        for (const auto& size : _loop_order) {
+            std::cout << size << " ";
+        }
+        std::cout << std::endl;
+        for (size_t i = 0; i < _num_parallel_loops; i++) {
+            size_parallel_loops *= _dim_sizes[_loop_order[i]];
+        }
+
+        std::cout << "size_parallel_loops: " << size_parallel_loops << std::endl;
+
+        // #pragma omp parallel for
         for (int64_t it_all = 0; it_all < size_parallel_loops; it_all++) {
             int64_t it_remaining = it_all;
-
-            bool is_first = (it_all == 0);
-            bool is_last = (it_all == size_parallel_loops - 1);
+            std::cout << "init it_remaining: " << it_remaining << std::endl;
 
             const char* temp_ptr_in0 = static_cast<const char*>(ptr_in0);
             const char* temp_ptr_in1 = static_cast<const char*>(ptr_in1);
             char* temp_ptr_out = static_cast<char*>(ptr_out);
 
-            for (int64_t id_loop = num_parallel_loops - 1; id_loop >= 0; id_loop--) {
+            for (int64_t id_loop = _num_parallel_loops - 1; id_loop >= 0; id_loop--) {
                 // calculate loop index l_it for loop l_id_loop
-                int64_t it = it_remaining % _loop_sizes[id_loop];
-                it_remaining = it_remaining / _loop_sizes[id_loop];
-
-                std::cout << "it_remaining: " << it_remaining << ", it: " << it << ", loop_size: " << _loop_sizes[id_loop] << ", it_all: " << it_all << ", id_loop: " << id_loop << std::endl;
+                int64_t it = it_remaining % _dim_sizes[_loop_order[id_loop]];
+                it_remaining = it_remaining / _dim_sizes[_loop_order[id_loop]];
 
                 // update pointer with strides
-                temp_ptr_in0 += it * _strides_in0[id_loop];
-                temp_ptr_in1 += it * _strides_in1[id_loop];
-                temp_ptr_out += it * _strides_out[id_loop];
+                temp_ptr_in0 += it * _strides_in0[_loop_order[id_loop]] * 4;
+                temp_ptr_in1 += it * _strides_in1[_loop_order[id_loop]] * 4;
+                temp_ptr_out += it * _strides_out[_loop_order[id_loop]] * 4;
             }
             // call non parallel loops or kernel
 
             bool thread_first_access = first_access && (it_all == 0);
             bool thread_last_access = last_access && (it_all == size_parallel_loops - 1);
 
-            execute_iter(num_parallel_loops,
+            execute_iter(_loop_order[_num_parallel_loops],
                          temp_ptr_in0,
                          temp_ptr_in1,
                          temp_ptr_out,
                          thread_first_access,
                          thread_last_access,
-                         0);  // Added missing argument for loop_count
+                         _num_parallel_loops);  // Added missing argument for loop_count
         }
     }
 }  // namespace einsum::backend
