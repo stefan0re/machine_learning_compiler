@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.0)
+cmake_minimum_required(VERSION 3.30.8)
 project(TenGenProject)
 
 # Set C++ standard
@@ -12,9 +12,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 # find OpenMP
 find_package(OpenMP REQUIRED)
 
+add_subdirectory(src/mini_jit)
+add_subdirectory(src/einsum)
+
 enable_testing()
 
 # Subprojects
-add_subdirectory(TenGen)
-add_subdirectory(TenGenTests)
+add_subdirectory(test)
 

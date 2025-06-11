@@ -1,24 +1,27 @@
-# Base-Instruction-Tests
-add_executable(mini_jit_base_instr_tests
-    test_base_instructions.cpp
-    test_utils.cpp
-)
-target_link_libraries(mini_jit_base_instr_tests PRIVATE mini_jit)
-add_test(NAME BaseInstrTests COMMAND mini_jit_base_instr_tests)
+cmake_minimum_required(VERSION 3.14)
+project(mini_jit_tests LANGUAGES CXX)
 
-# Neon-Instruction-Tests
-add_executable(mini_jit_neon_instr_tests
-    test_neon_instructions.cpp
-    test_utils.cpp
-)
-target_link_libraries(mini_jit_neon_instr_tests PRIVATE mini_jit)
-add_test(NAME NeonInstrTests COMMAND mini_jit_neon_instr_tests)
+include(FetchContent)
 
-# Generator-Methods-Tests
-add_executable(mini_jit_generator_methods_test
-    test_gen_methods.cpp
-    test_utils.cpp
+FetchContent_Declare(
+    Catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG        v3.5.3
 )
-target_link_libraries(mini_jit_generator_methods_test PRIVATE mini_jit)
-add_test(NAME GeneratorMethodsTests COMMAND mini_jit_generator_methods_test)
+FetchContent_MakeAvailable(Catch2)
 
+set(TEST_SOURCES
+    mini_jit/test_instructions.cpp
+    mini_jit/test_generators.cpp
+)
+
+add_executable(tests ${TEST_SOURCES})
+
+target_link_libraries(tests
+    PRIVATE
+        mini_jit                 # library under test
+        Catch2::Catch2WithMain   # Catch2 and its main()
+)
+
+include(Catch)
+catch_discover_tests(tests)
