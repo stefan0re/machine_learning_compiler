@@ -19,3 +19,4 @@ You can see our code at `Github <https://github.com/stefan0re/machine_learning_c
    chapters/week_06.rst
    chapters/week_07.rst
    chapters/week_08.rst
+   chapters/week_09.rst
