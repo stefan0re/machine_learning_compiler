@@ -13,19 +13,41 @@ include_directories(
     ${CMAKE_SOURCE_DIR}/../mini_jit/include
 )
 
-# Source files
-set(SOURCES
-    check_einsum.cpp
+set(LIB_SOURCES
+    ./trees/einsum_trees.cpp
+    ./backend/TensorOperation.cpp
+    ./include/einsum_ref.cpp
+)
+
+add_library(einsum STATIC ${LIB_SOURCES})
+
+target_include_directories(einsum
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/backend>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/trees>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(einsum PUBLIC -O3)
+endif()
+
+set_target_properties(einsum PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
+
+set(EXTERNAL_SOURCES
     ../mini_jit/generator/Brgemm.cpp
     ../mini_jit/generator/Util.cpp
     ../mini_jit/backend/Kernel.cpp
     ../mini_jit/instructions/neon.cpp
     ../mini_jit/instructions/base.cpp
-    backend/TensorOperation.cpp
     ../mini_jit/generator/Unary.cpp
-    include/einsum_ref.cpp
     ../mini_jit/include/gemm_ref.cpp
 )
 
-# Add executable
-add_executable(check_einsum ${SOURCES})
+# ---------------------------------------------------------------------------
+# Little helper binary (optional)
+# ---------------------------------------------------------------------------
+add_executable(check_einsum ./check_einsum.cpp ${LIB_SOURCES} ${EXTERNAL_SOURCES})

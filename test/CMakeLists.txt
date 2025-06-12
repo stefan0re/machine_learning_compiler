@@ -13,6 +13,7 @@ FetchContent_MakeAvailable(Catch2)
 set(TEST_SOURCES
     mini_jit/test_instructions.cpp
     mini_jit/test_generators.cpp
+    einsum/test_einsum_tree.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
@@ -20,6 +21,7 @@ add_executable(tests ${TEST_SOURCES})
 target_link_libraries(tests
     PRIVATE
         mini_jit                 # library under test
+        einsum
         Catch2::Catch2WithMain   # Catch2 and its main()
 )
 
