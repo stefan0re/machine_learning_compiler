@@ -802,11 +802,11 @@ void run_setting_5() {
 }
 
 int main() {
-    // run_setting_1();
-    // run_setting_2();
-    // run_setting_3();
-    // run_setting_4();
-    run_setting_5();
+    run_setting_1();
+    run_setting_2();
+    run_setting_3();
+    run_setting_4();
+    // run_setting_5();
 
     return 0;
 }
