@@ -12,8 +12,8 @@ using namespace einsum::trees;
 TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
     std::string str_repr = "[0,1],[1,2]->[0,2]";
     EinsumTree tree = EinsumTree(str_repr, {10, 20, 30});
+    tree.identify();
     tree.print();
-    tree.lower();
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
