@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+#include "../../tensor/tensor.h"
 #include "../backend/TensorOperation.h"
 
 namespace einsum {
@@ -36,11 +37,15 @@ class einsum::trees::EinsumTree {
 
     struct TreeNode {
         int32_t id;
-        std::vector<uint32_t> notation;
         node_t node_type;
         TreeNode* parent;
         TreeNode* left_child;
         TreeNode* right_child;
+
+        std::vector<uint32_t> notation;
+        Tensor* left_tensor;
+        Tensor* right_tensor;
+        Tensor* out_child_tensor;
     };
 
     TreeNode* root = nullptr;
@@ -49,10 +54,12 @@ class einsum::trees::EinsumTree {
     std::vector<int32_t> leaf_ids = {};
 
     void printNode(TreeNode* node, const std::string& prefix, bool isLast);
+    void identifyNode(TreeNode* node);
     OpSteps::OpStep lowerNode(TreeNode* node, OpSteps& lowered);
 
    public:
     EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims);
+    void identify();
     OpSteps lower();
 
     void print();
