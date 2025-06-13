@@ -53,11 +53,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
 
     this->root = new TreeNode{
         static_cast<int32_t>(this->size),  // id
-        {},                                // notation
         EinsumTree::node_t::leaf,          // node_type
         nullptr,                           // parent
         nullptr,                           // left_child
-        nullptr                            // right_child
+        nullptr,                           // right_child
+        {},                                // notation
+        nullptr,                           // left_tensor
+        nullptr,                           // right_tensor
+        nullptr,                           // out_child
     };
     this->leaf_ids.push_back(static_cast<int32_t>(this->size));
     this->size++;
@@ -70,11 +73,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 // add left node
                 TreeNode* new_node = new TreeNode{
                     static_cast<int32_t>(this->size),  // id
-                    {},                                // notation
                     EinsumTree::node_t::leaf,          // node_type
                     nullptr,                           // parent
                     nullptr,                           // left_child
-                    nullptr                            // right_child
+                    nullptr,                           // right_child
+                    {},                                // notation
+                    nullptr,                           // left_tensor
+                    nullptr,                           // right_tensor
+                    nullptr,                           // out_child
                 };
 
                 if (this->leaf_ids.size() > 0) {
@@ -94,11 +100,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 // add right node
                 TreeNode* new_node = new TreeNode{
                     static_cast<int32_t>(this->size),  // id
-                    {},                                // notation
                     EinsumTree::node_t::leaf,          // node_type
                     nullptr,                           // parent
                     nullptr,                           // left_child
-                    nullptr                            // right_child
+                    nullptr,                           // right_child
+                    {},                                // notation
+                    nullptr,                           // left_tensor
+                    nullptr,                           // right_tensor
+                    nullptr,                           // out_child
                 };
                 current->right_child = new_node;
                 current->node_type = EinsumTree::node_t::contraction;
@@ -153,6 +162,33 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
             }
         }
     }
+}
+
+void EinsumTree::identify() {
+    identifyNode(this->root);
+}
+
+void EinsumTree::identifyNode(TreeNode* node) {
+    std::vector<uint32_t> out_notation = node->notation;
+
+    // Konvertiere zu tuple und verwende apply
+    auto create_tensor = [](auto... dims) {
+        return new Tensor(dims...);
+    };
+
+    // Erstelle tuple aus vector
+    auto dims_tuple = std::apply([](auto&&... args) {
+        return std::make_tuple(args...);
+    },
+                                 out_notation);
+
+    if (node->node_type == node_t::leaf) {
+        Tensor* out_tensor = new Tensor();
+    } else if (node->node_type == node_t::permutation) {
+    } else if (node->node_type == node_t::contraction) {
+    }
+
+    return out_notation;
 }
 
 OpSteps EinsumTree::lower() {
