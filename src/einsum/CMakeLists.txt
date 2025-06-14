@@ -38,6 +38,7 @@ set_target_properties(einsum PROPERTIES
 )
 
 set(EXTERNAL_SOURCES
+    ../tensor/tensor.cpp
     ../mini_jit/generator/Brgemm.cpp
     ../mini_jit/generator/Util.cpp
     ../mini_jit/backend/Kernel.cpp
