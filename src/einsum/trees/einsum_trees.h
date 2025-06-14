@@ -45,7 +45,7 @@ class einsum::trees::EinsumTree {
         std::vector<uint32_t> notation;
         Tensor* left_tensor;
         Tensor* right_tensor;
-        Tensor* out_child_tensor;
+        Tensor* out_tensor;
     };
 
     TreeNode* root = nullptr;
@@ -54,7 +54,7 @@ class einsum::trees::EinsumTree {
     std::vector<int32_t> leaf_ids = {};
 
     void printNode(TreeNode* node, const std::string& prefix, bool isLast);
-    void identifyNode(TreeNode* node);
+    std::vector<uint32_t> identifyNode(TreeNode* node);
     OpSteps::OpStep lowerNode(TreeNode* node, OpSteps& lowered);
 
    public:
