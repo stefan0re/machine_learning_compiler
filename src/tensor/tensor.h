@@ -26,31 +26,17 @@ class Tensor {
         // store each dimension size in a vector
         std::vector<int> sizes = {dims...};
 
-        // of each dimension create a DimInfo
-        for (int i = 0; i < sizes.size(); ++i) {
-            DimInfo info;
-            info.dim_sizes = sizes[i];
-            info.loop_id = i;
-            id.push_back(info);
-        }
-
-        // compute strides in reverse order
-        // e.g. Tensor(2, 3, 4)::strides == {12, 4, 1}
-        // S2 = 1                   last dimension stride is always 1
-        // S1 = D2 * S2 = 4 * 1 = 4
-        // S0 = D1 * S1 = 3 * 4 = 12
-        int64_t stride = 1;
-        for (size_t i = sizes.size(); i-- > 0;) {
-            // assing the stride
-            id[i].stride = stride;
-            // multiple the current stride with the new one
-            stride *= sizes[i];
-        }
+        setup(sizes);
     }
+
+    Tensor(std::vector<u_int32_t> dims);
 
     void swap(int i, int j);
     void info() const;
     std::string info_str() const;
+
+   private:
+    void setup(std::vector<int> sizes);
 };
 
 #endif  // TENSOR_H
