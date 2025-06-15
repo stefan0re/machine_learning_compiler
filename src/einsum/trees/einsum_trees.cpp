@@ -7,45 +7,6 @@
 using namespace einsum::trees;
 using namespace einsum::backend;
 
-std::vector<int64_t> get_stride(std::vector<uint32_t> dim_ids,
-                                std::vector<TensorOperation::dim_t> dim_types,
-                                std::vector<int64_t> dim_sizes,
-                                std::vector<TensorOperation::exec_t> exec_types,
-                                TensorOperation::dim_t dim_type_0,
-                                TensorOperation::dim_t dim_type_1) {
-    std::vector<uint32_t> local_dim_ids;
-    std::vector<TensorOperation::dim_t> local_dim_types;
-    std::vector<uint32_t> local_dim_sizes;
-    std::vector<TensorOperation::exec_t> local_exec_types;
-    for (int i = 0; i < dim_types.size(); i++) {
-        if (dim_types[i] == dim_type_0 || dim_types[i] == dim_type_1) {
-            local_dim_ids.push_back(dim_ids[i]);
-            local_dim_sizes.push_back(dim_sizes[i]);
-            local_dim_types.push_back(dim_types[i]);
-            local_exec_types.push_back(exec_types[i]);
-        }
-    }
-
-    size_t count = 0;
-    std::vector<int64_t> strides;
-    for (auto dim : dim_ids) {
-        strides.push_back(0);
-        for (int i = 0; i < local_dim_ids.size(); i++) {
-            if (dim == local_dim_ids[i]) {
-                int64_t stride = 1;
-                for (int j = i + 1; j < local_dim_ids.size(); j++) {
-                    if (local_exec_types[i] == local_exec_types[j]) {
-                        stride *= local_dim_sizes[j];
-                    }
-                }
-                strides[count] = stride;
-            }
-        }
-        count++;
-    }
-    return strides;
-}
-
 EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
     this->id_dims = id_dims;
 
@@ -53,11 +14,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
 
     this->root = new TreeNode{
         static_cast<int32_t>(this->size),  // id
-        {},                                // notation
         EinsumTree::node_t::leaf,          // node_type
         nullptr,                           // parent
         nullptr,                           // left_child
-        nullptr                            // right_child
+        nullptr,                           // right_child
+        {},                                // notation
+        nullptr,                           // left_tensor
+        nullptr,                           // right_tensor
+        nullptr,                           // out_child
     };
     this->leaf_ids.push_back(static_cast<int32_t>(this->size));
     this->size++;
@@ -70,11 +34,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 // add left node
                 TreeNode* new_node = new TreeNode{
                     static_cast<int32_t>(this->size),  // id
-                    {},                                // notation
                     EinsumTree::node_t::leaf,          // node_type
                     nullptr,                           // parent
                     nullptr,                           // left_child
-                    nullptr                            // right_child
+                    nullptr,                           // right_child
+                    {},                                // notation
+                    nullptr,                           // left_tensor
+                    nullptr,                           // right_tensor
+                    nullptr,                           // out_child
                 };
 
                 if (this->leaf_ids.size() > 0) {
@@ -94,11 +61,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 // add right node
                 TreeNode* new_node = new TreeNode{
                     static_cast<int32_t>(this->size),  // id
-                    {},                                // notation
                     EinsumTree::node_t::leaf,          // node_type
                     nullptr,                           // parent
                     nullptr,                           // left_child
-                    nullptr                            // right_child
+                    nullptr,                           // right_child
+                    {},                                // notation
+                    nullptr,                           // left_tensor
+                    nullptr,                           // right_tensor
+                    nullptr,                           // out_child
                 };
                 current->right_child = new_node;
                 current->node_type = EinsumTree::node_t::contraction;
@@ -155,6 +125,70 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
     }
 }
 
+void EinsumTree::identify() {
+    identifyNode(this->root);
+}
+
+std::vector<uint32_t> EinsumTree::identifyNode(TreeNode* node) {
+    std::vector<uint32_t> out_dims;
+    for (uint32_t dim_id : node->notation) {
+        out_dims.push_back(this->id_dims[dim_id]);
+    }
+    node->out_tensor = new Tensor(out_dims);
+
+    if (node->node_type == node_t::permutation) {
+        std::cout << "Permutation Tensor" << std::endl;
+        node->out_tensor->info();
+
+        std::vector<uint32_t> child_dims = identifyNode(node->left_child);
+        node->left_tensor = new Tensor(child_dims);
+        std::cout << "Child Tensor" << std::endl;
+        node->left_tensor->info();
+    } else if (node->node_type == node_t::contraction) {
+        std::vector<uint32_t> left_dims = identifyNode(node->left_child);
+        node->left_tensor = new Tensor(left_dims);
+
+        std::vector<uint32_t> right_dims = identifyNode(node->right_child);
+        node->right_tensor = new Tensor(right_dims);
+
+        for (size_t i = 0; i < node->left_child->notation.size(); i++) {
+            for (size_t j = 0; j < node->right_child->notation.size(); j++) {
+                for (size_t k = 0; k < node->notation.size(); k++) {
+                    bool is_contraction_dim = node->left_child->notation[i] == node->right_child->notation[j] &&
+                                              node->left_child->notation[i] != node->notation[k];
+                    bool is_m_dim = node->notation[k] != node->right_child->notation[j] &&
+                                    node->notation[k] == node->left_child->notation[i];
+                    bool is_n_dim = node->notation[k] == node->right_child->notation[j] &&
+                                    node->notation[k] != node->left_child->notation[i];
+
+                    if (is_contraction_dim) {
+                        node->left_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::k);
+                        node->right_tensor->id[j].dim_t = static_cast<int>(TensorOperation::dim_t::k);
+                        std::cout << "Contraction dim: " << node->left_child->notation[i] << std::endl;
+                    } else if (is_m_dim) {
+                        node->left_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::m);
+                        node->out_tensor->id[k].dim_t = static_cast<int>(TensorOperation::dim_t::m);
+                        std::cout << "m dim: " << node->notation[k] << std::endl;
+                    } else if (is_n_dim) {
+                        node->right_tensor->id[j].dim_t = static_cast<int>(TensorOperation::dim_t::n);
+                        node->out_tensor->id[k].dim_t = static_cast<int>(TensorOperation::dim_t::n);
+                        std::cout << "n dim: " << node->notation[k] << std::endl;
+                    }
+                }
+            }
+        }
+
+        std::cout << "Contraction Tensor" << std::endl;
+        node->out_tensor->info();
+        std::cout << "Left Tensor" << std::endl;
+        node->left_tensor->info();
+        std::cout << "Right Tensor" << std::endl;
+        node->right_tensor->info();
+    }
+
+    return out_dims;
+}
+
 OpSteps EinsumTree::lower() {
     OpSteps steps = {{}, {}};
     OpSteps::OpStep lastStep = lowerNode(this->root, steps);
@@ -193,92 +227,26 @@ OpSteps::OpStep EinsumTree::lowerNode(TreeNode* node, OpSteps& lowered) {
         TensorOperation::prim_t prim_main = TensorOperation::prim_t::gemm;
         TensorOperation::prim_t prim_last_touch = TensorOperation::prim_t::none;
 
-        std::unordered_set<uint32_t> left_dims(left_step.out_ten_notation.begin(), left_step.out_ten_notation.end());
-        std::unordered_set<uint32_t> right_dims(right_step.out_ten_notation.begin(), right_step.out_ten_notation.end());
-        std::unordered_set<uint32_t> out_dims(node->notation.begin(), node->notation.end());
+        /*for (int i = 0; i < dim_ids.size(); i++) {
+    std::cout << "ID: " << dim_ids[i] << ", Dim Type: " << static_cast<uint32_t>(dim_types[i]) << ", Exec Type: " << static_cast<uint32_t>(exec_types[i]) << ", Dim Size: " << static_cast<uint32_t>(dim_sizes[i]) << ", Left Stride: " << static_cast<uint32_t>(strides_in0[i]) << ", Right Stride: " << static_cast<uint32_t>(strides_in1[i]) << ", Out Stride: " << static_cast<uint32_t>(strides_out[i]) << std::endl;
+}
 
-        // Kontraktionsdimensionen (in beiden inputs, nicht im output)
-        std::vector<uint32_t> contraction_dims;
-        for (uint32_t dim : left_dims) {
-            if (right_dims.count(dim) && !out_dims.count(dim)) {
-                contraction_dims.push_back(dim);
-                std::cout << "Contraction dim: " << dim << std::endl;
-            }
-        }
+TensorOperation::error_t result = op.setup(
+    dtype,
+    prim_first_touch,
+    prim_main,
+    prim_last_touch,
+    std::span<const TensorOperation::dim_t>(dim_types),
+    std::span<const TensorOperation::exec_t>(exec_types),
+    std::span<const int64_t>(dim_sizes),
+    std::span<const int64_t>(strides_in0),
+    std::span<const int64_t>(strides_in1),
+    std::span<const int64_t>(strides_out));
 
-        // M-Dimensionen (nur im linken Input und Output)
-        std::vector<uint32_t> m_dims;
-        for (uint32_t dim : out_dims) {
-            if (left_dims.count(dim) && !right_dims.count(dim)) {
-                m_dims.push_back(dim);
-                std::cout << "M dim: " << dim << std::endl;
-            }
-        }
-
-        // N-Dimensionen (nur im rechten Input und Output)
-        std::vector<uint32_t> n_dims;
-        for (uint32_t dim : out_dims) {
-            if (right_dims.count(dim) && !left_dims.count(dim)) {
-                n_dims.push_back(dim);
-                std::cout << "N dim: " << dim << std::endl;
-            }
-        }
-
-        std::vector<uint32_t> dim_ids;
-        std::vector<TensorOperation::dim_t> dim_types;
-        std::vector<TensorOperation::exec_t> exec_types;
-        std::vector<int64_t> dim_sizes;
-        std::vector<int64_t> strides_in0;
-        std::vector<int64_t> strides_in1;
-        std::vector<int64_t> strides_out;
-
-        auto addDimension = [&](uint32_t dim_id, TensorOperation::dim_t dim_type, TensorOperation::exec_t exec_type) {
-            exec_types.push_back(exec_type);
-            dim_ids.push_back(dim_id);
-            dim_types.push_back(dim_type);
-            dim_sizes.push_back(this->id_dims[dim_id]);
-        };
-
-        size_t count = 0;
-        for (uint32_t i = 0; i < m_dims.size(); i++) {
-            if (m_dims.size() - 1 == count) {
-                addDimension(m_dims[i], TensorOperation::dim_t::m, TensorOperation::exec_t::prim);
-                addDimension(n_dims[i], TensorOperation::dim_t::n, TensorOperation::exec_t::prim);
-                addDimension(contraction_dims[i], TensorOperation::dim_t::k, TensorOperation::exec_t::prim);
-            } else {
-                addDimension(m_dims[i], TensorOperation::dim_t::m, TensorOperation::exec_t::seq);
-                addDimension(n_dims[i], TensorOperation::dim_t::n, TensorOperation::exec_t::seq);
-                addDimension(contraction_dims[i], TensorOperation::dim_t::k, TensorOperation::exec_t::seq);
-            }
-
-            count++;
-        }
-
-        // in left stride (only look at k dims)
-        strides_in0 = get_stride(dim_ids, dim_types, dim_sizes, exec_types, TensorOperation::dim_t::m, TensorOperation::dim_t::k);
-        strides_in1 = get_stride(dim_ids, dim_types, dim_sizes, exec_types, TensorOperation::dim_t::n, TensorOperation::dim_t::k);
-        strides_out = get_stride(dim_ids, dim_types, dim_sizes, exec_types, TensorOperation::dim_t::m, TensorOperation::dim_t::n);
-
-        for (int i = 0; i < dim_ids.size(); i++) {
-            std::cout << "ID: " << dim_ids[i] << ", Dim Type: " << static_cast<uint32_t>(dim_types[i]) << ", Exec Type: " << static_cast<uint32_t>(exec_types[i]) << ", Dim Size: " << static_cast<uint32_t>(dim_sizes[i]) << ", Left Stride: " << static_cast<uint32_t>(strides_in0[i]) << ", Right Stride: " << static_cast<uint32_t>(strides_in1[i]) << ", Out Stride: " << static_cast<uint32_t>(strides_out[i]) << std::endl;
-        }
-
-        TensorOperation::error_t result = op.setup(
-            dtype,
-            prim_first_touch,
-            prim_main,
-            prim_last_touch,
-            std::span<const TensorOperation::dim_t>(dim_types),
-            std::span<const TensorOperation::exec_t>(exec_types),
-            std::span<const int64_t>(dim_sizes),
-            std::span<const int64_t>(strides_in0),
-            std::span<const int64_t>(strides_in1),
-            std::span<const int64_t>(strides_out));
-
-        if (result != TensorOperation::error_t::success) {
-            // Fehlerbehandlung
-            std::cerr << "Setup failed for contraction operation" << std::endl;
-        }
+if (result != TensorOperation::error_t::success) {
+    // Fehlerbehandlung
+    std::cerr << "Setup failed for contraction operation" << std::endl;
+}*/
 
         // lowered.step_list.push_back(op);
     } else {
