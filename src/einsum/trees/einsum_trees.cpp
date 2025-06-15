@@ -7,45 +7,6 @@
 using namespace einsum::trees;
 using namespace einsum::backend;
 
-std::vector<int64_t> get_stride(std::vector<uint32_t> dim_ids,
-                                std::vector<TensorOperation::dim_t> dim_types,
-                                std::vector<int64_t> dim_sizes,
-                                std::vector<TensorOperation::exec_t> exec_types,
-                                TensorOperation::dim_t dim_type_0,
-                                TensorOperation::dim_t dim_type_1) {
-    std::vector<uint32_t> local_dim_ids;
-    std::vector<TensorOperation::dim_t> local_dim_types;
-    std::vector<uint32_t> local_dim_sizes;
-    std::vector<TensorOperation::exec_t> local_exec_types;
-    for (int i = 0; i < dim_types.size(); i++) {
-        if (dim_types[i] == dim_type_0 || dim_types[i] == dim_type_1) {
-            local_dim_ids.push_back(dim_ids[i]);
-            local_dim_sizes.push_back(dim_sizes[i]);
-            local_dim_types.push_back(dim_types[i]);
-            local_exec_types.push_back(exec_types[i]);
-        }
-    }
-
-    size_t count = 0;
-    std::vector<int64_t> strides;
-    for (auto dim : dim_ids) {
-        strides.push_back(0);
-        for (int i = 0; i < local_dim_ids.size(); i++) {
-            if (dim == local_dim_ids[i]) {
-                int64_t stride = 1;
-                for (int j = i + 1; j < local_dim_ids.size(); j++) {
-                    if (local_exec_types[i] == local_exec_types[j]) {
-                        stride *= local_dim_sizes[j];
-                    }
-                }
-                strides[count] = stride;
-            }
-        }
-        count++;
-    }
-    return strides;
-}
-
 EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
     this->id_dims = id_dims;
 
