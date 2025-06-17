@@ -59,7 +59,14 @@ class einsum::trees::EinsumTree {
      * @return std::vector<uint32_t> list of dimensions for out tensor.
      */
     std::vector<uint32_t> identifyNode(TreeNode* node);
+    /**
+     * @brief Lowers the Einsum tree nodes to hold tensor operations.
+     *
+     * @param node current node in the tree to be lowered.
+     * @return TensorOperation::prim_t The lowered tensor operation primitive type for the node.
+     */
     TensorOperation::prim_t lowerNode(TreeNode* node);
+    void* executeNode(TreeNode* node, std::vector<void*> inputs);
 
    public:
     /**
@@ -76,7 +83,11 @@ class einsum::trees::EinsumTree {
      * @brief Identify the dimensions of the tensors in the tree.
      */
     void identify();
+    /**
+     * @brief Lowers the Einsum tree nodes for each to hold a tensor operations.
+     */
     void lower();
+    void execute(std::vector<void*> inputs, void* output);
     /**
      * @brief Prints the structure of the Einsum tree.
      */
