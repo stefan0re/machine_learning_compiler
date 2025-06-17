@@ -513,4 +513,65 @@ namespace einsum::backend {
                          _num_parallel_loops);  // Added missing argument for loop_count
         }
     }
+
+    void TensorOperation::print() {
+        std::cout << "TensorOperation:" << std::endl;
+        std::cout << "  dtype: " << static_cast<int>(_dtype) << std::endl;
+        std::cout << "  prim_first_touch: " << static_cast<int>(_prim_first_touch) << std::endl;
+        std::cout << "  prim_main: " << static_cast<int>(_prim_main) << std::endl;
+        std::cout << "  prim_last_touch: " << static_cast<int>(_prim_last_touch) << std::endl;
+
+        std::cout << "  dim_types: ";
+        for (const auto& type : _dim_types) {
+            std::cout << static_cast<int>(type) << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "  exec_types: ";
+        for (const auto& type : _exec_types) {
+            std::cout << static_cast<int>(type) << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "  dim_sizes: ";
+        for (const auto& size : _dim_sizes) {
+            std::cout << size << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "  strides_in0: ";
+        for (const auto& stride : _strides_in0) {
+            std::cout << stride << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "  strides_in1: ";
+        for (const auto& stride : _strides_in1) {
+            std::cout << stride << " ";
+        }
+        std::cout << std::endl;
+
+        std::cout << "  strides_out: ";
+        for (const auto& stride : _strides_out) {
+            std::cout << stride << " ";
+        }
+        std::cout << std::endl;
+
+        // Print loop sizes and order
+        if (!_loop_sizes.empty()) {
+            std::cout << "  loop_sizes: ";
+            for (const auto& size : _loop_sizes) {
+                std::cout << size << " ";
+            }
+            std::cout << "\n";
+
+            if (!_loop_order.empty()) {
+                std::cout << "  loop_order: ";
+                for (const auto& order : _loop_order) {
+                    std::cout << order << " ";
+                }
+                std::cout << "\n";
+            }
+        }
+    }
 }  // namespace einsum::backend
