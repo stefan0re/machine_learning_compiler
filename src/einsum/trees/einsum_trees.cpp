@@ -280,6 +280,7 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
 
         node->op.optimize();
         node->op.compile();
+        node->op.print();
     }
     return node_op;
 }
