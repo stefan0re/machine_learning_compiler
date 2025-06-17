@@ -277,6 +277,9 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
         if (result != TensorOperation::error_t::success) {
             std::cerr << "Setup failed for contraction operation" << std::endl;
         }
+
+        node->op.optimize();
+        node->op.compile();
     }
     return node_op;
 }
