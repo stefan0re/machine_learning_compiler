@@ -10,22 +10,11 @@
 
 namespace einsum {
     namespace trees {
-        struct OpSteps {
-            struct OpStep {
-                uint32_t in_ten_left;
-                std::vector<uint32_t> in_ten_left_notation;
-                uint32_t in_ten_right;
-                std::vector<uint32_t> in_ten_right_notation;
-                uint32_t out_ten;
-                std::vector<uint32_t> out_ten_notation;
-            };
-            std::vector<einsum::backend::TensorOperation> step_list;
-            std::vector<OpStep> tensor_order;
-        };
-
         class EinsumTree;
     }  // namespace trees
 }  // namespace einsum
+
+using namespace einsum::backend;
 
 class einsum::trees::EinsumTree {
    private:
@@ -46,6 +35,8 @@ class einsum::trees::EinsumTree {
         Tensor* left_tensor;
         Tensor* right_tensor;
         Tensor* out_tensor;
+
+        TensorOperation op;
     };
 
     TreeNode* root = nullptr;
@@ -68,7 +59,7 @@ class einsum::trees::EinsumTree {
      * @return std::vector<uint32_t> list of dimensions for out tensor.
      */
     std::vector<uint32_t> identifyNode(TreeNode* node);
-    void ::OpStep lowerNode(TreeNode* node, OpSteps& lowered);
+    TensorOperation::prim_t lowerNode(TreeNode* node);
 
    public:
     /**
