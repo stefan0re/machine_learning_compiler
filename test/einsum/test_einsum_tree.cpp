@@ -15,6 +15,24 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
     tree.identify();
     tree.lower();
     tree.print();
+    float* input1 = new float[10 * 20];
+    float* input2 = new float[20 * 30];
+    float* output = new float[10 * 30];
+    for (int i = 0; i < 10 * 20; ++i) {
+        input1[i] = static_cast<float>(rand() % 100);
+    }
+
+    for (int i = 0; i < 20 * 30; ++i) {
+        input2[i] = static_cast<float>(rand() % 100);
+    }
+    tree.execute({input1, input2}, output);
+    for (int i = 0; i < 10 * 30; ++i) {
+        std::cout << output[i] << " ";
+    }
+    std::cout << std::endl;
+    delete[] input1;
+    delete[] input2;
+    delete[] output;
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
