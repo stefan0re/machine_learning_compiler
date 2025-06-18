@@ -128,6 +128,61 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
     }
 }
 
+void EinsumTree::swap(TreeNode* parent) {
+    if (parent == nullptr) {
+        std::cerr << "Parent node is null, cannot swap." << std::endl;
+        return;
+    }
+
+    if (parent->node_type != node_t::contraction) {
+        std::cerr << "Swap can only be performed on contraction nodes." << std::endl;
+        return;
+    }
+
+    // Swap left and right children
+    TreeNode* temp = parent->left_child;
+    parent->left_child = parent->right_child;
+    parent->right_child = temp;
+}
+
+void EinsumTree::insertPermutation(TreeNode* parent, TreeNode* new_child, bool is_left) {
+    if (parent == nullptr || new_child == nullptr) {
+        std::cerr << "Parent or new child node is null, cannot insert." << std::endl;
+        return;
+    }
+
+    if (new_child->node_type != node_t::permutation) {
+        std::cerr << "New child must be a permutation node." << std::endl;
+        return;
+    }
+    TreeNode* temp = nullptr;
+    if (is_left) {
+        if (parent->left_child != nullptr) {
+            std::cerr << "Left child already exists, cannot insert new permutation node." << std::endl;
+            return;
+        }
+        temp = parent->left_child;
+        parent->left_child = new_child;
+        new_child->parent = parent;
+        if (temp != nullptr) {
+            new_child->left_child = temp;
+            temp->parent = new_child;
+        }
+    } else {
+        if (parent->right_child != nullptr) {
+            std::cerr << "Right child already exists, cannot insert new permutation node." << std::endl;
+            return;
+        }
+        temp = parent->right_child;
+        parent->right_child = new_child;
+        new_child->parent = parent;
+        if (temp != nullptr) {
+            new_child->left_child = temp;
+            temp->parent = new_child;
+        }
+    }
+}
+
 void EinsumTree::identify() {
     identifyNode(this->root);
 }

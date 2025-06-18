@@ -66,7 +66,29 @@ class einsum::trees::EinsumTree {
      * @return TensorOperation::prim_t The lowered tensor operation primitive type for the node.
      */
     TensorOperation::prim_t lowerNode(TreeNode* node);
+    /**
+     * @brief Executes the Einsum tree nodes recursively.
+     *
+     * @param node current node in the tree to be executed.
+     * @param inputs Vector of input tensors for the execution.
+     * @return void* Pointer to the output tensor after execution.
+     */
     void* executeNode(TreeNode* node, std::vector<void*> inputs);
+    /**
+     * @brief Swaps the left and right children of a node if the the parent is contraction.
+     *
+     * @param parent Pointer to the parent node whose children are to be swapped.
+     * @return void* Pointer to the output tensor after swapping.
+     */
+    void swap(TreeNode* parent);
+    /**
+     * @brief Inserts a new child permutation node into the tree.
+     *
+     * @param parent Pointer to the parent node where the new child will be inserted.
+     * @param new_child Pointer to the new child node to be inserted.
+     * @param is_left Boolean indicating if the new child should be inserted as a left child.
+     */
+    void insertPermutation(TreeNode* parent, TreeNode* new_child, bool is_left);
 
    public:
     /**
