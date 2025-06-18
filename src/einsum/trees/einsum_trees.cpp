@@ -197,7 +197,6 @@ void EinsumTree::lower() {
 }
 
 TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
-    std::cout << "ID: " << node->id << " Type: " << static_cast<uint32_t>(node->node_type) << std::endl;
     TensorOperation::prim_t node_op;
     if (node->node_type == node_t::leaf) {
         node_op = TensorOperation::prim_t::none;
@@ -278,8 +277,55 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
         if (result != TensorOperation::error_t::success) {
             std::cerr << "Setup failed for contraction operation" << std::endl;
         }
+
+        node->op.optimize();
+        node->op.compile();
+        node->op.print();
     }
     return node_op;
+}
+
+void EinsumTree::execute(std::vector<void*> inputs, void* output) {
+    if (this->root == nullptr) {
+        std::cerr << "Einsum tree is empty, cannot execute." << std::endl;
+        return;
+    }
+
+    // Execute the root node
+    output = executeNode(this->root, inputs);
+}
+
+void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs) {
+    if (node == nullptr) {
+        std::cerr << "Node is null, cannot execute." << std::endl;
+        return nullptr;
+    }
+
+    void* output = nullptr;
+
+    if (node->node_type == EinsumTree::node_t::leaf) {
+        size_t index = 0;
+        for (auto leaf_id : this->leaf_ids) {
+            if (node->id == leaf_id) {
+                output = static_cast<void*>(inputs[index]);
+                break;
+            }
+            index++;
+        }
+    } else if (node->node_type == EinsumTree::node_t::contraction) {
+        // Execute left and right children
+        void* left_output = executeNode(node->left_child, inputs);
+        void* right_output = executeNode(node->right_child, inputs);
+        if (left_output == nullptr || right_output == nullptr) {
+            std::cerr << "Failed to execute child nodes." << std::endl;
+        }
+        node->op.execute(left_output, right_output, output);
+    } else {
+        std::cerr << "Unsupported node type for execution." << std::endl;
+    }
+
+    // Perform the operation defined in the node
+    return output;
 }
 
 void EinsumTree::print() {
@@ -287,8 +333,12 @@ void EinsumTree::print() {
         std::cout << "Empty tree" << std::endl;
         return;
     }
-
     printNode(this->root, "", true);
+    std::cout << "Leaf ID's: ";
+    for (auto leaf_id : this->leaf_ids) {
+        std::cout << leaf_id << " ";
+    }
+    std::cout << std::endl;
 }
 
 void EinsumTree::printNode(TreeNode* node, const std::string& prefix, bool isLast) {
@@ -303,7 +353,7 @@ void EinsumTree::printNode(TreeNode* node, const std::string& prefix, bool isLas
         if (i > 0) std::cout << ",";
         std::cout << node->notation[i];
     }
-    std::cout << std::endl;
+    std::cout << " ID: " << node->id << std::endl;
 
     // Prepare prefix for children
     std::string childPrefix = prefix + (isLast ? "   " : "│  ");

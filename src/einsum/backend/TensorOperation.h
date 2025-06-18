@@ -224,6 +224,8 @@ class einsum::backend::TensorOperation {
                                bool first_access,
                                bool last_access);
 
+    void print();
+
    private:
     // BRGEMM
     mini_jit::generator::Brgemm _brgemm;
