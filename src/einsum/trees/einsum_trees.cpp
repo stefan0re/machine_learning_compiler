@@ -333,8 +333,12 @@ void EinsumTree::print() {
         std::cout << "Empty tree" << std::endl;
         return;
     }
-
     printNode(this->root, "", true);
+    std::cout << "Leaf ID's: ";
+    for (auto leaf_id : this->leaf_ids) {
+        std::cout << leaf_id << " ";
+    }
+    std::cout << std::endl;
 }
 
 void EinsumTree::printNode(TreeNode* node, const std::string& prefix, bool isLast) {
@@ -349,7 +353,7 @@ void EinsumTree::printNode(TreeNode* node, const std::string& prefix, bool isLas
         if (i > 0) std::cout << ",";
         std::cout << node->notation[i];
     }
-    std::cout << std::endl;
+    std::cout << " ID: " << node->id << std::endl;
 
     // Prepare prefix for children
     std::string childPrefix = prefix + (isLast ? "   " : "│  ");
