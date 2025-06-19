@@ -126,6 +126,8 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
             }
         }
     }
+
+    identify();
 }
 
 void EinsumTree::swap(TreeNode* parent) {
@@ -141,8 +143,36 @@ void EinsumTree::swap(TreeNode* parent) {
 
     // Swap left and right children
     TreeNode* temp = parent->left_child;
+    Tensor* temp_tensor = parent->left_tensor;
     parent->left_child = parent->right_child;
+    parent->left_tensor = parent->right_tensor;
     parent->right_child = temp;
+    parent->right_tensor = temp_tensor;
+
+    // Swap m and n dimension types in the tensors
+    for (size_t i = 0; i < parent->left_tensor->id.size(); i++) {
+        if (parent->left_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
+            parent->left_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::n);
+        } else if (parent->left_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+            parent->left_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::m);
+        }
+    }
+
+    for (size_t i = 0; i < parent->right_tensor->id.size(); i++) {
+        if (parent->right_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
+            parent->right_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::n);
+        } else if (parent->right_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+            parent->right_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::m);
+        }
+    }
+
+    for (size_t i = 0; i < parent->out_tensor->id.size(); i++) {
+        if (parent->out_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
+            parent->out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::n);
+        } else if (parent->out_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+            parent->out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::m);
+        }
+    }
 }
 
 void EinsumTree::insertPermutation(TreeNode* parent, TreeNode* new_child, bool is_left) {
@@ -180,6 +210,105 @@ void EinsumTree::insertPermutation(TreeNode* parent, TreeNode* new_child, bool i
             new_child->left_child = temp;
             temp->parent = new_child;
         }
+    }
+}
+
+void EinsumTree::optimize() {
+    this->leaf_ids = {};
+    if (this->root == nullptr) {
+        std::cerr << "Einsum tree is empty, cannot optimize." << std::endl;
+        return;
+    }
+
+    optimizeNode(this->root);
+}
+
+double EinsumTree::getScore(TreeNode* node, TensorOperation::dim_t dim_type, bool swap) {
+    TensorOperation::dim_t left_dim_type, right_dim_type;
+    if (swap) {
+        left_dim_type = TensorOperation::dim_t::k;
+        right_dim_type = dim_type;
+    } else {
+        left_dim_type = dim_type;
+        right_dim_type = TensorOperation::dim_t::k;
+    }
+
+    double score = 0;
+    double left_score = 0.f;
+    double right_score = 0.f;
+    double out_score = 0.f;
+    double num_left = 0.f;
+    double num_right = 0.f;
+    double num_out = 0.f;
+
+    for (size_t i = 0; i < node->left_child->notation.size(); i++) {
+        if (node->left_tensor->id[i].dim_t == static_cast<int>(left_dim_type)) {
+            left_score += static_cast<double>(node->left_child->notation.size() - (i + 1));
+            std::cout << "Left child dimension " << node->left_child->notation[i] << " has type " << static_cast<int>(left_dim_type) << ", score: " << node->left_child->notation.size() - (i + 1) << std::endl;
+            num_left += 1;
+        }
+    }
+    score += left_score / num_left;
+    std::cout << "normalized left score: " << static_cast<double>(left_score) / static_cast<double>(num_left) << std::endl;
+    for (size_t i = 0; i < node->right_child->notation.size(); i++) {
+        if (node->right_tensor->id[i].dim_t == static_cast<int>(right_dim_type)) {
+            right_score += static_cast<double>(node->right_child->notation.size() - (i + 1));
+            std::cout << "Right child dimension " << node->right_child->notation[i] << " has type " << static_cast<int>(right_dim_type) << ", score: " << node->right_child->notation.size() - (i + 1) << std::endl;
+            num_right += 1;
+        }
+    }
+    score += right_score / num_right;
+    std::cout << "normalized right score: " << static_cast<double>(right_score) / static_cast<double>(num_right) << std::endl;
+    for (size_t i = 0; i < node->notation.size(); i++) {
+        if (node->out_tensor->id[i].dim_t == static_cast<int>(dim_type)) {
+            out_score += static_cast<double>(node->notation.size() - (i + 1));
+            std::cout << "Output tensor dimension " << node->notation[i] << " has type " << static_cast<int>(dim_type) << ", score: " << node->notation.size() - (i + 1) << std::endl;
+            num_out += 1;
+        }
+    }
+    score += out_score / num_out;
+    std::cout << "normalized output score: " << static_cast<double>(out_score) / static_cast<double>(num_out) << std::endl;
+    return score;
+}
+
+void EinsumTree::optimizeNode(TreeNode* node) {
+    if (node == nullptr) {
+        std::cerr << "Node is null, cannot optimize." << std::endl;
+        return;
+    }
+    if (node->node_type == node_t::leaf) {
+        this->leaf_ids.push_back(node->id);
+    } else if (node->node_type == node_t::permutation) {
+        std::cout << "Optimizing permutation node with ID: " << node->id << std::endl;
+        if (node->left_child == nullptr) {
+            std::cerr << "Permutation node must have a left child." << std::endl;
+            return;
+        }
+
+        // Recursively optimize left child
+        optimizeNode(node->left_child);
+    } else if (node->node_type == node_t::contraction) {
+        std::cout << "Optimizing contraction node with ID: " << node->id << std::endl;
+        if (node->left_child == nullptr || node->right_child == nullptr) {
+            std::cerr << "Contraction node must have both left and right children." << std::endl;
+            return;
+        }
+
+        // Check if the left and right children have to be swapped
+        std::cout << "Get score for current configurattion" << std::endl;
+        double current_score = getScore(node, TensorOperation::dim_t::m, false);
+        std::cout << "Get score for swapped configuration" << std::endl;
+        double swap_score = getScore(node, TensorOperation::dim_t::n, true);
+        std::cout << "Current score: " << current_score << ", Swap score: " << swap_score << std::endl;
+
+        if (swap_score < current_score) {
+            std::cout << "Swapping children of contraction node with ID: " << node->id << std::endl;
+            swap(node);
+        }
+
+        // Recursively optimize left and right children
+        optimizeNode(node->left_child);
+        optimizeNode(node->right_child);
     }
 }
 
@@ -222,26 +351,23 @@ std::vector<uint32_t> EinsumTree::identifyNode(TreeNode* node) {
                     if (is_contraction_dim) {
                         node->left_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::k);
                         node->right_tensor->id[j].dim_t = static_cast<int>(TensorOperation::dim_t::k);
-                        std::cout << "Contraction dim: " << node->left_child->notation[i] << std::endl;
                     } else if (is_m_dim) {
                         node->left_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::m);
                         node->out_tensor->id[k].dim_t = static_cast<int>(TensorOperation::dim_t::m);
-                        std::cout << "m dim: " << node->notation[k] << std::endl;
                     } else if (is_n_dim) {
                         node->right_tensor->id[j].dim_t = static_cast<int>(TensorOperation::dim_t::n);
                         node->out_tensor->id[k].dim_t = static_cast<int>(TensorOperation::dim_t::n);
-                        std::cout << "n dim: " << node->notation[k] << std::endl;
                     }
                 }
             }
         }
 
-        std::cout << "Contraction Tensor" << std::endl;
+        /*std::cout << "Contraction Tensor" << std::endl;
         node->out_tensor->info();
         std::cout << "Left Tensor" << std::endl;
         node->left_tensor->info();
         std::cout << "Right Tensor" << std::endl;
-        node->right_tensor->info();
+        node->right_tensor->info();*/
     }
 
     return out_dims;
@@ -374,7 +500,9 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs) {
         if (left_output == nullptr || right_output == nullptr) {
             std::cerr << "Failed to execute child nodes." << std::endl;
         }
+        std::cout << "Executing contraction node with ID: " << node->id << std::endl;
         node->op.execute(left_output, right_output, output);
+        std::cout << "Contraction executed successfully." << std::endl;
     } else {
         std::cerr << "Unsupported node type for execution." << std::endl;
     }
