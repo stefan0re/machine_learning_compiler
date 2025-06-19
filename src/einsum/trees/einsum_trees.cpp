@@ -30,7 +30,6 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
     TreeNode* current = this->root;
 
     for (char character : str_repr) {
-        std::cout << "Processing character: " << character << std::endl;
         if (character == '[') {
             if (stack.back() == 'l' || stack.back() == 'd') {
                 // add left node
@@ -92,7 +91,6 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 // mark as currently "writing" into current node
                 stack.push_back('w');
             }
-            std::cout << "Adding dimension " << character - '0' << " to node with ID: " << current->id << std::endl;
             current->notation.push_back(static_cast<uint32_t>(character - '0'));
         } else if (character == ',') {
             if (stack.back() == 'l' || stack.back() == 'd' || stack.back() == 'u') {
@@ -127,11 +125,6 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 }
             }
         }
-        for (char& c : stack) {
-            std::cout << c << " ";
-        }
-        std::cout << std::endl;
-        this->print();
     }
 
     identify();
