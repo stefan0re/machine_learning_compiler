@@ -22,48 +22,128 @@ namespace mini_jit::generator {
 
     mini_jit::backend::Kernel Unary::m_kernel;
 
-    void Unary::gen_unary_transpose(uint32_t m, uint32_t n) {
-        int max_size = m * n;
-        int helper = 0;
+    void Unary::gen_transpose_micro( uint32_t i_m,
+                                     uint32_t i_n) {
+        // ldr
+        for( size_t i = 0; i < 4; i++){
+            m_kernel.add_instr(inst::InstGen::neon_ld1_no_offset( static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
+                                                                  inst::InstGen::x0,
+                                                                  inst::InstGen::vector_count_t::vc1));
+            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0,
+                                                                        inst::InstGen::x0,
+                                                                        inst::InstGen::x2,
+                                                                        0,
+                                                                        0));
+        }
+        /* first part */
+        // trn 
+        m_kernel.add_instr(inst::InstGen::neon_trn(inst::InstGen::v4, inst::InstGen::v0, inst::InstGen::v1, 1));
+        m_kernel.add_instr(inst::InstGen::neon_trn(inst::InstGen::v5, inst::InstGen::v0, inst::InstGen::v1, 2));
+        m_kernel.add_instr(inst::InstGen::neon_trn(inst::InstGen::v6, inst::InstGen::v2, inst::InstGen::v3, 1));
+        m_kernel.add_instr(inst::InstGen::neon_trn(inst::InstGen::v7, inst::InstGen::v2, inst::InstGen::v3, 2));
 
-        // for all elements in a
-        for (int i = 0; i < max_size; i++) {
-            // copy from a to b
-            // TODO: This instructions are not implemented
-            // ldr x11, [x7]
-            m_kernel.add_instr(3107979499);
-            // str x11, [x8]
-            m_kernel.add_instr(3103785227);
+        // zip
+        m_kernel.add_instr(inst::InstGen::neon_zip(inst::InstGen::v8, inst::InstGen::v4, inst::InstGen::v6, 1));
+        m_kernel.add_instr(inst::InstGen::neon_zip(inst::InstGen::v9, inst::InstGen::v5, inst::InstGen::v7, 1));
+        m_kernel.add_instr(inst::InstGen::neon_zip(inst::InstGen::v10, inst::InstGen::v4, inst::InstGen::v6, 2));
+        m_kernel.add_instr(inst::InstGen::neon_zip(inst::InstGen::v11, inst::InstGen::v5, inst::InstGen::v7, 2));
 
-            // calc new element_b by adding the offset (size)
-            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, m * 4, 0));
-            helper += m;
 
-            // if the elements_b exeeds the maximum size
-            if (max_size - helper < 0) {
-                // start over
-                m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, max_size * 4, 0));
-                helper -= max_size;
 
-                // next element in b
-                m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG, Util::WORKING_ADDRESS_B_REG, 4, 0));
-                helper += 1;
-            }
-
-            // next element in a
-            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG, Util::WORKING_ADDRESS_A_REG, 4, 0));
+        // str
+        for( size_t i = 0; i < 4; i++){
+            m_kernel.add_instr(inst::InstGen::neon_st1_no_offset(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v8 + i),
+                                                                        inst::InstGen::x1,
+                                                                        inst::InstGen::vector_count_t::vc1));
+            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1,
+                                                                        inst::InstGen::x1,
+                                                                        inst::InstGen::x3,
+                                                                        0,
+                                                                        0));
         }
     }
 
+    void Unary::gen_transpose( uint32_t i_m,
+                               uint32_t i_n){
+        /* get blocking */
+        uint32_t m_blocks_full = i_m / 4;
+        uint32_t m_blocks_reminder = i_m % 4;
+
+        uint32_t n_blocks_full = i_n / 4;
+        uint32_t n_blocks_reminder = i_n % 4;
+
+        // write restore size to x5 for A and x6 for B
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x5, 4, 0));
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x6, i_m, 0));
+        m_kernel.add_instr(inst::InstGen::base_mul_reg( inst::InstGen::x5,
+                                                        inst::InstGen::x5,
+                                                        inst::InstGen::x2 ));
+        m_kernel.add_instr(inst::InstGen::base_mul_reg( inst::InstGen::x6,
+                                                        inst::InstGen::x6,
+                                                        inst::InstGen::x3 ));   
+
+
+        for( uint32_t l_n = 0; l_n < n_blocks_full; l_n++){
+            for( uint32_t l_m = 0; l_m < m_blocks_full; l_m++ ){
+                gen_transpose_micro( 4, 4);
+                if( l_m < (m_blocks_full - 1)){
+                    m_kernel.add_instr(inst::InstGen::base_sub_shifted_register( inst::InstGen::x0,
+                                                                                inst::InstGen::x0,
+                                                                                inst::InstGen::x5,
+                                                                                0,
+                                                                                0));
+                    
+                    m_kernel.add_instr(inst::InstGen::base_add_imm( inst::InstGen::x0,
+                                                                    inst::InstGen::x0,
+                                                                    4 * 4,
+                                                                    0));
+                }
+            }
+            // adjust a and b pointer
+            m_kernel.add_instr( inst::InstGen::base_sub_imm( inst::InstGen::x0,
+                                                             inst::InstGen::x0,
+                                                             4 * 4 * (m_blocks_full - 1),
+                                                             0));
+        
+            
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register( inst::InstGen::x1,
+                                                                         inst::InstGen::x1,
+                                                                         inst::InstGen::x6,
+                                                                         0,
+                                                                         0));
+            
+            m_kernel.add_instr( inst::InstGen::base_add_imm( inst::InstGen::x1,
+                                                             inst::InstGen::x1,
+                                                             4 * 4,
+                                                             0));
+        }
+    }
+
+    void Unary::gen_zero( ){
+        for( uint32_t i = 0; i < 32; i ++) {
+            m_kernel.add_instr( inst::InstGen::neon_eor( static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
+                                                         static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
+                                                         static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i)));
+        }
+    }
+    // assuming that vr 31 is not used by C accumulator
+    void Unary::gen_relu(){
+        m_kernel.add_instr( inst::InstGen::neon_eor( inst::InstGen::v31,
+                                                     inst::InstGen::v31,
+                                                     inst::InstGen::v31));
+        for( uint32_t i = 0; i < 31; i ++) {
+            m_kernel.add_instr( inst::InstGen::neon_fmax_vector( static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
+                                                                 static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v31 ),
+                                                                 static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
+                                                                 false));
+        }
+    }
+    
+
     Unary::error_t Unary::generate(uint32_t m,
                                    uint32_t n,
-                                   uint32_t trans_b,
                                    Unary::dtype_t dtype,
                                    Unary::ptype_t ptype) {
-        // safely calculate number of iterations for main loop and number of rest elements
-        uint64_t total = static_cast<uint64_t>(m) * static_cast<uint64_t>(n);
-        uint32_t iterations = static_cast<uint32_t>((total - (total % 4)) / 16);
-        uint32_t rest = static_cast<uint32_t>(total % 16);
 
         // procedure call standard (store to stack)
         m_kernel.add_instr(0x6DBF27E8);
@@ -78,156 +158,61 @@ namespace mini_jit::generator {
                                                             inst::InstGen::x1));
 
         // shift leading dimensions to 4 bytes
-        m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x2, inst::InstGen::x2, 2));
-        m_kernel.add_instr(inst::InstGen::base_lsl_imm(inst::InstGen::x3, inst::InstGen::x3, 2));
+        m_kernel.add_instr(0xd37ef442);
+        m_kernel.add_instr(0xd37ef463);
 
-        if (!(ptype == Unary::ptype_t::identity) && !(trans_b == 1)) {
-            // move 0 to v31 for relu
-            m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::simd_fp_t::v31, true, false));
+        if( ptype == Unary::ptype_t::trans ){
+            gen_transpose( m,
+                       n);
+        } else if( ptype == Unary::ptype_t::zero ){
+             Util::KernelSize l_kernelsize;
+            l_kernelsize.M = m;
+            l_kernelsize.N = n;
 
-            // generate main loop
-            if (iterations > 0) {
-                // set loop counter, if number of iterations too high for immediate use movk
-                uint64_t value = iterations;
-                uint16_t lo = value & 0xffff;
-                uint16_t hi = (value >> 16) & 0xffff;
+            m_kernel.add_instr(inst::InstGen::base_mov_register( inst::InstGen::x5,
+                                                                 inst::InstGen::x3));
 
-                m_kernel.add_instr(inst::InstGen::base_movz(inst::InstGen::x9, lo, 0));  // movz x9, lo
-                if (hi != 0)
-                    m_kernel.add_instr(inst::InstGen::base_movk(inst::InstGen::x9, hi, 16));  // movk x9, hi, LSL #16
+            gen_zero();
 
-                // loop
-                size_t loop_count = m_kernel.get_size();
+            Util::generator_store_reg_block( m_kernel,
+                                             l_kernelsize,
+                                             inst::InstGen::x1);
+        } else if( ptype == Unary::ptype_t::identity ){
+            Util::KernelSize l_kernelsize;
+            l_kernelsize.M = m;
+            l_kernelsize.N = n;
 
-                m_kernel.add_instr(
-                    inst::InstGen::base_sub_imm(
-                        inst::InstGen::x9,
-                        inst::InstGen::x9,
-                        1,
-                        0));
+            m_kernel.add_instr(inst::InstGen::base_mov_register( inst::InstGen::x5,
+                                                                 inst::InstGen::x3));
 
-                m_kernel.add_instr(inst::InstGen::neon_ld1_multiple(inst::InstGen::v0,
-                                                                    inst::InstGen::x7,
-                                                                    inst::InstGen::ld1_opcode_t::four_regs,
-                                                                    inst::InstGen::ld1_t::S4));
+            // load C
+            Util::generator_load_reg_block( m_kernel,
+                                            l_kernelsize,
+                                            inst::InstGen::x0);
 
-                if (ptype == Unary::ptype_t::zero) {
-                    m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::v0, true, false));
-                    m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::v1, true, false));
-                    m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::v2, true, false));
-                    m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::v3, true, false));
-                    this->fops += 4;
-                } else if (ptype == Unary::ptype_t::relu) {
-                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(inst::InstGen::v0,
-                                                                       inst::InstGen::v0,
-                                                                       inst::InstGen::simd_fp_t::v31,
-                                                                       false));
-                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(inst::InstGen::v1,
-                                                                       inst::InstGen::v1,
-                                                                       inst::InstGen::simd_fp_t::v31,
-                                                                       false));
-                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(inst::InstGen::v2,
-                                                                       inst::InstGen::v2,
-                                                                       inst::InstGen::simd_fp_t::v31,
-                                                                       false));
-                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(inst::InstGen::v3,
-                                                                       inst::InstGen::v3,
-                                                                       inst::InstGen::simd_fp_t::v31,
-                                                                       false));
-                    this->fops += 4;
-                }
+            // store C
+            Util::generator_store_reg_block( m_kernel,
+                                             l_kernelsize,
+                                             inst::InstGen::x1);
+        } else if( ptype == Unary::ptype_t::relu) {
+            Util::KernelSize l_kernelsize;
+            l_kernelsize.M = m;
+            l_kernelsize.N = n;
 
-                m_kernel.add_instr(inst::InstGen::neon_st1_multiple(inst::InstGen::v0,
-                                                                    inst::InstGen::x8,
-                                                                    inst::InstGen::ld1_opcode_t::four_regs,
-                                                                    inst::InstGen::ld1_t::S4));
+            m_kernel.add_instr(inst::InstGen::base_mov_register( inst::InstGen::x5,
+                                                                 inst::InstGen::x3));
 
-                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x7, inst::InstGen::x7, 4 * 16, 0));
-                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8, inst::InstGen::x8, 4 * 16, 0));
+            // load C
+            Util::generator_load_reg_block( m_kernel,
+                                            l_kernelsize,
+                                            inst::InstGen::x0);
 
-                // jump loop
-                m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x9, (loop_count - m_kernel.get_size()) / 4));
-            }
+            gen_relu();
 
-            // try to use ld1 with as many registers as possible for rest (rest in [0, 15])
-            uint32_t next_bigger = rest;
-
-            while (next_bigger % 4 != 0) {
-                next_bigger--;
-            }
-
-            inst::InstGen::ld1_opcode_t num_regs;
-
-            if (next_bigger == 12) {
-                num_regs = inst::InstGen::ld1_opcode_t::three_regs;
-            } else if (next_bigger == 8) {
-                num_regs = inst::InstGen::ld1_opcode_t::two_regs;
-            } else if (next_bigger == 4) {
-                num_regs = inst::InstGen::ld1_opcode_t::one_regs;
-            }
-
-            if (next_bigger > 0) {
-                m_kernel.add_instr(inst::InstGen::neon_ld1_multiple(inst::InstGen::v0,
-                                                                    inst::InstGen::x7,
-                                                                    num_regs,
-                                                                    inst::InstGen::ld1_t::S4));
-
-                int32_t reg_count = 0;
-
-                for (int i = 0; i < (int)(next_bigger / 4); i++) {
-                    if (ptype == Unary::ptype_t::zero) {
-                        m_kernel.add_instr(inst::InstGen::neon_movi_zero(static_cast<inst::InstGen::simd_fp_t>(reg_count++), true, false));
-                    } else if (ptype == Unary::ptype_t::relu) {
-                        m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                                           static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                                           inst::InstGen::simd_fp_t::v31,
-                                                                           false));
-                        reg_count++;
-                    }
-                }
-
-                m_kernel.add_instr(inst::InstGen::neon_st1_multiple(inst::InstGen::v0,
-                                                                    inst::InstGen::x8,
-                                                                    num_regs,
-                                                                    inst::InstGen::ld1_t::S4));
-
-                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x7, inst::InstGen::x7, 4 * next_bigger, 0));
-                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8, inst::InstGen::x8, 4 * next_bigger, 0));
-            }
-
-            // final rest (in [0, 3]) with single ld1 statements per element
-            int32_t reg_count = 0;
-            rest = (uint32_t)std::abs((int)next_bigger - (int)rest);
-            for (int i = 0; i < rest; i++) {
-                m_kernel.add_instr(
-                    inst::InstGen::neon_ld1_no_offset(
-                        static_cast<inst::InstGen::simd_fp_t>(i),
-                        inst::InstGen::x7,
-                        inst::InstGen::vector_count_t::vc1));
-
-                if (ptype == Unary::ptype_t::zero) {
-                    m_kernel.add_instr(inst::InstGen::neon_movi_zero(static_cast<inst::InstGen::simd_fp_t>(reg_count++), true, false));
-                } else if (ptype == Unary::ptype_t::relu) {
-                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                                       static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                                       inst::InstGen::simd_fp_t::v31,
-                                                                       false));
-                    reg_count++;
-                }
-                m_kernel.add_instr(
-                    inst::InstGen::neon_st1_no_offset(
-                        static_cast<inst::InstGen::simd_fp_t>(i),
-                        inst::InstGen::x8,
-                        inst::InstGen::vector_count_t::vc1));
-
-                // advance the base pointer by 1 elements
-                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x7, inst::InstGen::x7, 4, 0));
-                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8, inst::InstGen::x8, 4, 0));
-            }
-
-            // Transpose
-        } else {
-            gen_unary_transpose(m, n);
+            // store C
+            Util::generator_store_reg_block( m_kernel,
+                                             l_kernelsize,
+                                             inst::InstGen::x1);
         }
 
         // procedure call standard (load from stack)

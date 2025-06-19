@@ -281,3 +281,62 @@ uint32_t mini_jit::instructions::InstGen::neon_st1_multiple(simd_fp_t reg_base,
 
     return l_ins;
 }
+
+
+uint32_t mini_jit::instructions::InstGen::neon_trn( simd_fp_t reg_dst,
+                                                   simd_fp_t reg_src1,
+                                                   simd_fp_t reg_src2,
+                                                   int variant /* 1 or 2 */) {
+    uint32_t l_ins = 0;
+
+    if( variant == 1) {
+        l_ins = 0x4e802800; // TRN1
+    } else if( variant == 2) {
+        l_ins = 0x4e806800; // TRN2
+    } else {
+        std::cerr << "Invalid variant for TRN instruction: " << variant << std::endl;
+        return 0; // Invalid variant
+    }
+
+    l_ins |= (reg_dst & 0x1f);
+    l_ins |= (reg_src1 & 0x1f) << 5;
+    l_ins |= (reg_src2 & 0x1f) << 16;
+    
+    return l_ins;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_zip( simd_fp_t reg_dst,
+                                                   simd_fp_t reg_src1,
+                                                   simd_fp_t reg_src2,
+                                                   int variant /* 1 or 2 */) {
+    uint32_t l_ins = 0;
+
+    if( variant == 1) {
+        l_ins = 0x4ec03800; // ZIP1
+    } else if( variant == 2) {
+        l_ins = 0x4ec07800; // ZIP2
+    } else {
+        std::cerr << "Invalid variant for ZIP instruction: " << variant << std::endl;
+        return 0; // Invalid variant
+    }
+
+    l_ins |= (reg_dst & 0x1f);
+    l_ins |= (reg_src1 & 0x1f) << 5;
+    l_ins |= (reg_src2 & 0x1f) << 16;
+
+    return l_ins;
+}
+
+uint32_t mini_jit::instructions::InstGen::neon_eor( simd_fp_t reg_dst,
+                                                    simd_fp_t reg_src1,
+                                                    simd_fp_t reg_src2){
+    uint32_t l_ins = 0x6e201c00;
+
+    l_ins |= (reg_dst & 0x1f);
+    l_ins |= (reg_src1 & 0x1f) << 5;
+    l_ins |= (reg_src2 & 0x1f) << 16;
+
+    return l_ins;
+
+
+}

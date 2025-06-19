@@ -330,5 +330,17 @@ class mini_jit::instructions::InstGen {
                                       gpr_t src_reg,
                                       ld1_opcode_t op_code,
                                       ld1_t element);
+
+    static uint32_t neon_trn( simd_fp_t reg_dst,
+                              simd_fp_t reg_src1,
+                              simd_fp_t reg_src2,
+                              int variant /* 1 or 2 */);
+    static uint32_t neon_zip( simd_fp_t reg_dst,
+                              simd_fp_t reg_src1,
+                              simd_fp_t reg_src2,
+                              int variant /* 1 or 2 */);
+    static uint32_t neon_eor( simd_fp_t reg_dst,
+                              simd_fp_t reg_src1,
+                              simd_fp_t reg_src2 );
 };
 #endif
