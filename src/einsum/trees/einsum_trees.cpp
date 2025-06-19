@@ -95,12 +95,12 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
             std::cout << "Adding dimension " << character - '0' << " to node with ID: " << current->id << std::endl;
             current->notation.push_back(static_cast<uint32_t>(character - '0'));
         } else if (character == ',') {
-            if (stack.back() == 'l' || stack.back() == 'u') {
+            if (stack.back() == 'l' || stack.back() == 'd' || stack.back() == 'u') {
                 // go to right next
                 if (stack.back() == 'u') {
                     // clean stack (don't go further up)
                     stack.pop_back();
-                } else if (stack.back() == 'l') {
+                } else if (stack.back() == 'l' || stack.back() == 'd') {
                     // go to parent to reach right neighbor
                     current = current->parent;
                 }
@@ -234,6 +234,7 @@ void EinsumTree::optimize() {
     }
 
     optimizeNode(this->root);
+    identify();
 }
 
 double EinsumTree::getScore(TreeNode* node, TensorOperation::dim_t dim_type, bool swap) {
@@ -349,6 +350,7 @@ void EinsumTree::optimizeNode(TreeNode* node) {
             Tensor* out_tensor = new Tensor(out_dims);
 
             for (size_t i = 0; i < new_notation.size(); i++) {
+                out_tensor->id[i].exec_t = static_cast<int>(TensorOperation::exec_t::seq);
                 if (i < k_dim_size) {
                     out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::k);
                 } else {
@@ -403,6 +405,7 @@ void EinsumTree::optimizeNode(TreeNode* node) {
             Tensor* out_tensor = new Tensor(out_dims);
 
             for (size_t i = 0; i < new_notation.size(); i++) {
+                out_tensor->id[i].exec_t = static_cast<int>(TensorOperation::exec_t::seq);
                 if (i < n_dim_size) {
                     out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::n);
                 } else {
