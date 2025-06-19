@@ -30,6 +30,7 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
     TreeNode* current = this->root;
 
     for (char character : str_repr) {
+        std::cout << "Processing character: " << character << std::endl;
         if (character == '[') {
             if (stack.back() == 'l' || stack.back() == 'd') {
                 // add left node
@@ -91,6 +92,7 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 // mark as currently "writing" into current node
                 stack.push_back('w');
             }
+            std::cout << "Adding dimension " << character - '0' << " to node with ID: " << current->id << std::endl;
             current->notation.push_back(static_cast<uint32_t>(character - '0'));
         } else if (character == ',') {
             if (stack.back() == 'l' || stack.back() == 'u') {
@@ -125,6 +127,11 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 }
             }
         }
+        for (char& c : stack) {
+            std::cout << c << " ";
+        }
+        std::cout << std::endl;
+        this->print();
     }
 
     identify();
@@ -187,15 +194,16 @@ void EinsumTree::insertPermutation(TreeNode* parent, TreeNode* new_child, bool i
     }
     TreeNode* temp = nullptr;
     if (is_left) {
-        if (parent->left_child != nullptr) {
-            std::cerr << "Left child already exists, cannot insert new permutation node." << std::endl;
-            return;
-        }
+        new_child->id = this->size;
+        this->size++;
+
         temp = parent->left_child;
         parent->left_child = new_child;
+        parent->left_tensor = new_child->out_tensor;
         new_child->parent = parent;
         if (temp != nullptr) {
             new_child->left_child = temp;
+            new_child->left_tensor = temp->left_tensor;
             temp->parent = new_child;
         }
     } else {
@@ -203,11 +211,16 @@ void EinsumTree::insertPermutation(TreeNode* parent, TreeNode* new_child, bool i
             std::cerr << "Right child already exists, cannot insert new permutation node." << std::endl;
             return;
         }
+        new_child->id = this->size;
+        this->size++;
+
         temp = parent->right_child;
         parent->right_child = new_child;
+        parent->right_tensor = new_child->out_tensor;
         new_child->parent = parent;
         if (temp != nullptr) {
             new_child->left_child = temp;
+            new_child->left_tensor = temp->left_tensor;
             temp->parent = new_child;
         }
     }
@@ -304,6 +317,112 @@ void EinsumTree::optimizeNode(TreeNode* node) {
         if (swap_score < current_score) {
             std::cout << "Swapping children of contraction node with ID: " << node->id << std::endl;
             swap(node);
+        }
+
+        // Insert left permutation node if necessary
+        bool add_left_permutation = false;
+        std::vector<uint32_t> m_dim = {};
+        std::vector<uint32_t> k_dim = {};
+        for (size_t i = 0; i < node->left_tensor->id.size(); i++) {
+            if (node->left_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
+                m_dim.push_back(node->left_child->notation[i]);
+            } else if (node->left_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::k)) {
+                k_dim.push_back(node->left_child->notation[i]);
+            }
+            for (size_t j = node->left_tensor->id.size() - 1; j > i; j--) {
+                if (node->left_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::m) && node->left_tensor->id[j].dim_t == static_cast<int>(TensorOperation::dim_t::k)) {
+                    add_left_permutation = true;
+                    break;
+                }
+            }
+        }
+
+        size_t k_dim_size = k_dim.size();
+        k_dim.insert(k_dim.end(), m_dim.begin(), m_dim.end());
+        std::vector<uint32_t> new_notation = k_dim;
+        if (add_left_permutation) {
+            std::cout << "Adding left permutation node for contraction node with ID: " << node->id << std::endl;
+            std::vector<uint32_t> out_dims;
+            for (uint32_t dim_id : new_notation) {
+                out_dims.push_back(this->id_dims[dim_id]);
+            }
+            Tensor* out_tensor = new Tensor(out_dims);
+
+            for (size_t i = 0; i < new_notation.size(); i++) {
+                if (i < k_dim_size) {
+                    out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::k);
+                } else {
+                    out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::m);
+                }
+            }
+
+            TreeNode* new_left_child = new TreeNode{
+                0,                                // id
+                EinsumTree::node_t::permutation,  // node_type
+                node,                             // parent
+                nullptr,                          // left_child
+                nullptr,                          // right_child
+                new_notation,                     // notation
+                nullptr,                          // left_tensor
+                nullptr,                          // right_tensor
+                out_tensor,                       // out_tensor
+                TensorOperation(),                // op
+            };
+            insertPermutation(node, new_left_child, true);
+        }
+
+        // insert right permutation node if necessary
+        bool add_right_permutation = false;
+        std::vector<uint32_t> n_dim = {};
+        k_dim = {};
+
+        for (size_t i = 0; i < node->right_tensor->id.size(); i++) {
+            if (node->right_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+                n_dim.push_back(node->right_child->notation[i]);
+            } else if (node->right_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::k)) {
+                k_dim.push_back(node->right_child->notation[i]);
+            }
+            for (size_t j = node->right_tensor->id.size() - 1; j > i; j--) {
+                if (node->right_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::k) && node->right_tensor->id[j].dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+                    add_right_permutation = true;
+                    break;
+                }
+            }
+        }
+
+        size_t n_dim_size = n_dim.size();
+        n_dim.insert(n_dim.end(), k_dim.begin(), k_dim.end());
+        new_notation = n_dim;
+        if (add_right_permutation) {
+            std::cout << "Adding right permutation node for contraction node with ID: " << node->id << std::endl;
+            std::vector<uint32_t> out_dims;
+            for (uint32_t dim_id : new_notation) {
+                out_dims.push_back(this->id_dims[dim_id]);
+            }
+
+            Tensor* out_tensor = new Tensor(out_dims);
+
+            for (size_t i = 0; i < new_notation.size(); i++) {
+                if (i < n_dim_size) {
+                    out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::n);
+                } else {
+                    out_tensor->id[i].dim_t = static_cast<int>(TensorOperation::dim_t::k);
+                }
+            }
+
+            TreeNode* new_right_child = new TreeNode{
+                0,                                // id
+                EinsumTree::node_t::permutation,  // node_type
+                node,                             // parent
+                nullptr,                          // left_child
+                nullptr,                          // right_child
+                new_notation,                     // notation
+                nullptr,                          // left_tensor
+                nullptr,                          // right_tensor
+                out_tensor,                       // out_tensor
+                TensorOperation(),                // op
+            };
+            insertPermutation(node, new_right_child, false);
         }
 
         // Recursively optimize left and right children
@@ -461,6 +580,7 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
 
         node->op.optimize();
         node->op.compile();
+        std::cout << "Lowering contraction node with ID: " << node->id << std::endl;
         node->op.print();
     }
     return node_op;
