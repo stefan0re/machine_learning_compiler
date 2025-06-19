@@ -53,6 +53,10 @@ class einsum::trees::EinsumTree {
      */
     void printNode(TreeNode* node, const std::string& prefix, bool isLast);
     /**
+     * @brief Identify the dimensions of the tensors in the tree.
+     */
+    void identify();
+    /**
      * @brief Identify the dimensions of the tensors for a node.
      *
      * @param node current node in the tree for which tensor are identified.
@@ -65,8 +69,46 @@ class einsum::trees::EinsumTree {
      * @param node current node in the tree to be lowered.
      * @return TensorOperation::prim_t The lowered tensor operation primitive type for the node.
      */
+
     TensorOperation::prim_t lowerNode(TreeNode* node);
+    /**
+     * @brief Executes the Einsum tree nodes recursively.
+     *
+     * @param node current node in the tree to be executed.
+     * @param inputs Vector of input tensors for the execution.
+     * @return void* Pointer to the output tensor after execution.
+     */
     void* executeNode(TreeNode* node, std::vector<void*> inputs);
+    /**
+     * @brief Swaps the left and right children of a node if the the parent is contraction.
+     *
+     * @param parent Pointer to the parent node whose children are to be swapped.
+     * @return void* Pointer to the output tensor after swapping.
+     */
+    void swap(TreeNode* parent);
+    /**
+     * @brief Inserts a new child permutation node into the tree.
+     *
+     * @param parent Pointer to the parent node where the new child will be inserted.
+     * @param new_child Pointer to the new child node to be inserted.
+     * @param is_left Boolean indicating if the new child should be inserted as a left child.
+     */
+    void insertPermutation(TreeNode* parent, TreeNode* new_child, bool is_left);
+    /**
+     * @brief Calculates the score for a node based on its dimensions and whether to swap children.
+     *
+     * @param node  Pointer to the current node in the tree.
+     * @param dim_type The dimension type to consider for scoring (e.g., m, n, k).
+     * @param swap Boolean indicatiing whether to look at the swapped dimensions.
+     * @return double The score for the node based on its dimensions.
+     */
+    double getScore(TreeNode* node, TensorOperation::dim_t dim_type, bool swap);
+    /**
+     * @brief Optimizes the Einsum tree nodes by adding permutation nodes and swapping children if necessary.
+     *
+     * @param node Pointer to the current node in the tree to be optimized.
+     */
+    void optimizeNode(TreeNode* node);
 
    public:
     /**
@@ -80,13 +122,20 @@ class einsum::trees::EinsumTree {
      */
     EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims);
     /**
-     * @brief Identify the dimensions of the tensors in the tree.
-     */
-    void identify();
-    /**
      * @brief Lowers the Einsum tree nodes for each to hold a tensor operations.
      */
     void lower();
+    /**
+     * @brief Optimizes the Einsum tree for efficient execution.
+     * This includes adding permutation nodes and swapping children if necessary.
+     */
+    void optimize();
+    /**
+     * @brief Executes the Einsum tree with the provided input tensors.
+     *
+     * @param inputs Vector of input tensors to be used in the execution.
+     * @return void* Pointer to the output tensor after execution.
+     */
     void execute(std::vector<void*> inputs, void* output);
     /**
      * @brief Prints the structure of the Einsum tree.
