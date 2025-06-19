@@ -7,6 +7,7 @@
 
 #include "../../mini_jit/generator/Brgemm.h"
 #include "../../mini_jit/generator/Unary.h"
+#include "../../tensor/tensor.h"
 
 namespace einsum {
     namespace backend {
@@ -59,43 +60,27 @@ class einsum::backend::TensorOperation {
 
     // scalars
     dtype_t _dtype;
-    prim_t _prim_first_touch;
-    prim_t _prim_main;
-    prim_t _prim_last_touch;
-    int64_t _id_first_primitive_loop;
-    int64_t _num_parallel_loops;
+    prim_t _prim_first_touch;  // first touch primitive
+    prim_t _prim_main;         // main primitive
+    prim_t _prim_last_touch;   // last touch primitive
 
-    int64_t _id_prim_m;
-    int64_t _id_prim_n;
-    int64_t _id_prim_k;
-    int64_t _id_prim_br;
-    int64_t _id_prim_br_size = -1;
+    int _prim_m_id = -1;  // id of the M dimension in input tensor 0
+    int _prim_n_id = -1;  // id of the N dimension in input tensor 1
+    int _prim_k_id = -1;  // id of the K dimension in input tensor 0 and 1
 
-    int64_t _lda;
-    int64_t _ldb;
-    int64_t _ldc;
-    int64_t _in0_br_stride;
-    int64_t _in1_br_stride;
+    int _lda = 0;
+    int _ldb = 0;
+    int _ldc = 0;
+
+    int _id_first_primitive_loop = -1;
+
+    std::vector<int32_t> _loop_order;
+
+    Tensor* _tensor_in0;  // first input tensor
+    Tensor* _tensor_in1;  // second input tensor (use nullptr if unary)
+    Tensor* _tensor_out;  // output tensor
 
     // owned storage
-    std::vector<dim_t> _dim_types_storage;
-    std::vector<exec_t> _exec_types_storage;
-    std::vector<int64_t> _dim_sizes_storage;
-    std::vector<int64_t> _strides_in0_storage;
-    std::vector<int64_t> _strides_in1_storage;
-    std::vector<int64_t> _strides_out_storage;
-    std::vector<int64_t> _loop_sizes_storage;
-    std::vector<int64_t> _loop_order_storage;
-
-    // views (spans)
-    std::span<const dim_t> _dim_types;
-    std::span<const exec_t> _exec_types;
-    std::span<const int64_t> _dim_sizes;
-    std::span<const int64_t> _strides_in0;
-    std::span<const int64_t> _strides_in1;
-    std::span<const int64_t> _strides_out;
-    std::span<const int64_t> _loop_sizes;
-    std::span<const int64_t> _loop_order;
 
     using kernel_t = mini_jit::generator::Brgemm::kernel_t;
 
@@ -106,24 +91,19 @@ class einsum::backend::TensorOperation {
      * @param prim_first_touch  Type of the first touch primitive.
      * @param prim_main         Type of the main primitive.
      * @param prim_last_touch   Type of the last touch primitive.
-     * @param dim_types         Dimension type of the loops (c, m, n, or k).
-     * @param exec_types        Execution type of the loops (seq, shared, or prim).
-     * @param dim_sizes         Sizes of the dimensions.
-     * @param strides_in0       Strides of the first input tensor.
-     * @param strides_in1       Strides of the second input tensor (ignored if unary).
-     * @param strides_out       Strides of the output tensor.
+     * @param in0               First input tensor.
+     * @param in1               Second input tensor (use nullptr if unary).
+     * @param out               Output tensor.
+     *
      * @return error_t::success on success, another error_t value otherwise.
      **/
     error_t setup(dtype_t dtype,
                   prim_t prim_first_touch,
                   prim_t prim_main,
                   prim_t prim_last_touch,
-                  std::span<const dim_t> dim_types,
-                  std::span<const exec_t> exec_types,
-                  std::span<const int64_t> dim_sizes,
-                  std::span<const int64_t> strides_in0,
-                  std::span<const int64_t> strides_in1,
-                  std::span<const int64_t> strides_out);
+                  Tensor& in0,
+                  Tensor& in1,
+                  Tensor& out);
 
     /**
      * @brief Optimizes tensor contraction for efficient computation.
