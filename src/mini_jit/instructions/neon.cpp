@@ -326,3 +326,17 @@ uint32_t mini_jit::instructions::InstGen::neon_zip( simd_fp_t reg_dst,
 
     return l_ins;
 }
+
+uint32_t mini_jit::instructions::InstGen::neon_eor( simd_fp_t reg_dst,
+                                                    simd_fp_t reg_src1,
+                                                    simd_fp_t reg_src2){
+    uint32_t l_ins = 0x6e201c00;
+
+    l_ins |= (reg_dst & 0x1f);
+    l_ins |= (reg_src1 & 0x1f) << 5;
+    l_ins |= (reg_src2 & 0x1f) << 16;
+
+    return l_ins;
+
+
+}

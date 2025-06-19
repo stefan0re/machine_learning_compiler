@@ -339,5 +339,8 @@ class mini_jit::instructions::InstGen {
                               simd_fp_t reg_src1,
                               simd_fp_t reg_src2,
                               int variant /* 1 or 2 */);
+    static uint32_t neon_eor( simd_fp_t reg_dst,
+                              simd_fp_t reg_src1,
+                              simd_fp_t reg_src2 );
 };
 #endif
