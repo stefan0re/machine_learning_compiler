@@ -1,5 +1,7 @@
 #include "TensorOperation.h"
 
+#include <omp.h>
+
 #include <algorithm>
 #include <iostream>
 
@@ -37,7 +39,11 @@ namespace einsum::backend {
         char* l_ptr_out = static_cast<char*>(tensor_out);
 
         // execute the operation
-        execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+        if (_tensor_in1->id[_loop_order[0]].exec_t == 2) {
+            execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+        } else {
+            execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+        }
     }
     void TensorOperation::execute_iter(int64_t id_loop,
                                        char const* ptr_in0,
@@ -55,11 +61,11 @@ namespace einsum::backend {
             char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _tensor_in1->id[_loop_order[id_loop]].stride * 4;
             char* l_ptr_out = ptr_out + l_it * _tensor_out->id[_loop_order[id_loop]].stride * 4;
 
-            if (id_loop + 1 < _id_first_primitive_loop) {
+            if ((id_loop + 1) < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
-                             ptr_in0,
-                             ptr_in1,
-                             ptr_out,
+                             l_ptr_in0,
+                             l_ptr_in1,
+                             l_ptr_out,
                              first_access,
                              last_access);
             } else {
@@ -81,11 +87,6 @@ namespace einsum::backend {
     }
 
     TensorOperation::error_t TensorOperation::optimize() {
-        std::cout << "dimension sizes: "
-                  << _tensor_in0->id.size() << ", "
-                  << _tensor_in1->id.size() << ", "
-                  << _tensor_out->id.size() << std::endl;
-
         // check if all three tensor dimension vectors (id) have the same size
         if (!(_tensor_in0->id.size() == _tensor_in1->id.size() && _tensor_out->id.size() == _tensor_in0->id.size())) {
             std::cerr << "Dimension sizes must be equal" << std::endl;
@@ -115,10 +116,11 @@ namespace einsum::backend {
 
         // check if last loop is M or N than make it shared
         if (_loop_order.size() > 0) {
-            if (_tensor_in0->id[_loop_order.back()].dim_t == 1 || _tensor_in1->id[_loop_order.back()].dim_t == 2) {
-                _tensor_in0->id[_loop_order.back()].exec_t = 2;
-                _tensor_in1->id[_loop_order.back()].exec_t = 2;
-                _tensor_out->id[_loop_order.back()].exec_t = 2;
+            if (_tensor_in0->id[_loop_order.front()].dim_t == 1 || _tensor_in1->id[_loop_order.front()].dim_t == 2) {
+                _tensor_in0->id[_loop_order.front()].exec_t = 2;
+                _tensor_in1->id[_loop_order.front()].exec_t = 2;
+                _tensor_out->id[_loop_order.front()].exec_t = 2;
+                _size_parallel_loop = _tensor_in0->id[_loop_order.front()].dim_sizes;
             }
         }
 
@@ -234,8 +236,8 @@ namespace einsum::backend {
             if (1 < _id_first_primitive_loop) {
                 execute_iter(1,
                              l_ptr_in0,
-                             l_ptr_in0,
-                             l_ptr_in0,
+                             l_ptr_in1,
+                             l_ptr_out,
                              first_access,
                              last_access);
             } else {
