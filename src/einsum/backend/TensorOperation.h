@@ -73,6 +73,7 @@ class einsum::backend::TensorOperation {
     int _ldc = 0;
 
     int _id_first_primitive_loop = -1;
+    int _size_parallel_loop = 0;
 
     std::vector<int32_t> _loop_order;
 
@@ -180,8 +181,7 @@ class einsum::backend::TensorOperation {
                       char const* ptr_in1,
                       char* ptr_out,
                       bool first_access,
-                      bool last_access,
-                      int64_t loop_count);
+                      bool last_access);
 
     /**
      * Generates a first touch kernel with the given parameters.
@@ -190,7 +190,7 @@ class einsum::backend::TensorOperation {
                             char* ptr_out);
 
     /**
-     * General-purpose loop implementation featuring first and last touch operations with OMP parallelization.
+     * @brief Executes the the first loop if it is M or N dimension in parallel
      *
      * @param ptr_in0      Pointer to the first input tensor's data.
      * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).

@@ -44,17 +44,16 @@ namespace einsum::backend {
                                        char const* ptr_in1,
                                        char* ptr_out,
                                        bool first_access,
-                                       bool last_access,
-                                       int64_t loop_count) {
+                                       bool last_access) {
         int64_t l_size = _tensor_in0->id[_loop_order[id_loop]].dim_sizes;
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
             // derive if this is first or last access to the output block
 
             // update pointer with strides
-            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _tensor_in0->id[id_loop].stride * 4;
-            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _tensor_in1->id[id_loop].stride * 4;
-            char* l_ptr_out = ptr_out + l_it * _tensor_out->id[id_loop].stride * 4;
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _tensor_in0->id[_loop_order[id_loop]].stride * 4;
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _tensor_in1->id[_loop_order[id_loop]].stride * 4;
+            char* l_ptr_out = ptr_out + l_it * _tensor_out->id[_loop_order[id_loop]].stride * 4;
 
             if (id_loop + 1 < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
@@ -62,8 +61,7 @@ namespace einsum::backend {
                              ptr_in1,
                              ptr_out,
                              first_access,
-                             last_access,
-                             loop_count);
+                             last_access);
             } else {
                 // call first touch kernel if necessary
 
@@ -181,7 +179,7 @@ namespace einsum::backend {
         }
 
         // set first primitive loop id
-        _id_first_primitive_loop = _loop_order.size() + 1;
+        _id_first_primitive_loop = _loop_order.size();
 
         if (found_m && found_k && found_n) {
             return TensorOperation::error_t::success;
@@ -224,6 +222,38 @@ namespace einsum::backend {
                                                 char* ptr_out,
                                                 bool first_access,
                                                 bool last_access) {
+#pragma omp parallel for
+        for (int64_t l_it = 0; l_it < _size_parallel_loop; l_it++) {
+            // derive if this is first or last access to the output block
+
+            // update pointer with strides
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _tensor_in0->id[_loop_order[0]].stride * 4;
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _tensor_in1->id[_loop_order[0]].stride * 4;
+            char* l_ptr_out = ptr_out + l_it * _tensor_out->id[_loop_order[0]].stride * 4;
+
+            if (1 < _id_first_primitive_loop) {
+                execute_iter(1,
+                             l_ptr_in0,
+                             l_ptr_in0,
+                             l_ptr_in0,
+                             first_access,
+                             last_access);
+            } else {
+                // call first touch kernel if necessary
+
+                // call main kernel
+                _brgemm_kernel(l_ptr_in0,
+                               l_ptr_in1,
+                               l_ptr_out,
+                               _lda,
+                               _ldb,
+                               _ldc,
+                               0,
+                               0);
+
+                // call last touch kernel if necessary
+            }
+        }
     }
 
     void TensorOperation::print() {
