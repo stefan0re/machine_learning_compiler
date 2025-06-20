@@ -102,9 +102,9 @@ class einsum::backend::TensorOperation {
                   prim_t prim_first_touch,
                   prim_t prim_main,
                   prim_t prim_last_touch,
-                  Tensor& in0,
-                  Tensor& in1,
-                  Tensor& out);
+                  Tensor *in0,
+                  Tensor *in1,
+                  Tensor* out);
 
     /**
      * @brief Optimizes tensor contraction for efficient computation.

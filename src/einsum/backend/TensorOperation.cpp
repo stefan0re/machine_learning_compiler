@@ -16,17 +16,17 @@ namespace einsum::backend {
                                                     prim_t prim_first_touch,
                                                     prim_t prim_main,
                                                     prim_t prim_last_touch,
-                                                    Tensor& in0,
-                                                    Tensor& in1,
-                                                    Tensor& out) {
+                                                    Tensor* in0,
+                                                    Tensor* in1,
+                                                    Tensor* out) {
         _dtype = dtype;
         _prim_first_touch = prim_first_touch;
         _prim_main = prim_main;
         _prim_last_touch = prim_last_touch;
 
-        _tensor_in0 = &in0;
-        _tensor_in1 = &in1;
-        _tensor_out = &out;
+        _tensor_in0 = in0;
+        _tensor_in1 = in1;
+        _tensor_out = out;
 
         return TensorOperation::error_t::success;
     }
@@ -39,9 +39,11 @@ namespace einsum::backend {
         char* l_ptr_out = static_cast<char*>(tensor_out);
 
         // execute the operation
-        if (_tensor_in1->id[_loop_order[0]].exec_t == 2) {
+        if ((_loop_order.size() > 0) && _tensor_in1->id[_loop_order[0]].exec_t == 2) {
+            std::cout << "shared memory parallelization" << std::endl;
             execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
         } else {
+            std::cout << "sequential execution" << std::endl;
             execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
         }
     }
@@ -51,15 +53,28 @@ namespace einsum::backend {
                                        char* ptr_out,
                                        bool first_access,
                                        bool last_access) {
-        int64_t l_size = _tensor_in0->id[_loop_order[id_loop]].dim_sizes;
+        int64_t l_size = 1;
+        int l_tmp = 0;
+        if (_loop_order.size() > id_loop) {
+            l_size = _tensor_in0->id[_loop_order[id_loop]].dim_sizes;
+            l_tmp = _loop_order[id_loop];
+        }
+
+        std::cout << "loop size: " << _loop_order.size() << std::endl;
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
             // derive if this is first or last access to the output block
 
             // update pointer with strides
-            char* l_ptr_in0 = const_cast<char*>(ptr_in0) + l_it * _tensor_in0->id[_loop_order[id_loop]].stride * 4;
-            char* l_ptr_in1 = const_cast<char*>(ptr_in1) + l_it * _tensor_in1->id[_loop_order[id_loop]].stride * 4;
-            char* l_ptr_out = ptr_out + l_it * _tensor_out->id[_loop_order[id_loop]].stride * 4;
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0);
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1);
+            char* l_ptr_out = ptr_out;
+
+            if (l_size > 1) {
+                l_ptr_in0 += l_it * _tensor_in0->id[l_tmp].stride * 4;
+                l_ptr_in1 += l_it * _tensor_in1->id[l_tmp].stride * 4;
+                l_ptr_out += l_it * _tensor_out->id[l_tmp].stride * 4;
+            }
 
             if ((id_loop + 1) < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
@@ -70,6 +85,10 @@ namespace einsum::backend {
                              last_access);
             } else {
                 // call first touch kernel if necessary
+
+                std::cout << "lda: " << _lda << std::endl;
+                std::cout << "ldb: " << _ldb << std::endl;
+                std::cout << "ldc: " << _ldc << std::endl;
 
                 // call main kernel
                 _brgemm_kernel(l_ptr_in0,
@@ -116,7 +135,7 @@ namespace einsum::backend {
 
         // check if last loop is M or N than make it shared
         if (_loop_order.size() > 0) {
-            if (_tensor_in0->id[_loop_order.front()].dim_t == 1 || _tensor_in1->id[_loop_order.front()].dim_t == 2) {
+            if ((_tensor_in0->id[_loop_order.front()].dim_t == 1 || _tensor_in1->id[_loop_order.front()].dim_t == 2)) {
                 _tensor_in0->id[_loop_order.front()].exec_t = 2;
                 _tensor_in1->id[_loop_order.front()].exec_t = 2;
                 _tensor_out->id[_loop_order.front()].exec_t = 2;
@@ -133,16 +152,31 @@ namespace einsum::backend {
         // set M and K Primitve
         for (size_t i = 0; i < _tensor_in0->id.size(); i++) {
             if (_tensor_in0->id[i].dim_t == 1 && _tensor_out->id[i].dim_t == 1 && _tensor_in0->id[i].stride == 1 && _tensor_out->id[i].stride == 1) {  // m dimension
-                _tensor_in0->id[i].exec_t = 1;
-                _tensor_in1->id[i].exec_t = 1;
-                _tensor_out->id[i].exec_t = 1;
-                _prim_m_id = i;
+                // find id
+                for (int j = 0; j < _tensor_in0->id.size(); j++) {
+                    if (_tensor_in1->id[j].loop_id == _tensor_in0->id[i].loop_id) {
+                        _tensor_in1->id[j].exec_t = 1;
+                    }
+                    _tensor_in0->id[i].exec_t = 1;
+                    if (_tensor_in0->id[i].loop_id == _tensor_out->id[j].loop_id) {
+                        _tensor_out->id[j].exec_t = 1;
+                    }
+                }
+                _prim_m_id = _tensor_in0->id[i].loop_id;
                 found_m = true;
-            } else if (_tensor_in1->id[i].dim_t == 3 && _tensor_in1->id[i].stride == 1) {  // k dimension
-                _tensor_in0->id[i].exec_t = 1;
-                _tensor_in1->id[i].exec_t = 1;
-                _tensor_out->id[i].exec_t = 1;
-                _prim_k_id = i;
+            }
+            if (_tensor_in1->id[i].dim_t == 3 && _tensor_in1->id[i].stride == 1) {
+                // find id
+                for (int j = 0; j < _tensor_in0->id.size(); j++) {
+                    if (_tensor_in1->id[i].loop_id == _tensor_in0->id[j].loop_id) {
+                        _tensor_in0->id[j].exec_t = 1;
+                    }
+                    _tensor_in1->id[i].exec_t = 1;
+                    if (_tensor_in1->id[i].loop_id == _tensor_out->id[j].loop_id) {
+                        _tensor_out->id[j].exec_t = 1;
+                    }
+                }
+                _prim_k_id = _tensor_in1->id[i].loop_id;
                 found_k = true;
             }
         }
@@ -150,10 +184,17 @@ namespace einsum::backend {
         // set N Primitiv
         for (size_t i = _tensor_in1->id.size() - 1; i >= 0; i--) {
             if (_tensor_in1->id[i].dim_t == 2) {
-                _tensor_in0->id[i].exec_t = 1;
-                _tensor_in1->id[i].exec_t = 1;
-                _tensor_out->id[i].exec_t = 1;
-                _prim_n_id = i;
+                // find id
+                for (int j = 0; j < _tensor_in1->id.size(); j++) {
+                    if (_tensor_in1->id[i].loop_id == _tensor_in0->id[j].loop_id) {
+                        _tensor_in0->id[j].exec_t = 1;
+                    }
+                    _tensor_in1->id[i].exec_t = 1;
+                    if (_tensor_in1->id[i].loop_id == _tensor_out->id[j].loop_id) {
+                        _tensor_out->id[j].exec_t = 1;
+                    }
+                }
+                _prim_n_id = _tensor_in1->id[i].loop_id;
                 found_n = true;
                 break;
             }
@@ -171,6 +212,15 @@ namespace einsum::backend {
                 _tensor_out->id[i].exec_t = 0;
             }
         }
+
+        std::cout << "*****************************************************" << std::endl;
+        std::cout << "in0:" << std::endl;
+        _tensor_in0->info();
+        std::cout << "in1:" << std::endl;
+        _tensor_in1->info();
+        std::cout << "out:" << std::endl;
+        _tensor_out->info();
+        std::cout << "*****************************************************" << std::endl;
 
         // set loop_ids
         _loop_order.clear();
@@ -215,6 +265,18 @@ namespace einsum::backend {
         _lda = _tensor_in0->id[_prim_k_id].stride;
         _ldb = _tensor_in1->id[_prim_n_id].stride;
         _ldc = _tensor_out->id[_prim_n_id].stride;
+
+        for (size_t i = 0; i < _tensor_in0->id.size(); i++) {
+            if (_tensor_in0->id[i].loop_id == _prim_k_id) {
+                _lda = _tensor_in0->id[i].stride;
+            }
+            if (_tensor_in1->id[i].loop_id == _prim_n_id) {
+                _ldb = _tensor_in1->id[i].stride;
+            }
+            if (_tensor_out->id[i].loop_id == _prim_n_id) {
+                _ldc = _tensor_out->id[i].stride;
+            }
+        }
 
         return TensorOperation::error_t::success;
     }
