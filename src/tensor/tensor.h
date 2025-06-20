@@ -16,6 +16,8 @@ class Tensor {
         int exec_t = 99;
     };
 
+    float * data = nullptr;
+
     std::vector<DimInfo> id;
 
     // constructor taking n dimension sizes

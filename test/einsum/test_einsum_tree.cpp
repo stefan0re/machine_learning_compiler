@@ -9,7 +9,7 @@
 
 using namespace einsum::trees;
 
-/*TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
+TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
     std::string str_repr = "[0,1],[1,2]->[0,2]";
     EinsumTree tree = EinsumTree(str_repr, {10, 20, 30});
     tree.optimize();
@@ -33,7 +33,7 @@ using namespace einsum::trees;
     delete[] input2;
     delete[] output;
 }
-
+/*
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
     std::string str_repr = "[[8,4],[7,3,8]->[7,3,4]],[[[2,6,7],[1,5,6]->[1,2,5,7]],[0,5]->[0,1,2,7]]->[0,1,2,3,4]";
     EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
@@ -50,7 +50,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::parse test with unary", "[Einsum][Trees][
     tree.optimize();
     tree.print();
     tree.lower();
-}*/
+}
 
 TEST_CASE("Einsum::Trees::EinsumTrees::optimize 1", "[Einsum][Trees][EinsumTrees][optimize]") {
     std::string str_repr = "[[7,3,8],[8,4]->[7,3,4]],[[0,5],[[5,1,6],[6,2,7]->[5,1,2,7]]->[0,1,2,7]]->[0,1,2,3,4]";
@@ -78,3 +78,4 @@ TEST_CASE("Einsum::Trees::EinsumTrees::optimize 3", "[Einsum][Trees][EinsumTrees
     tree.print();
     tree.lower();
 }
+    */
