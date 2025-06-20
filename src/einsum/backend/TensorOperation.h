@@ -68,9 +68,9 @@ class einsum::backend::TensorOperation {
     int _prim_n_id = -1;  // id of the N dimension in input tensor 1
     int _prim_k_id = -1;  // id of the K dimension in input tensor 0 and 1
 
-    int _lda = 0;
-    int _ldb = 0;
-    int _ldc = 0;
+    int64_t _lda = 0;
+    int64_t _ldb = 0;
+    int64_t _ldc = 0;
 
     int _id_first_primitive_loop = -1;
     int _size_parallel_loop = 0;

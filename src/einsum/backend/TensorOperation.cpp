@@ -212,9 +212,9 @@ namespace einsum::backend {
 
         /* TODO get correct lda for bad einsums */
         // define lda, ldb and ldc
-        _lda = _tensor_in0->id[_prim_m_id].dim_sizes;
-        _ldb = _tensor_in1->id[_prim_k_id].dim_sizes;
-        _ldc = _tensor_out->id[_prim_m_id].dim_sizes;
+        _lda = _tensor_in0->id[_prim_k_id].stride;
+        _ldb = _tensor_in1->id[_prim_n_id].stride;
+        _ldc = _tensor_out->id[_prim_n_id].stride;
 
         return TensorOperation::error_t::success;
     }
