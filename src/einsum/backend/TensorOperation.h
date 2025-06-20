@@ -68,6 +68,10 @@ class einsum::backend::TensorOperation {
     int _prim_n_id = -1;  // id of the N dimension in input tensor 1
     int _prim_k_id = -1;  // id of the K dimension in input tensor 0 and 1
 
+    int _prim_m_size = -1;
+    int _prim_n_size = -1;
+    int _prim_k_size = -1;
+
     int64_t _lda = 0;
     int64_t _ldb = 0;
     int64_t _ldc = 0;
@@ -102,8 +106,8 @@ class einsum::backend::TensorOperation {
                   prim_t prim_first_touch,
                   prim_t prim_main,
                   prim_t prim_last_touch,
-                  Tensor *in0,
-                  Tensor *in1,
+                  Tensor* in0,
+                  Tensor* in1,
                   Tensor* out);
 
     /**

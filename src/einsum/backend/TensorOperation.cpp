@@ -59,9 +59,6 @@ namespace einsum::backend {
             l_size = _tensor_in0->id[_loop_order[id_loop]].dim_sizes;
             l_tmp = _loop_order[id_loop];
         }
-
-        std::cout << "loop size: " << _loop_order.size() << std::endl;
-
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
             // derive if this is first or last access to the output block
 
@@ -85,10 +82,6 @@ namespace einsum::backend {
                              last_access);
             } else {
                 // call first touch kernel if necessary
-
-                std::cout << "lda: " << _lda << std::endl;
-                std::cout << "ldb: " << _ldb << std::endl;
-                std::cout << "ldc: " << _ldc << std::endl;
 
                 // call main kernel
                 _brgemm_kernel(l_ptr_in0,
@@ -163,6 +156,7 @@ namespace einsum::backend {
                     }
                 }
                 _prim_m_id = _tensor_in0->id[i].loop_id;
+                _prim_m_id = _tensor_in0->id[i].dim_sizes;
                 found_m = true;
             }
             if (_tensor_in1->id[i].dim_t == 3 && _tensor_in1->id[i].stride == 1) {
@@ -177,6 +171,7 @@ namespace einsum::backend {
                     }
                 }
                 _prim_k_id = _tensor_in1->id[i].loop_id;
+                _prim_k_size = _tensor_in1->id[i].dim_sizes;
                 found_k = true;
             }
         }
@@ -195,6 +190,7 @@ namespace einsum::backend {
                     }
                 }
                 _prim_n_id = _tensor_in1->id[i].loop_id;
+                _prim_n_size = _tensor_in1->id[i].dim_sizes;
                 found_n = true;
                 break;
             }
@@ -212,15 +208,6 @@ namespace einsum::backend {
                 _tensor_out->id[i].exec_t = 0;
             }
         }
-
-        std::cout << "*****************************************************" << std::endl;
-        std::cout << "in0:" << std::endl;
-        _tensor_in0->info();
-        std::cout << "in1:" << std::endl;
-        _tensor_in1->info();
-        std::cout << "out:" << std::endl;
-        _tensor_out->info();
-        std::cout << "*****************************************************" << std::endl;
 
         // set loop_ids
         _loop_order.clear();
@@ -245,9 +232,9 @@ namespace einsum::backend {
     }
 
     TensorOperation::error_t TensorOperation::compile() {
-        _brgemm.generate(_tensor_in0->id[_prim_m_id].dim_sizes,
-                         _tensor_in1->id[_prim_n_id].dim_sizes,
-                         _tensor_in0->id[_prim_k_id].dim_sizes,
+        _brgemm.generate(_prim_m_size,
+                         _prim_n_size,
+                         _prim_k_size,
                          1,
                          0,
                          0,
