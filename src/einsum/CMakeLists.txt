@@ -48,7 +48,3 @@ set(EXTERNAL_SOURCES
     ../mini_jit/include/gemm_ref.cpp
 )
 
-# ---------------------------------------------------------------------------
-# Little helper binary (optional)
-# ---------------------------------------------------------------------------
-add_executable(check_einsum ./check_einsum.cpp ${LIB_SOURCES} ${EXTERNAL_SOURCES})

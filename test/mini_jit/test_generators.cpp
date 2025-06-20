@@ -125,7 +125,7 @@ TEST_CASE("Unary generate zero kernel sets all elements to zero", "[unary][gener
     generate_matrix(kernelSize.M, kernelSize.N, b);
     generate_matrix(kernelSize.M, kernelSize.N, c, true);  // fill with zeroes
 
-    unary.generate(kernelSize.M, kernelSize.N, 0, Unary::dtype_t::fp32, Unary::ptype_t::zero);
+    unary.generate(kernelSize.M, kernelSize.N, Unary::dtype_t::fp32, Unary::ptype_t::zero);
 
     Unary::kernel_t zero = unary.get_kernel();
 
