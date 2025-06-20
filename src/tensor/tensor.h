@@ -4,6 +4,7 @@
 #define TENSOR_H
 
 #include <sstream>
+#include <string>
 #include <vector>
 
 class Tensor {
@@ -17,6 +18,8 @@ class Tensor {
     };
 
     std::vector<DimInfo> id;
+
+    float* data = nullptr;
 
     // constructor taking n dimension sizes
     // template definitions must be visible to every translation unit that uses them,
@@ -34,6 +37,8 @@ class Tensor {
     void swap(int i, int j);
     void info() const;
     std::string info_str() const;
+
+    void from_torchpp(std::string path);
 
    private:
     void setup(std::vector<int> sizes);

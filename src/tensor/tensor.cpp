@@ -1,8 +1,10 @@
 #include "tensor.h"
 
+#include <fstream>
 #include <initializer_list>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 // constuctor that gets the dimension sizes as vector
@@ -68,4 +70,42 @@ std::string Tensor::info_str() const {
             << " }\n";
     }
     return oss.str();
+}
+
+void Tensor::from_torchpp(std::string path) {
+    std::ifstream file("data.txt");
+    std::string line;
+    std::vector<float*> layers;  // Vector to store pointers to float arrays
+    std::vector<size_t> layer_sizes;
+
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<float> values;
+
+        // Parse floats from line
+        while (std::getline(ss, token, ',')) {
+            values.push_back(std::stof(token));
+        }
+
+        // Allocate raw float array and copy values
+        float* layer = new float[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            layer[i] = values[i];
+        }
+
+        // Store the layer pointer and size
+        layers.push_back(layer);
+        layer_sizes.push_back(values.size());
+    }
+
+    // Example: print and cleanup
+    for (size_t i = 0; i < layers.size(); ++i) {
+        std::cout << "Layer " << i + 1 << ": ";
+        for (size_t j = 0; j < layer_sizes[i]; ++j) {
+            std::cout << layers[i][j] << " ";
+        }
+        std::cout << "\n";
+        delete[] layers[i];  // Free the memory
+    }
 }
