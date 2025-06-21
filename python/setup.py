@@ -79,14 +79,15 @@ def test_model(model):
 
 
 # Model setup
-input_size = 4  # Iris features
-hidden1_size = 10
-hidden2_size = 8
-output_size = 3  # Iris species
+a = 1 # batch size
+b = 4 # Iris features
+c = 64
+d = 16
+e = 3 # Iris species
 
 X_train, X_test, y_train, y_test = load_and_save_dataset()
 
-model = BasicNet(input_size, hidden1_size, hidden2_size, output_size)
+model = BasicNet(b, c, d, e)
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
@@ -104,3 +105,11 @@ for epoch in range(epochs):
 save_model(model)
 
 test_model(model)
+
+# Print the einsum-notation for the model
+print(f"a: {a}"); 
+print(f"b: {b}"); 
+print(f"c: {c}"); 
+print(f"d: {d}"); 
+print(f"e: {e}"); 
+print(f"[[[b,a],[c,b]->[c,a]],[d,c]->[d,a]],[e,d]->[e,a]"); 
