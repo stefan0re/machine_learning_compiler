@@ -1,8 +1,10 @@
 #include "tensor.h"
 
+#include <fstream>
 #include <initializer_list>
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <vector>
 
 // constuctor that gets the dimension sizes as vector
@@ -68,4 +70,103 @@ std::string Tensor::info_str() const {
             << " }\n";
     }
     return oss.str();
+}
+
+std::vector<Tensor> Tensor::from_torchpp(std::string path, int in_size) {
+    std::ifstream file(path);
+    std::string line;
+    std::vector<Tensor> layers;
+
+    int out_size;
+    int line_count = 0;
+
+    // for each line
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<float> values;
+
+        // parse floats from line
+        while (std::getline(ss, token, ',')) {
+            values.push_back(std::stof(token));
+        }
+
+        // if the line is a layer (matrix)
+        if (line_count % 2 == 0) {
+            // calculate the size of the output layer
+            out_size = values.size() / in_size;
+            // create the tensor
+            Tensor t = Tensor(in_size, out_size);
+            // update the in_size to the ouput layer so it
+            // becomes the new input layer
+            in_size = out_size;
+
+            // allocate raw float array and copy values
+            t.data = new float[values.size()];
+            for (size_t i = 0; i < values.size(); ++i) {
+                t.data[i] = values[i];
+            }
+
+            // store the tensor
+            layers.push_back(t);
+
+        }
+        // otherwise it must be a baies (vector)
+        else {
+            // create a vector
+            Tensor t = Tensor(static_cast<int>(values.size()));
+
+            // allocate raw float array and copy values
+            t.data = new float[values.size()];
+            for (size_t i = 0; i < values.size(); ++i) {
+                t.data[i] = values[i];
+            }
+
+            // store the tensor
+            layers.push_back(t);
+        }
+        std::cout << line_count << std::endl;
+        line_count++;
+    }
+
+    return layers;
+}
+
+Tensor Tensor::from_csv(std::string path) {
+    std::ifstream file(path);
+    std::string line;
+    std::vector<float> float_values;
+    int line_count = 0;
+    int element_count = 0;
+
+    // for each line
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+
+        element_count = 0;
+
+        while (std::getline(ss, token, ',')) {
+            try {
+                // try to convert to float
+                float f = std::stof(token);
+                float_values.push_back(f);
+                element_count++;
+            } catch (const std::invalid_argument&) {
+                // Not a valid float, treat as string
+                // stringValues.push_back(token);
+            }
+        }
+
+        line_count++;
+    }
+
+    Tensor t = Tensor(line_count, element_count);
+
+    t.data = new float[float_values.size()];
+    for (size_t i = 0; i < float_values.size(); ++i) {
+        t.data[i] = float_values[i];
+    }
+
+    return t;
 }

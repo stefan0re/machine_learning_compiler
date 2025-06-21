@@ -1,3 +1,4 @@
 env_sphinx*
 build*
 .cache
+*.o

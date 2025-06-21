@@ -85,6 +85,8 @@
         "regex": "cpp",
         "generator": "cpp",
         "shared_mutex": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "csignal": "cpp",
+        "valarray": "cpp"
     }
 }
