@@ -10,9 +10,10 @@
 using namespace einsum::trees;
 
 TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
-    std::string str_repr = "[0,1],[1,2]->[0,2]";
+    std::string str_repr = "[0,1,z],[1,2]r->[0,2]r";
     EinsumTree tree = EinsumTree(str_repr, {10, 20, 30});
     tree.optimize();
+    tree.print();
     tree.lower();
     float* input1 = new float[10 * 20];
     float* input2 = new float[20 * 30];
