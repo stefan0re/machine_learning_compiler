@@ -17,11 +17,9 @@ class Tensor {
         int exec_t = 99;
     };
 
-    float * data = nullptr;
+    float* data = nullptr;
 
     std::vector<DimInfo> id;
-
-    float* data = nullptr;
 
     // constructor taking n dimension sizes
     // template definitions must be visible to every translation unit that uses them,
