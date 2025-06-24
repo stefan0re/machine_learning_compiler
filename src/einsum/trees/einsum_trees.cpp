@@ -24,6 +24,9 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
         nullptr,                           // left_tensor
         nullptr,                           // right_tensor
         nullptr,                           // out_child
+        TensorOperation::prim_t::none,     // first touch
+        TensorOperation::prim_t::none,     // operation primitive
+        TensorOperation::prim_t::none,     // last touch
         TensorOperation(),                 // op
     };
     this->leaf_ids.push_back(static_cast<int32_t>(this->size));
@@ -45,6 +48,9 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                     nullptr,                           // left_tensor
                     nullptr,                           // right_tensor
                     nullptr,                           // out_child
+                    TensorOperation::prim_t::none,     // first touch
+                    TensorOperation::prim_t::none,     // operation primitive
+                    TensorOperation::prim_t::none,     // last touch
                     TensorOperation(),                 // op
                 };
 
@@ -56,6 +62,7 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
 
                 current->left_child = new_node;
                 current->node_type = EinsumTree::node_t::permutation;
+                current->operation_primitive = TensorOperation::prim_t::copy;
                 new_node->parent = current;
                 current = new_node;
                 stack.push_back('l');
@@ -73,10 +80,14 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                     nullptr,                           // left_tensor
                     nullptr,                           // right_tensor
                     nullptr,                           // out_child
+                    TensorOperation::prim_t::none,     // first touch
+                    TensorOperation::prim_t::none,     // operation primitive
+                    TensorOperation::prim_t::none,     // last touch
                     TensorOperation(),                 // op
                 };
                 current->right_child = new_node;
                 current->node_type = EinsumTree::node_t::contraction;
+                current->operation_primitive = TensorOperation::prim_t::gemm;
                 new_node->parent = current;
                 current = new_node;
                 // mark right node as "done" in stack
@@ -124,6 +135,20 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims) {
                 stack.push_back('u');
                 if (current->parent != nullptr) {
                     current = current->parent;
+                }
+            }
+        } else if (character >= 'a' && character <= 'z') {
+            if (character == 'r') {
+                if (stack.back() == 'w') {
+                    current->first_touch = TensorOperation::prim_t::relu;
+                } else {
+                    current->last_touch = TensorOperation::prim_t::relu;
+                }
+            } else if (character == 'z') {
+                if (stack.back() == 'w') {
+                    current->first_touch = TensorOperation::prim_t::zero;
+                } else {
+                    current->last_touch = TensorOperation::prim_t::zero;
                 }
             }
         }
@@ -363,6 +388,9 @@ void EinsumTree::optimizeNode(TreeNode* node) {
                 nullptr,                          // left_tensor
                 nullptr,                          // right_tensor
                 out_tensor,                       // out_tensor
+                TensorOperation::prim_t::none,    // first touch
+                TensorOperation::prim_t::copy,    // operation primitive
+                TensorOperation::prim_t::none,    // last touch
                 TensorOperation(),                // op
             };
             insertPermutation(node, new_left_child, true);
@@ -418,6 +446,9 @@ void EinsumTree::optimizeNode(TreeNode* node) {
                 nullptr,                          // left_tensor
                 nullptr,                          // right_tensor
                 out_tensor,                       // out_tensor
+                TensorOperation::prim_t::none,    // first touch
+                TensorOperation::prim_t::copy,    // operation primitive
+                TensorOperation::prim_t::none,    // last touch
                 TensorOperation(),                // op
             };
             insertPermutation(node, new_right_child, false);
@@ -690,7 +721,10 @@ void EinsumTree::printNode(TreeNode* node, const std::string& prefix, bool isLas
         if (i > 0) std::cout << ",";
         std::cout << node->notation[i];
     }
-    std::cout << " ID: " << node->id << std::endl;
+    std::cout << " ID: " << node->id
+              << " /   " << static_cast<int>(node->first_touch)
+              << " | " << static_cast<int>(node->operation_primitive)
+              << " | " << static_cast<int>(node->last_touch) << std::endl;
 
     // Prepare prefix for children
     std::string childPrefix = prefix + (isLast ? "   " : "│  ");
