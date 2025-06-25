@@ -94,6 +94,10 @@ namespace einsum::backend {
                                0);
 
                 // call last touch kernel if necessary
+                if( last_access && (_prim_last_touch != prim_t::none )){
+                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
+                
             }
         }
     }
@@ -245,6 +249,11 @@ namespace einsum::backend {
         if (!_brgemm_kernel) {
             std::cerr << "Failed to compile BRGEMM kernel." << std::endl;
             return TensorOperation::error_t::compile_failed;
+        }
+
+        if(_prim_last_touch == prim_t::relu ){
+            _unary_last_touch.gen_relu();
+            _unary_last_touch_kernel = _unary_last_touch.get_kernel();
         }
 
         /* TODO get correct lda for bad einsums */
