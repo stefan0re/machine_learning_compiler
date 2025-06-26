@@ -621,29 +621,8 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
             std::cerr << "Setup failed for contraction operation" << std::endl;
         }
 
-        std::cout << "*****************************************************" << std::endl;
-        std::cout << "in0:" << std::endl;
-        node->left_tensor->info();
-        std::cout << "in1:" << std::endl;
-        node->right_tensor->info();
-        std::cout << "out:" << std::endl;
-        node->out_tensor->info();
-        std::cout << "*****************************************************" << std::endl;
-
         node->op.optimize();
         node->op.compile();
-
-        for (const auto& dim : node->left_tensor->id) {
-            std::cout << "Left tensor dim: " << dim.exec_t << ", dim_id: " << dim.loop_id << std::endl;
-        }
-        std::cout << "----------------------------------------------------" << std::endl;
-        for (const auto& dim : node->right_tensor->id) {
-            std::cout << "Right tensor dim: " << dim.exec_t << ", dim_id: " << dim.loop_id << std::endl;
-        }
-        std::cout << "----------------------------------------------------" << std::endl;
-        for (const auto& dim : node->out_tensor->id) {
-            std::cout << "Output tensor dim: " << dim.exec_t << ", dim_id: " << dim.loop_id << std::endl;
-        }
 
         std::cout << "Lowering contraction node with ID: " << node->id << std::endl;
         node->op.print();

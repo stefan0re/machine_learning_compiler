@@ -25,7 +25,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
     for (int i = 0; i < 20 * 30; ++i) {
         input2[i] = static_cast<float>(rand() % 100);
     }
-    // tree.execute({input1, input2}, output);
+    tree.execute({input1, input2}, output);
     for (int i = 0; i < 10 * 30; ++i) {
         std::cout << output[i] << " ";
     }
@@ -34,7 +34,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
     delete[] input2;
     delete[] output;
 }
-/*
+
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
     std::string str_repr = "[[8,4],[7,3,8]->[7,3,4]],[[[2,6,7],[1,5,6]->[1,2,5,7]],[0,5]->[0,1,2,7]]->[0,1,2,3,4]";
     EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
@@ -79,4 +79,3 @@ TEST_CASE("Einsum::Trees::EinsumTrees::optimize 3", "[Einsum][Trees][EinsumTrees
     tree.print();
     tree.lower();
 }
-    */
