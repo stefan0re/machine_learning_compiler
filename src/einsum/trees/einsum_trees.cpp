@@ -591,8 +591,6 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
 
         node->op.optimize();
         node->op.compile();
-
-        node->op.print();
     }
     return node_op;
 }
@@ -631,9 +629,7 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs) {
         if (left_output == nullptr || right_output == nullptr) {
             std::cerr << "Failed to execute child nodes." << std::endl;
         }
-        std::cout << "Executing contraction node with ID: " << node->id << std::endl;
         node->op.execute(left_output, right_output, output);
-        std::cout << "Contraction executed successfully." << std::endl;
     } else {
         std::cerr << "Unsupported node type for execution." << std::endl;
     }
