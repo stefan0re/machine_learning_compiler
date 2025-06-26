@@ -507,9 +507,9 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
         TensorOperation::prim_t right_op = lowerNode(node->right_child);
 
         TensorOperation::dtype_t dtype = TensorOperation::dtype_t::fp32;
-        TensorOperation::prim_t prim_first_touch = TensorOperation::prim_t::none;
-        TensorOperation::prim_t prim_main = TensorOperation::prim_t::gemm;
-        TensorOperation::prim_t prim_last_touch = TensorOperation::prim_t::none;
+        TensorOperation::prim_t prim_first_touch = node->first_touch;
+        TensorOperation::prim_t prim_main = node->operation_primitive;
+        TensorOperation::prim_t prim_last_touch = node->last_touch;
 
         std::vector<TensorOperation::dim_t> dim_types;
         std::vector<TensorOperation::exec_t> exec_types;
