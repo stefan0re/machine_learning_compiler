@@ -145,7 +145,7 @@ namespace einsum::backend {
                 _size_parallel_loop = _tensor_in0->id[_loop_order.front()].dim_sizes;
             }
         }
-        for (int i = _loop_order.size() - 1; i >= 0; i++) {
+        for (int i = _loop_order.size() - 1; i >= 0; i--) {
             if (_tensor_in0->id[_loop_order[i]].dim_t == 3) {
                 _last_touch_id = _loop_order[i];
             }
