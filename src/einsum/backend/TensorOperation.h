@@ -79,6 +79,8 @@ class einsum::backend::TensorOperation {
     int _id_first_primitive_loop = -1;
     int _size_parallel_loop = 0;
 
+    int _last_touch_id = -1;
+
     std::vector<int32_t> _loop_order;
 
     Tensor* _tensor_in0;  // first input tensor
