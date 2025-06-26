@@ -72,6 +72,13 @@ namespace einsum::backend {
                 l_ptr_in1 += l_it * _tensor_in1->id[l_tmp].stride * 4;
                 l_ptr_out += l_it * _tensor_out->id[l_tmp].stride * 4;
             }
+            if (_loop_order.size() > 0) {
+                if ((_last_touch_id == _loop_order[id_loop]) && (_tensor_in0->id[_last_touch_id].dim_t != 3)) {
+                    last_access == true;
+                } else if ((_last_touch_id == _loop_order[id_loop]) && (_tensor_in0->id[_last_touch_id].dim_t == 3) && (l_it == l_size - 1)) {
+                    last_access == true;
+                }
+            }
 
             if ((id_loop + 1) < _id_first_primitive_loop) {
                 execute_iter(id_loop + 1,
@@ -94,10 +101,9 @@ namespace einsum::backend {
                                0);
 
                 // call last touch kernel if necessary
-                if( last_access && (_prim_last_touch != prim_t::none )){
+                if (last_access && (_prim_last_touch != prim_t::none)) {
                     _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                 }
-                
             }
         }
     }
@@ -137,6 +143,11 @@ namespace einsum::backend {
                 _tensor_in1->id[_loop_order.front()].exec_t = 2;
                 _tensor_out->id[_loop_order.front()].exec_t = 2;
                 _size_parallel_loop = _tensor_in0->id[_loop_order.front()].dim_sizes;
+            }
+        }
+        for (int i = _loop_order.size() - 1; i >= 0; i++) {
+            if (_tensor_in0->id[_loop_order[i]].dim_t == 3) {
+                _last_touch_id = _loop_order[i];
             }
         }
 
@@ -251,7 +262,7 @@ namespace einsum::backend {
             return TensorOperation::error_t::compile_failed;
         }
 
-        if(_prim_last_touch == prim_t::relu ){
+        if (_prim_last_touch == prim_t::relu) {
             _unary_last_touch.gen_relu();
             _unary_last_touch_kernel = _unary_last_touch.get_kernel();
         }
