@@ -36,6 +36,10 @@ class einsum::trees::EinsumTree {
         Tensor* right_tensor;
         Tensor* out_tensor;
 
+        TensorOperation::prim_t first_touch;
+        TensorOperation::prim_t operation_primitive;
+        TensorOperation::prim_t last_touch;
+
         TensorOperation op;
     };
 
