@@ -8,37 +8,9 @@
 #include "../../src/mini_jit/generator/Unary.h"
 #include "../../src/mini_jit/generator/Util.h"
 #include "../../src/mini_jit/include/gemm_ref.h"
+#include "../test_utils/test_utils.h"
 
 using namespace mini_jit::generator;
-
-void generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero = false, bool visualization = false) {
-    float MAX = 100;
-    float MIN = -100;
-    for (uint32_t i = 0; i < height; i++) {
-        for (uint32_t j = 0; j < width; j++) {
-            int index = j * height + i;
-            float rand_float = static_cast<float>(rand()) / RAND_MAX;
-            rand_float = rand_float * (MAX - MIN) + MIN;
-            if (visualization) {
-                rand_float = std::trunc(rand_float);
-            }
-            M[index] = (1 - (double)set_zero) * rand_float;
-        }
-    }
-}
-
-bool compare_matrix(uint32_t height, uint32_t width, float* M, float* C) {
-    for (uint32_t i = 0; i < height; i++) {
-        for (uint32_t j = 0; j < width; j++) {
-            int index = j * height + i;
-            if (M[index] != C[index]) {
-                std::cout << "Matrices are not equal in element: " << index << " M: " << M[index] << ", C: " << C[index] << std::endl;
-                return false;
-            }
-        }
-    }
-    return true;
-}
 
 TEST_CASE("MiniJit::Brgemm::FP32 test", "[MiniJit][Brgemm][FP32]") {
     int64_t m = GENERATE(8, 16);
@@ -121,9 +93,9 @@ TEST_CASE("Unary generate zero kernel sets all elements to zero", "[unary][gener
 
     Unary unary;
 
-    generate_matrix(kernelSize.M, kernelSize.N, a);
-    generate_matrix(kernelSize.M, kernelSize.N, b);
-    generate_matrix(kernelSize.M, kernelSize.N, c, true);  // fill with zeroes
+    test::matmul::generate_matrix(kernelSize.M, kernelSize.N, a);
+    test::matmul::generate_matrix(kernelSize.M, kernelSize.N, b);
+    test::matmul::generate_matrix(kernelSize.M, kernelSize.N, c, true);  // fill with zeroes
 
     unary.generate(kernelSize.M, kernelSize.N, Unary::dtype_t::fp32, Unary::ptype_t::zero);
 
@@ -131,7 +103,7 @@ TEST_CASE("Unary generate zero kernel sets all elements to zero", "[unary][gener
 
     zero(a, b, leading_dimension, leading_dimension);
 
-    bool match = compare_matrix(kernelSize.M, kernelSize.N, b, c);
+    bool match = test::matmul::compare_matrix(kernelSize.M, kernelSize.N, b, c);
     REQUIRE(match == true);
 
     delete[] a;
