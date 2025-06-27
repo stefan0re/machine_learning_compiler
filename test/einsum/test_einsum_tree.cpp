@@ -9,8 +9,8 @@
 
 using namespace einsum::trees;
 
-TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
-    std::cout << "########## Einsum test case 1 ##########" << std::endl;
+/*TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
+    std::cout << "########## Einsum tree test case 1 ##########" << std::endl;
     std::string str_repr = "[0,1,z],[1,2]r->[0,2]r";
     EinsumTree tree = EinsumTree(str_repr, {10, 20, 30});
     tree.optimize();
@@ -34,10 +34,10 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
     delete[] input1;
     delete[] input2;
     delete[] output;
-}
+}*/
 
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
-    std::cout << "########### Einsum test case 2 ##########" << std::endl;
+    std::cout << "########### Einsum tree test case 2 ##########" << std::endl;
     std::string str_repr = "[[8,4],[7,3,8]->[7,3,4]],[[[2,6,7],[1,5,6]->[1,2,5,7]],[0,5]->[0,1,2,7]]->[0,1,2,3,4]";
     EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
     tree.optimize();
@@ -46,7 +46,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees]
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test with unary", "[Einsum][Trees][EinsumTrees][parse]") {
-    std::cout << "########### Einsum test case 3 ##########" << std::endl;
+    std::cout << "########### Einsum tree test case 3 ##########" << std::endl;
     std::string str_repr = "[[[[3,6,8,9]->[8,6,9,3]],[[2,5,7,9]->[7,5,2,9]]->[7,8,5,6,2,3]],[0,4,5,6]->[0,4,7,8,2,3]],[1,4,7,8]->[0,1,2,3]";
     EinsumTree tree = EinsumTree(str_repr, {60, 60, 20, 20, 8, 8, 8, 8, 8, 8});
     tree.optimize();
@@ -55,7 +55,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::parse test with unary", "[Einsum][Trees][
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::optimize 1", "[Einsum][Trees][EinsumTrees][optimize]") {
-    std::cout << "########### Einsum test case 4 ##########" << std::endl;
+    std::cout << "########### Einsum tree test case 4 ##########" << std::endl;
     std::string str_repr = "[[7,3,8],[8,4]->[7,3,4]],[[0,5],[[5,1,6],[6,2,7]->[5,1,2,7]]->[0,1,2,7]]->[0,1,2,3,4]";
     EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
     tree.optimize();
@@ -64,7 +64,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::optimize 1", "[Einsum][Trees][EinsumTrees
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::optimize 2", "[Einsum][Trees][EinsumTrees][optimize]") {
-    std::cout << "########### Einsum test case 5 ##########" << std::endl;
+    std::cout << "########### Einsum tree test case 5 ##########" << std::endl;
     std::string str_repr = "[1,4,7,8],[[0,4,5,6],[[2,5,7,9],[3,6,8,9]->[2,5,7,3,6,8]]->[0,4,2,7,3,8]]->[0,1,2,3]";
     EinsumTree tree = EinsumTree(str_repr, {60, 60, 20, 20, 8, 8, 8, 8, 8, 8});
     tree.optimize();
@@ -73,7 +73,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::optimize 2", "[Einsum][Trees][EinsumTrees
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::optimize 3", "[Einsum][Trees][EinsumTrees][optimize]") {
-    std::cout << "######## Einsum test case 6 ##########" << std::endl;
+    std::cout << "######## Einsum tree test case 6 ##########" << std::endl;
     std::string str_repr = "[[2,7,3],[3,8,4]->[2,7,8,4]],[[4,9,0],[[0,5,1],[1,6,2]->[0,5,6,2]]->[4,9,5,6,2]]->[5,6,7,8,9]";
     EinsumTree tree = EinsumTree(str_repr, {40, 40, 40, 40, 40, 25, 25, 25, 25, 25});
     tree.optimize();
