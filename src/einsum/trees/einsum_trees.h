@@ -47,6 +47,7 @@ class einsum::trees::EinsumTree {
     uint32_t size = 0;
     std::vector<uint32_t> id_dims = {};
     std::vector<int32_t> leaf_ids = {};
+    std::vector<void*> allocated_memory = {};  // Track allocated memory for cleanup
 
     /**
      * @brief Prints the structure of a Einsum tree node.
@@ -145,6 +146,10 @@ class einsum::trees::EinsumTree {
      * @brief Prints the structure of the Einsum tree.
      */
     void print();
+    /**
+     * @brief Cleans up allocated memory from intermediate computations.
+     */
+    void cleanup();
 };
 
 #endif
