@@ -1,5 +1,6 @@
 #include "./einsum_trees.h"
 
+#include <cstring>
 #include <iostream>
 #include <unordered_set>
 #include <vector>
@@ -453,7 +454,15 @@ std::vector<uint32_t> EinsumTree::identifyNode(TreeNode* node) {
         out_dims.push_back(this->id_dims[dim_id]);
     }
     node->out_tensor = new Tensor(out_dims);
+    int32_t size = 1;
+    for (auto id : node->out_tensor->id) {
+        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n))) {
+            size *= id.dim_sizes;
+        }
+    }
 
+    float* output_f = new float[size];
+    void* output = static_cast<void*>(output_f);
     if (node->node_type == node_t::permutation) {
         std::vector<uint32_t> child_dims = identifyNode(node->left_child);
         node->left_tensor = new Tensor(child_dims);
@@ -601,8 +610,23 @@ void EinsumTree::execute(std::vector<void*> inputs, void* output) {
         return;
     }
 
-    // Execute the root node
-    output = executeNode(this->root, inputs);
+    // Execute the root node and get the result
+    void* result = executeNode(this->root, inputs);
+
+    if (result == nullptr) {
+        std::cerr << "Execution failed, result is null." << std::endl;
+        return;
+    }
+
+    // Copy the result to the output buffer
+    // First calculate the total size of the output tensor
+    int32_t size = 1;
+    for (auto id : this->root->out_tensor->id) {
+        size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
+    }
+
+    // Copy the data
+    memcpy(output, result, size * sizeof(float));
 }
 
 void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs) {
@@ -611,30 +635,62 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs) {
         return nullptr;
     }
 
-    void* output = nullptr;
-
     if (node->node_type == EinsumTree::node_t::leaf) {
+        // For leaf nodes, return the corresponding input data directly
         size_t index = 0;
         for (auto leaf_id : this->leaf_ids) {
             if (node->id == leaf_id) {
-                output = static_cast<void*>(inputs[index]);
-                break;
+                return inputs[index];  // Return the input data directly
             }
             index++;
         }
-    } else if (node->node_type == EinsumTree::node_t::contraction) {
+        std::cerr << "Leaf node ID " << node->id << " not found in leaf_ids." << std::endl;
+        return nullptr;
+    }
+
+    // For non-leaf nodes, we need to allocate output memory
+    int32_t size = 1;
+    for (auto id : node->out_tensor->id) {
+        size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
+    }
+
+    float* output_f = new float[size]();  // Initialize to zero
+    void* output = static_cast<void*>(output_f);
+
+    // Track allocated memory for cleanup
+    this->allocated_memory.push_back(output);
+
+    if (node->node_type == EinsumTree::node_t::contraction) {
         // Execute left and right children
         void* left_output = executeNode(node->left_child, inputs);
         void* right_output = executeNode(node->right_child, inputs);
+
         if (left_output == nullptr || right_output == nullptr) {
             std::cerr << "Failed to execute child nodes." << std::endl;
+            delete[] output_f;  // Clean up allocated memory
+            return nullptr;
         }
+
+        // Execute the tensor operation
         node->op.execute(left_output, right_output, output);
+    } else if (node->node_type == EinsumTree::node_t::permutation) {
+        // Execute child node
+        void* child_output = executeNode(node->left_child, inputs);
+
+        if (child_output == nullptr) {
+            std::cerr << "Failed to execute child node for permutation." << std::endl;
+            delete[] output_f;  // Clean up allocated memory
+            return nullptr;
+        }
+
+        // Execute the permutation operation
+        node->op.execute(child_output, nullptr, output);
     } else {
-        std::cerr << "Unsupported node type for execution." << std::endl;
+        std::cerr << "Unsupported node type for execution: " << static_cast<int>(node->node_type) << std::endl;
+        delete[] output_f;  // Clean up allocated memory
+        return nullptr;
     }
 
-    // Perform the operation defined in the node
     return output;
 }
 
@@ -686,4 +742,14 @@ void EinsumTree::printNode(TreeNode* node, const std::string& prefix, bool isLas
             printNode(node->right_child, childPrefix, true);
         }
     }
+}
+
+void EinsumTree::cleanup() {
+    // Free all allocated memory from intermediate computations
+    for (void* ptr : this->allocated_memory) {
+        if (ptr != nullptr) {
+            delete[] static_cast<float*>(ptr);
+        }
+    }
+    this->allocated_memory.clear();
 }

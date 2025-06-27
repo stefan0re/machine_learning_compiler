@@ -5,6 +5,7 @@ from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import pandas as pd
+import time
 
 
 def load_and_save_dataset():
@@ -72,44 +73,62 @@ def test_model(model):
 
     # Disable gradient computation (faster & safer for inference)
     with torch.no_grad():
-        outputs = model(X_test)
+        outputs = model(X_test)     
+        
         _, predicted = torch.max(outputs, 1)  # Get class with highest score
         accuracy = (predicted == y_test).sum().item() / len(y_test)
         print(f"Test Accuracy: {accuracy * 100:.2f}%")
 
+def test_performance(model):
+    # Evaluation mode
+    model.eval()
+    with torch.no_grad():
 
-# Model setup
-a = 1 # batch size
-b = 4 # Iris features
-c = 64
-d = 16
-e = 3 # Iris species
+        start = time.perf_counter()
+        for _ in range(10000):
+            outputs = model(X_test)
+        end = time.perf_counter()  
+        exec_time = end - start
+        print(f"Model evaluation took {exec_time:.8f} seconds")
+        flops = 2 * 10000 * 4 * 64 * 16 * 3 - 3
 
-X_train, X_test, y_train, y_test = load_and_save_dataset()
+        print(f"FLOPs: {(flops / exec_time) * 1e-9:,}")
 
-model = BasicNet(b, c, d, e)
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
-# Training loop
-epochs = 100
-for epoch in range(epochs):
-    model.train()
-    optimizer.zero_grad()
-    outputs = model(X_train)
-    loss = criterion(outputs, y_train)
-    loss.backward()
-    optimizer.step()
-    print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
+if __name__ == "__main__":
+    # Model setup
+    a = 1 # batch size
+    b = 4 # Iris features
+    c = 64
+    d = 16
+    e = 3 # Iris species
 
-save_model(model)
+    X_train, X_test, y_train, y_test = load_and_save_dataset()
 
-test_model(model)
+    model = BasicNet(b, c, d, e)
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
-# Print the einsum-notation for the model
-print(f"a: {a}"); 
-print(f"b: {b}"); 
-print(f"c: {c}"); 
-print(f"d: {d}"); 
-print(f"e: {e}"); 
-print(f"[[[b,a],[c,b]->[c,a]],[d,c]->[d,a]],[e,d]->[e,a]"); 
+    # Training loop
+    epochs = 100
+    for epoch in range(epochs):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train)
+        loss = criterion(outputs, y_train)
+        loss.backward()
+        optimizer.step()
+        print(f"Epoch {epoch+1}/{epochs}, Loss: {loss.item():.4f}")
+
+    save_model(model)
+
+    test_model(model)
+
+    # Print the einsum-notation for the model
+    print(f"a: {a}"); 
+    print(f"b: {b}"); 
+    print(f"c: {c}"); 
+    print(f"d: {d}"); 
+    print(f"e: {e}"); 
+    print(f"[[[b,a],[c,b]->[c,a]],[d,c]->[d,a]],[e,d]->[e,a]"); 
+    test_performance(model)
