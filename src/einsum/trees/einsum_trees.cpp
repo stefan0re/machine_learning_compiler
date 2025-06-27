@@ -453,7 +453,15 @@ std::vector<uint32_t> EinsumTree::identifyNode(TreeNode* node) {
         out_dims.push_back(this->id_dims[dim_id]);
     }
     node->out_tensor = new Tensor(out_dims);
+    int32_t size = 1;
+    for (auto id : node->out_tensor->id) {
+        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n))) {
+            size *= id.dim_sizes;
+        }
+    }
 
+    float* output_f = new float[size];
+    void* output = static_cast<void*>(output_f);
     if (node->node_type == node_t::permutation) {
         std::vector<uint32_t> child_dims = identifyNode(node->left_child);
         node->left_tensor = new Tensor(child_dims);
@@ -611,7 +619,15 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs) {
         return nullptr;
     }
 
-    void* output = nullptr;
+    int32_t size = 1;
+    for (auto id : node->out_tensor->id) {
+        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n))) {
+            size *= id.dim_sizes;
+        }
+    }
+
+    float* output_f = new float[size];
+    void* output = static_cast<void*>(output_f);
 
     if (node->node_type == EinsumTree::node_t::leaf) {
         size_t index = 0;

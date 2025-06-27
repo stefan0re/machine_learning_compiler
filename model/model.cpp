@@ -103,10 +103,6 @@ int main() {
             std::cout << "Error at index " << i << ": " << l_out[i] << " != " << l_out_ref[i] << std::endl;
             count_error++;
         }
-        if (count_error > 10) {
-            std::cout << "Too many errors, stopping output." << std::endl;
-            break;
-        }
     }
     std::cout << "Error: " << error << std::endl;
 
