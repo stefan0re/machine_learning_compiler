@@ -40,10 +40,8 @@ namespace einsum::backend {
 
         // execute the operation
         if ((_loop_order.size() > 0) && _tensor_in1->id[_loop_order[0]].exec_t == 2) {
-            std::cout << "shared memory parallelization" << std::endl;
             execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
         } else {
-            std::cout << "sequential execution" << std::endl;
             execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
         }
     }
