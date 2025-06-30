@@ -1,3 +1,5 @@
+#include <chrono>
+#include <cstdlib>
 #include <iostream>
 
 #include "../src/einsum/trees/einsum_trees.h"
@@ -105,6 +107,22 @@ int main() {
         }
     }
     std::cout << "Error: " << error << std::endl;
+
+    double flops = (2.0 * BATCH_SIZE * 4 * 64 * 16 * 3) - 3 * BATCH_SIZE;
+
+    size_t reps = 10000;
+
+    auto tp0 = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < reps; i++) {
+        tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
+    }
+    auto tp1 = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> duration = tp1 - tp0;
+    double time = duration.count();
+    double gflops = (flops * reps) / (time * 1e9);
+    std::cout << "Execution time for 1000 iterations: " << time << " seconds" << std::endl;
+    std::cout << "GFLOPS: " << gflops << std::endl;
 
     return EXIT_SUCCESS;
 }

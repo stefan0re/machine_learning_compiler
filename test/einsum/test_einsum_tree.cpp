@@ -31,9 +31,6 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
         std::cout << output[i] << " ";
     }
     std::cout << std::endl;
-    delete[] input1;
-    delete[] input2;
-    delete[] output;
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
