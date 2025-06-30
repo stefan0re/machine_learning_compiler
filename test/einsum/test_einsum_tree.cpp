@@ -9,7 +9,7 @@
 
 using namespace einsum::trees;
 
-/*TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
+TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees][EinsumTrees]") {
     std::cout << "########## Einsum tree test case 1 ##########" << std::endl;
     std::string str_repr = "[0,1,z],[1,2]r->[0,2]r";
     EinsumTree tree = EinsumTree(str_repr, {10, 20, 30});
@@ -31,10 +31,7 @@ using namespace einsum::trees;
         std::cout << output[i] << " ";
     }
     std::cout << std::endl;
-    delete[] input1;
-    delete[] input2;
-    delete[] output;
-}*/
+}
 
 TEST_CASE("Einsum::Trees::EinsumTrees::parse test only binary", "[Einsum][Trees][EinsumTrees][parse]") {
     std::cout << "########### Einsum tree test case 2 ##########" << std::endl;
