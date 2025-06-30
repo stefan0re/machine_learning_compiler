@@ -45,8 +45,11 @@ class einsum::trees::EinsumTree {
 
     TreeNode* root = nullptr;
     uint32_t size = 0;
+    bool use_bias = false;
+
     std::vector<uint32_t> id_dims = {};
     std::vector<int32_t> leaf_ids = {};
+    std::vector<uint32_t> bias_ids = {};
     std::vector<void*> allocated_memory = {};  // Track allocated memory for cleanup
 
     /**
@@ -83,7 +86,7 @@ class einsum::trees::EinsumTree {
      * @param inputs Vector of input tensors for the execution.
      * @return void* Pointer to the output tensor after execution.
      */
-    void* executeNode(TreeNode* node, std::vector<void*> inputs);
+    void* executeNode(TreeNode* node, std::vector<void*> inputs, std::vector<void*> biases);
     /**
      * @brief Swaps the left and right children of a node if the the parent is contraction.
      *
@@ -124,8 +127,9 @@ class einsum::trees::EinsumTree {
      *
      * @param str_repr String representation of the einsum operation.
      * @param id_dims Vector of dimensions for each tensor ID in the einsum operation.
+     * @param use_bias Boolean indicating whether to use a bias tensor in the operation.
      */
-    EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims);
+    EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims, bool use_bias = false);
     /**
      * @brief Lowers the Einsum tree nodes for each to hold a tensor operations.
      */
@@ -141,7 +145,7 @@ class einsum::trees::EinsumTree {
      * @param inputs Vector of input tensors to be used in the execution.
      * @return void* Pointer to the output tensor after execution.
      */
-    void execute(std::vector<void*> inputs, void* output);
+    void execute(std::vector<void*> inputs, std::vector<void*> biases, void* output);
     /**
      * @brief Prints the structure of the Einsum tree.
      */

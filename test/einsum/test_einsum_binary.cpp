@@ -42,12 +42,12 @@ TEST_CASE("Einsum::Backend::MatMul", "[Einsum][Backend][Einsum][MatMul]") {
              einsum::backend::TensorOperation::prim_t::none,
              einsum::backend::TensorOperation::prim_t::gemm,
              einsum::backend::TensorOperation::prim_t::none,
-             &in_tensor1, &in_tensor2, &out_tensor);
+             &in_tensor1, &in_tensor2, nullptr, &out_tensor);
 
     op.optimize();
     op.compile();
     float* output = new float[10 * 30];
-    op.execute(input1, input2, output);
+    op.execute(input1, input2, nullptr, output);
 
     bool is_correct = test::matmul::compare_matrix(10, 30, output, output);
 
