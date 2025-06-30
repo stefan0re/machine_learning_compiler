@@ -92,7 +92,7 @@ int main() {
     tree.print();
     tree.lower();
 
-    tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
+    tree.execute({l_in0, l_in1, l_in2, l_in3}, {}, l_out);
 
     // check if output is correct
     double error = 0.0;
