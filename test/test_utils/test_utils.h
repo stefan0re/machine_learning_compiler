@@ -1,5 +1,5 @@
-#ifndef EINSUM_TREES_EINSUM_TREE_H
-#define EINSUM_TREES_EINSUM_TREE_H
+#ifndef TEST_TEST_UTILS_H
+#define TEST_TEST_UTILS_H
 
 #include <cstdint>
 #include <iostream>
@@ -13,6 +13,7 @@ namespace test {
     namespace matmul {
         void generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero = false, bool visualization = false);
         bool compare_matrix(uint32_t height, uint32_t width, float* M, float* C);
+        void print_matrix(uint32_t height, uint32_t width, float* M);
     }  // namespace matmul
 }  // namespace test
 
