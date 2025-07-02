@@ -698,8 +698,14 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
 
         // Execute the tensor operation
         node->op.execute(left_output, right_output, bias, output);
-        delete[] static_cast<float*>(left_output);   // Clean up left output
-        delete[] static_cast<float*>(right_output);  // Clean up right output
+        if (node->left_child->node_type != EinsumTree::node_t::leaf) {
+            // If the left child is not a leaf, we need to clean up the left output
+            delete[] static_cast<float*>(left_output);
+        }
+        if (node->right_child->node_type != EinsumTree::node_t::leaf) {
+            // If the right child is not a leaf, we need to clean up the right output
+            delete[] static_cast<float*>(right_output);
+        }
     } else if (node->node_type == EinsumTree::node_t::permutation) {
         // Execute child node
         void* child_output = executeNode(node->left_child, inputs, biases);
