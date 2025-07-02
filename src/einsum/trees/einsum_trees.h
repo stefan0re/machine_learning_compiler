@@ -50,7 +50,6 @@ class einsum::trees::EinsumTree {
     std::vector<uint32_t> id_dims = {};
     std::vector<int32_t> leaf_ids = {};
     std::vector<uint32_t> bias_ids = {};
-    std::vector<void*> allocated_memory = {};  // Track allocated memory for cleanup
 
     /**
      * @brief Prints the structure of a Einsum tree node.
@@ -117,6 +116,12 @@ class einsum::trees::EinsumTree {
      * @param node Pointer to the current node in the tree to be optimized.
      */
     void optimizeNode(TreeNode* node);
+    /**
+     * @brief Deletes a node and its children recursively.
+     *
+     * @param node Pointer to the node to be deleted.
+     */
+    void deleteNode(TreeNode* node);
 
    public:
     /**
@@ -154,6 +159,12 @@ class einsum::trees::EinsumTree {
      * @brief Cleans up allocated memory from intermediate computations.
      */
     void cleanup();
+
+    /**
+     * @brief Destructor for the EinsumTree class.
+     * Cleans up the tree structure and allocated memory.
+     */
+    void delete_tree();
 };
 
 #endif
