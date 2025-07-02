@@ -13,7 +13,7 @@ namespace test {
     namespace matmul {
         void generate_matrix(uint32_t height, uint32_t width, float* M, bool set_zero = false, bool visualization = false);
         bool compare_matrix(uint32_t height, uint32_t width, float* M, float* C);
-        void print_matrix(uint32_t height, uint32_t width, float* M);
+        void print_matrix(uint32_t height, uint32_t width, float* M, std::string name);
     }  // namespace matmul
 }  // namespace test
 

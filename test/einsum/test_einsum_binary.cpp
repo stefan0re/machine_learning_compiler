@@ -16,9 +16,13 @@ TEST_CASE("Einsum::Backend::MatMul", "[Einsum][Backend][Einsum][MatMul]") {
     float* input2 = new float[30 * 20];
     test::matmul::generate_matrix(10, 20, input1, false, true);
     test::matmul::generate_matrix(30, 20, input2, false, true);
+
+    test::matmul::print_matrix(10, 20, input1, "input1");
+    test::matmul::print_matrix(30, 20, input2, "input2");
+
     float* output_ref = new float[10 * 30];
-    std::cout << "Input1: " << std::endl;
     gemm_ref(input1, input2, output_ref, 10, 30, 20, 10, 20, 10);
+    test::matmul::print_matrix(10, 30, output_ref, "output_ref");
 
     Tensor in_tensor1(10, 20);
     in_tensor1.id[0].dim_t = static_cast<int>(einsum::backend::TensorOperation::dim_t::m);
@@ -48,6 +52,8 @@ TEST_CASE("Einsum::Backend::MatMul", "[Einsum][Backend][Einsum][MatMul]") {
     op.compile();
     float* output = new float[10 * 30];
     op.execute(input1, input2, nullptr, output);
+
+    test::matmul::print_matrix(10, 30, output, "output");
 
     bool is_correct = test::matmul::compare_matrix(10, 30, output, output_ref);
 

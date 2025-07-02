@@ -34,7 +34,9 @@ bool test::matmul::compare_matrix(uint32_t height, uint32_t width, float* M, flo
     return true;
 }
 
-void test::matmul::print_matrix(uint32_t height, uint32_t width, float* M) {
+void test::matmul::print_matrix(uint32_t height, uint32_t width, float* M, std::string name) {
+    std::cout << "Matrix: " << name << std::endl;
+
     for (uint32_t i = 0; i < height; i++) {
         for (uint32_t j = 0; j < width; j++) {
             int index = j * height + i;
