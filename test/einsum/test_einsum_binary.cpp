@@ -12,12 +12,12 @@
 
 TEST_CASE("Einsum::Backend::MatMul", "[Einsum][Backend][Einsum][MatMul]") {
     std::cout << "########## Einsum binary test case 1 ##########" << std::endl;
-
     float* input1 = new float[10 * 20];
+    float* input2 = new float[30 * 20];
     test::matmul::generate_matrix(10, 20, input1, false, true);
-    float* input2 = new float[20 * 30];
-    test::matmul::generate_matrix(30, 20, input1, false, true);
+    test::matmul::generate_matrix(30, 20, input2, false, true);
     float* output_ref = new float[10 * 30];
+    std::cout << "Input1: " << std::endl;
     gemm_ref(input1, input2, output_ref, 10, 30, 20, 10, 20, 10);
 
     Tensor in_tensor1(10, 20);
@@ -49,7 +49,7 @@ TEST_CASE("Einsum::Backend::MatMul", "[Einsum][Backend][Einsum][MatMul]") {
     float* output = new float[10 * 30];
     op.execute(input1, input2, nullptr, output);
 
-    bool is_correct = test::matmul::compare_matrix(10, 30, output, output);
+    bool is_correct = test::matmul::compare_matrix(10, 30, output, output_ref);
 
     REQUIRE(is_correct);
 }
