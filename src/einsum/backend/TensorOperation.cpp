@@ -18,6 +18,7 @@ namespace einsum::backend {
                                                     prim_t prim_last_touch,
                                                     Tensor* in0,
                                                     Tensor* in1,
+                                                    Tensor* bias,
                                                     Tensor* out) {
         _dtype = dtype;
         _prim_first_touch = prim_first_touch;
@@ -26,28 +27,37 @@ namespace einsum::backend {
 
         _tensor_in0 = in0;
         _tensor_in1 = in1;
+        if (bias != nullptr) {
+            _use_bias = true;
+        } else {
+            _use_bias = false;
+        }
+        _tensor_bias = bias;
         _tensor_out = out;
 
         return TensorOperation::error_t::success;
     }
     void TensorOperation::execute(void const* tensor_in0,
                                   void const* tensor_in1,
+                                  void const* tensor_bias,
                                   void* tensor_out) {
         // get pointers to input and output data
         char const* l_ptr_in0 = static_cast<char const*>(tensor_in0);
         char const* l_ptr_in1 = static_cast<char const*>(tensor_in1);
+        char const* l_ptr_bias = static_cast<char const*>(tensor_bias);
         char* l_ptr_out = static_cast<char*>(tensor_out);
 
         // execute the operation
         if ((_loop_order.size() > 0) && _tensor_in1->id[_loop_order[0]].exec_t == 2) {
-            execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+            execute_iter_parallel(l_ptr_in0, l_ptr_in1, l_ptr_bias, l_ptr_out, false, false);
         } else {
-            execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+            execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_bias, l_ptr_out, false, false);
         }
     }
     void TensorOperation::execute_iter(int64_t id_loop,
                                        char const* ptr_in0,
                                        char const* ptr_in1,
+                                       char const* ptr_bias,
                                        char* ptr_out,
                                        bool first_access,
                                        bool last_access) {
@@ -63,6 +73,7 @@ namespace einsum::backend {
             // update pointer with strides
             char* l_ptr_in0 = const_cast<char*>(ptr_in0);
             char* l_ptr_in1 = const_cast<char*>(ptr_in1);
+            char* l_ptr_bias = const_cast<char*>(ptr_bias);
             char* l_ptr_out = ptr_out;
 
             if (l_size > 1) {
@@ -82,6 +93,7 @@ namespace einsum::backend {
                 execute_iter(id_loop + 1,
                              l_ptr_in0,
                              l_ptr_in1,
+                             l_ptr_bias,
                              l_ptr_out,
                              first_access,
                              last_access);
@@ -98,10 +110,38 @@ namespace einsum::backend {
                                0,
                                0);
 
+                if (_use_bias) {
+                    add_bias(l_ptr_out, l_ptr_bias, l_ptr_out);
+                }
+
                 // call last touch kernel if necessary
                 if (last_access && (_prim_last_touch != prim_t::none)) {
                     _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                 }
+            }
+        }
+    }
+
+    void TensorOperation::add_bias(const char* ptr_in, const char* ptr_bias, char* ptr_out) {
+        const float* input = reinterpret_cast<const float*>(ptr_in);
+        const float* bias = reinterpret_cast<const float*>(ptr_bias);
+        float* output = reinterpret_cast<float*>(ptr_out);
+
+        size_t inner_loop_size = 1;
+        size_t outer_loop_size = 1;
+
+        for (size_t i = 0; i < _tensor_out->id.size(); ++i) {
+            if (_tensor_out->id[i].dim_t == 2) {
+                inner_loop_size *= _tensor_out->id[i].dim_sizes;
+            } else if (_tensor_out->id[i].dim_t == 1) {
+                outer_loop_size *= _tensor_out->id[i].dim_sizes;
+            }
+        }
+
+        for (size_t outer = 0; outer < outer_loop_size; outer++) {
+            for (size_t inner = 0; inner < inner_loop_size; inner++) {
+                size_t index = inner * outer_loop_size + outer;
+                output[index] = input[index] + bias[inner];
             }
         }
     }
@@ -288,6 +328,7 @@ namespace einsum::backend {
 
     void TensorOperation::execute_iter_parallel(const char* ptr_in0,
                                                 const char* ptr_in1,
+                                                const char* ptr_bias,
                                                 char* ptr_out,
                                                 bool first_access,
                                                 bool last_access) {
@@ -304,6 +345,7 @@ namespace einsum::backend {
                 execute_iter(1,
                              l_ptr_in0,
                              l_ptr_in1,
+                             ptr_bias,
                              l_ptr_out,
                              first_access,
                              last_access);

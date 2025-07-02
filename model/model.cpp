@@ -94,7 +94,7 @@ int main() {
     tree.print();
     tree.lower();
 
-    tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
+    tree.execute({l_in0, l_in1, l_in2, l_in3}, {}, l_out);
 
     // check if output is correct
     double error = 0.0;
@@ -114,7 +114,7 @@ int main() {
 
     auto tp0 = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < reps; i++) {
-        tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
+        tree.execute({l_in0, l_in1, l_in2, l_in3}, {}, l_out);
     }
     auto tp1 = std::chrono::high_resolution_clock::now();
 
