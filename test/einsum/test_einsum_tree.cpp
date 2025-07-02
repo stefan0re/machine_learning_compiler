@@ -32,6 +32,7 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
         std::cout << output[i] << " ";
     }
     std::cout << std::endl;
+
     tree.delete_tree();
 }
 
@@ -101,10 +102,6 @@ TEST_CASE("Einsum::Trees::EinsumTrees::small model and bias", "[Einsum][Trees][E
     test::matmul::generate_matrix(4, 4, input2, true, true);
     test::matmul::generate_matrix(4, 1, bias1, false, true);
 
-    test::matmul::print_matrix(4, 4, input1);
-    test::matmul::print_matrix(4, 4, input2);
-    test::matmul::print_matrix(4, 1, bias1);
-
     tree.execute({input1, input2}, {bias1}, output);
 
     float* output_ref = new float[4 * 4];
@@ -118,6 +115,8 @@ TEST_CASE("Einsum::Trees::EinsumTrees::small model and bias", "[Einsum][Trees][E
     bool is_correct = test::matmul::compare_matrix(4, 4, output, output_ref);
     REQUIRE(is_correct);
 
+    delete[] input1;
+    delete[] input2;
     delete[] bias1;
     delete[] output;
     delete[] output_ref;
