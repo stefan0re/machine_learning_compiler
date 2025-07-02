@@ -110,7 +110,6 @@ namespace einsum::backend {
                                0,
                                0);
 
-                // add bias if necessary
                 if (_use_bias) {
                     add_bias(l_ptr_out, l_ptr_bias, l_ptr_out);
                 }
@@ -132,16 +131,16 @@ namespace einsum::backend {
         size_t outer_loop_size = 1;
 
         for (size_t i = 0; i < _tensor_out->id.size(); ++i) {
-            if (_tensor_out->id[i].dim_t == 3) {
+            if (_tensor_out->id[i].dim_t == 2) {
                 inner_loop_size *= _tensor_out->id[i].dim_sizes;
-            } else {
+            } else if (_tensor_out->id[i].dim_t == 1) {
                 outer_loop_size *= _tensor_out->id[i].dim_sizes;
             }
         }
 
-        for (size_t outer = 0; outer < outer_loop_size; ++outer) {
-            for (size_t inner = 0; inner < inner_loop_size; ++inner) {
-                size_t index = outer * inner_loop_size + inner;
+        for (size_t outer = 0; outer < outer_loop_size; outer++) {
+            for (size_t inner = 0; inner < inner_loop_size; inner++) {
+                size_t index = inner * outer_loop_size + outer;
                 output[index] = input[index] + bias[inner];
             }
         }
