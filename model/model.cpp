@@ -40,22 +40,55 @@ void model_ref(float* in_0,
         result_gemm_1[i] = 0;
     }
 
-    gemm_ref(in_0, in_1, result_gemm_0, BATCH_SIZE, 64, 4, BATCH_SIZE, 4, BATCH_SIZE);
+    // GEMM 0: M = 16, N = 64, K = 4
+    gemm_ref(static_cast<float*>(in_tensors[0]), static_cast<float*>(in_tensors[1]), result_gemm_0, BATCH_SIZE, 64, 4, BATCH_SIZE, 4, BATCH_SIZE);
 
+    // Add bias1 to result_gemm_0
+    float* bias1 = static_cast<float*>(biases[0]);
+    for (size_t i = 0; i < BATCH_SIZE; i++) {
+        for (size_t j = 0; j < 64; j++) {
+            size_t index = j * BATCH_SIZE + i;
+            result_gemm_0[index] += bias1[j];
+        }
+    }
+
+    // Apply ReLU activation
     for (size_t i = 0; i < BATCH_SIZE * 64; i++) {
         if (result_gemm_0[i] < 0) {
             result_gemm_0[i] = 0.0;
         }
     }
 
-    gemm_ref(result_gemm_0, in_2, result_gemm_1, BATCH_SIZE, 16, 64, BATCH_SIZE, 64, BATCH_SIZE);
+    // GEMM 1: M = 16, N = 16, K = 64
+    gemm_ref(result_gemm_0, static_cast<float*>(in_tensors[2]), result_gemm_1, BATCH_SIZE, 16, 64, BATCH_SIZE, 64, BATCH_SIZE);
 
+    // Add bias2 to result_gemm_1
+    float* bias2 = static_cast<float*>(biases[1]);
+    for (size_t i = 0; i < BATCH_SIZE; i++) {
+        for (size_t j = 0; j < 16; j++) {
+            size_t index = j * BATCH_SIZE + i;
+            result_gemm_1[index] += bias2[j];
+        }
+    }
+
+    // Apply ReLU activation
     for (size_t i = 0; i < BATCH_SIZE * 16; i++) {
         if (result_gemm_1[i] < 0) {
             result_gemm_1[i] = 0.0;
         }
     }
-    gemm_ref(result_gemm_1, in_3, out, BATCH_SIZE, 3, 16, BATCH_SIZE, 16, BATCH_SIZE);
+
+    // GEMM 2: M = 16, N = 3, K = 16
+    gemm_ref(result_gemm_1, static_cast<float*>(in_tensors[3]), out, BATCH_SIZE, 3, 16, BATCH_SIZE, 16, BATCH_SIZE);
+
+    // Add bias3 to out
+    float* bias3 = static_cast<float*>(biases[2]);
+    for (size_t i = 0; i < BATCH_SIZE; i++) {
+        for (size_t j = 0; j < 3; j++) {
+            size_t index = j * BATCH_SIZE + i;
+            out[index] += bias3[j];
+        }
+    }
 }
 
 int main() {
@@ -113,6 +146,7 @@ int main() {
     size_t reps = 10000;
 
     auto tp0 = std::chrono::high_resolution_clock::now();
+    auto tp0 = std::chrono::high_resolution_clock::now();
     for (size_t i = 0; i < reps; i++) {
         tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
     }
@@ -122,6 +156,7 @@ int main() {
     double time = duration.count();
     double gflops = (flops * reps) / (time * 1e9);
     std::cout << "Execution time for 1000 iterations: " << time << " seconds" << std::endl;
+    std::cout << "GFLOPS: " << gflops << std::endl;
     std::cout << "GFLOPS: " << gflops << std::endl;
 
     return EXIT_SUCCESS;
