@@ -85,7 +85,6 @@ void model_ref(std::vector<void*> in_tensors,
     for (size_t i = 0; i < BATCH_SIZE; i++) {
         for (size_t j = 0; j < 3; j++) {
             out[i * 3 + j] += bias3[j];
-            std::cout << "out[" << i * 3 + j << "] = " << out[i * 3 + j] << std::endl;
         }
     }
 }
@@ -141,7 +140,6 @@ int main() {
     tree.print();
 
     tree.execute(data_and_weights, biases, l_out);
-
     // check if output is correct
     double error = 0.0;
     size_t count_error = 0;
