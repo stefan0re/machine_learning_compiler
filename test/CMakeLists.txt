@@ -21,6 +21,14 @@ set(TEST_SOURCES
 
 add_executable(tests ${TEST_SOURCES})
 
+target_include_directories(tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/test_utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/tensor
+    ${CMAKE_CURRENT_SOURCE_DIR}/einsum
+    ${CMAKE_CURRENT_SOURCE_DIR}/mini_jit
+    ${CMAKE_CURRENT_SOURCE_DIR}/src    # falls du dort auch TensorOperation.h usw. hast
+)
+
 target_link_libraries(tests
     PRIVATE
         mini_jit                 # library under test

@@ -45,9 +45,11 @@ class einsum::trees::EinsumTree {
 
     TreeNode* root = nullptr;
     uint32_t size = 0;
+    bool use_bias = false;
+
     std::vector<uint32_t> id_dims = {};
     std::vector<int32_t> leaf_ids = {};
-    std::vector<void*> allocated_memory = {};  // Track allocated memory for cleanup
+    std::vector<uint32_t> bias_ids = {};
 
     /**
      * @brief Prints the structure of a Einsum tree node.
@@ -83,7 +85,7 @@ class einsum::trees::EinsumTree {
      * @param inputs Vector of input tensors for the execution.
      * @return void* Pointer to the output tensor after execution.
      */
-    void* executeNode(TreeNode* node, std::vector<void*> inputs);
+    void* executeNode(TreeNode* node, std::vector<void*> inputs, std::vector<void*> biases);
     /**
      * @brief Swaps the left and right children of a node if the the parent is contraction.
      *
@@ -114,6 +116,12 @@ class einsum::trees::EinsumTree {
      * @param node Pointer to the current node in the tree to be optimized.
      */
     void optimizeNode(TreeNode* node);
+    /**
+     * @brief Deletes a node and its children recursively.
+     *
+     * @param node Pointer to the node to be deleted.
+     */
+    void deleteNode(TreeNode* node);
 
    public:
     /**
@@ -124,8 +132,9 @@ class einsum::trees::EinsumTree {
      *
      * @param str_repr String representation of the einsum operation.
      * @param id_dims Vector of dimensions for each tensor ID in the einsum operation.
+     * @param use_bias Boolean indicating whether to use a bias tensor in the operation.
      */
-    EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims);
+    EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims, bool use_bias = false);
     /**
      * @brief Lowers the Einsum tree nodes for each to hold a tensor operations.
      */
@@ -141,7 +150,7 @@ class einsum::trees::EinsumTree {
      * @param inputs Vector of input tensors to be used in the execution.
      * @return void* Pointer to the output tensor after execution.
      */
-    void execute(std::vector<void*> inputs, void* output);
+    void execute(std::vector<void*> inputs, std::vector<void*> biases, void* output);
     /**
      * @brief Prints the structure of the Einsum tree.
      */
@@ -150,6 +159,12 @@ class einsum::trees::EinsumTree {
      * @brief Cleans up allocated memory from intermediate computations.
      */
     void cleanup();
+
+    /**
+     * @brief Destructor for the EinsumTree class.
+     * Cleans up the tree structure and allocated memory.
+     */
+    void delete_tree();
 };
 
 #endif

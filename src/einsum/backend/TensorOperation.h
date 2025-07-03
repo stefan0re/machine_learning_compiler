@@ -81,11 +81,14 @@ class einsum::backend::TensorOperation {
 
     int _last_touch_id = -1;
 
+    bool _use_bias = false;  // flag to indicate if bias is used
+
     std::vector<int32_t> _loop_order;
 
-    Tensor* _tensor_in0;  // first input tensor
-    Tensor* _tensor_in1;  // second input tensor (use nullptr if unary)
-    Tensor* _tensor_out;  // output tensor
+    Tensor* _tensor_in0;   // first input tensor
+    Tensor* _tensor_in1;   // second input tensor (use nullptr if unary)
+    Tensor* _tensor_bias;  // bias tensor (use nullptr if no bias)
+    Tensor* _tensor_out;   // output tensor
 
     // owned storage
 
@@ -100,6 +103,7 @@ class einsum::backend::TensorOperation {
      * @param prim_last_touch   Type of the last touch primitive.
      * @param in0               First input tensor.
      * @param in1               Second input tensor (use nullptr if unary).
+     * @param bias              Bias tensor (use nullptr if no bias).
      * @param out               Output tensor.
      *
      * @return error_t::success on success, another error_t value otherwise.
@@ -110,6 +114,7 @@ class einsum::backend::TensorOperation {
                   prim_t prim_last_touch,
                   Tensor* in0,
                   Tensor* in1,
+                  Tensor* bias,
                   Tensor* out);
 
     /**
@@ -165,10 +170,12 @@ class einsum::backend::TensorOperation {
      *
      * @param tensor_in0 First input tensor.
      * @param tensor_in1 Second input tensor (use nullptr if unary).
+     * @param tensor_bias Bias tensor (use nullptr if no bias).
      * @param tensor_out Output tensor.
      **/
     void execute(void const* tensor_in0,
                  void const* tensor_in1,
+                 void const* tensor_bias,
                  void* tensor_out);
 
     /**
@@ -178,6 +185,7 @@ class einsum::backend::TensorOperation {
      * @param id_loop      Dimension id of the loop which is executed.
      * @param ptr_in0      Pointer to the first input tensor's data.
      * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
+     * @param ptr_bias     Pointer to the bias tensor's data (use nullptr if no bias).
      * @param ptr_out      Pointer to the output tensor's data.
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
@@ -185,9 +193,21 @@ class einsum::backend::TensorOperation {
     void execute_iter(int64_t id_loop,
                       char const* ptr_in0,
                       char const* ptr_in1,
+                      char const* ptr_bias,
                       char* ptr_out,
                       bool first_access,
                       bool last_access);
+
+    /**
+     * @brief Adds bias to the output tensor.
+     *
+     * @param ptr_in Pointer to the input tensor's data in row major.
+     * @param ptr_bias Pointer to the bias tensor's data in row major.
+     * @param ptr_out Pointer to the output tensor's data in row major.
+     */
+    void add_bias(char const* ptr_in,
+                  char const* ptr_bias,
+                  char* ptr_out);
 
     /**
      * Generates a first touch kernel with the given parameters.
@@ -206,6 +226,7 @@ class einsum::backend::TensorOperation {
      **/
     void execute_iter_parallel(char const* ptr_in0,
                                char const* ptr_in1,
+                               char const* ptr_bias,
                                char* ptr_out,
                                bool first_access,
                                bool last_access);

@@ -25,10 +25,8 @@ using namespace einsum::trees;
 
 #define BATCH_SIZE 16
 
-void model_ref(float* in_0,
-               float* in_1,
-               float* in_2,
-               float* in_3,
+void model_ref(std::vector<void*> in_tensors,
+               std::vector<void*> biases,
                float* out) {
     float* result_gemm_0 = new float[BATCH_SIZE * 64];
     float* result_gemm_1 = new float[BATCH_SIZE * 16];
@@ -92,43 +90,56 @@ void model_ref(float* in_0,
 }
 
 int main() {
+    int in_size = 4;
     std::string str_repr = "[[[1,0],[2,1]->[2,0]r],[3,2]->[3,0]r],[4,3]->[4,0]";
 
-    float* l_in0 = new float[BATCH_SIZE * 4];
-    float* l_in1 = new float[4 * 64];
-    float* l_in2 = new float[64 * 16];
-    float* l_in3 = new float[16 * 3];
+    std::vector<Tensor> in_tensors = Tensor::from_torchpp("../python/model.torchpp", in_size);
+
+    Tensor dataset = Tensor::from_csv("../python/iris.csv");
+    std::cout << "Dataset: \n"
+              << dataset.info_str() << std::endl;
+
+    std::vector<void*> data_and_weights = {
+        dataset.data,  // input data
+    };
+    std::vector<void*> biases;
+
+    uint32_t index = 0;
+    for (auto& t : in_tensors) {
+        index++;
+
+        if (t.id.size() == 2) {
+            // this is a weight matrix
+            std::cout << "Weight Tensor " << index << ": " << std::endl;
+            data_and_weights.push_back(static_cast<void*>(t.data));
+        } else if (t.id.size() == 1) {
+            // this is a bias vector
+            std::cout << "Bias Tensor " << index << ": " << std::endl;
+            biases.push_back(static_cast<void*>(t.data));
+        } else {
+            std::cout << "Unknown Tensor type for Tensor " << index << ": " << std::endl;
+        }
+        t.info();
+    }
+
     float* l_out = new float[BATCH_SIZE * 3];
     float* l_out_ref = new float[BATCH_SIZE * 3];
 
     srand48(time(NULL));
 
-    for (size_t i = 0; i < BATCH_SIZE * 4; i++) {
-        l_in0[i] = (float)(drand48() * 10.0f) - 5.0f;
-    }
-    for (size_t i = 0; i < 4 * 64; i++) {
-        l_in1[i] = (float)(drand48() * 10.0f) - 5.0f;
-    }
-    for (size_t i = 0; i < 64 * 16; i++) {
-        l_in2[i] = (float)(drand48() * 10.0f) - 5.0f;
-    }
-    for (size_t i = 0; i < 16 * 3; i++) {
-        l_in3[i] = (float)(drand48() * 10.0f) - 5.0f;
-    }
     for (size_t i = 0; i < BATCH_SIZE * 3; i++) {
         l_out[i] = 0.0f;
         l_out_ref[i] = 0.0f;
     }
 
-    model_ref(l_in0, l_in1, l_in2, l_in3, l_out_ref);
+    model_ref(data_and_weights, biases, l_out_ref);
 
-    EinsumTree tree = EinsumTree(str_repr, {BATCH_SIZE, 4, 64, 16, 3});
+    EinsumTree tree = EinsumTree(str_repr, {BATCH_SIZE, 4, 64, 16, 3}, true);
     tree.optimize();
-    tree.print();
     tree.lower();
+    tree.print();
 
-    tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
-
+    tree.execute(data_and_weights, biases, l_out);
     // check if output is correct
     double error = 0.0;
     size_t count_error = 0;
@@ -146,9 +157,9 @@ int main() {
     size_t reps = 10000;
 
     auto tp0 = std::chrono::high_resolution_clock::now();
-    auto tp0 = std::chrono::high_resolution_clock::now();
+
     for (size_t i = 0; i < reps; i++) {
-        tree.execute({l_in0, l_in1, l_in2, l_in3}, l_out);
+        tree.execute(data_and_weights, biases, l_out);
     }
     auto tp1 = std::chrono::high_resolution_clock::now();
 
@@ -156,8 +167,9 @@ int main() {
     double time = duration.count();
     double gflops = (flops * reps) / (time * 1e9);
     std::cout << "Execution time for 1000 iterations: " << time << " seconds" << std::endl;
-    std::cout << "GFLOPS: " << gflops << std::endl;
+
     std::cout << "GFLOPS: " << gflops << std::endl;
 
+    std::cout << "Number of errors: " << count_error << std::endl;
     return EXIT_SUCCESS;
 }
