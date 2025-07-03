@@ -640,7 +640,9 @@ void EinsumTree::execute(std::vector<void*> inputs, std::vector<void*> biases, v
     // First calculate the total size of the output tensor
     int32_t size = 1;
     for (auto id : this->root->out_tensor->id) {
-        size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
+        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n))) {
+            size *= id.dim_sizes;
+        }
     }
 
     // Copy the data
