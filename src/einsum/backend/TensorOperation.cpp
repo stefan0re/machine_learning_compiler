@@ -138,8 +138,9 @@ namespace einsum::backend {
             }
         }
 
-        for (size_t outer = 0; outer < outer_loop_size; outer++) {
-            for (size_t inner = 0; inner < inner_loop_size; inner++) {
+        // changed inner and outer for optimization
+        for (size_t inner = 0; inner < inner_loop_size; inner++) {
+            for (size_t outer = 0; outer < outer_loop_size; outer++) {
                 size_t index = inner * outer_loop_size + outer;
                 output[index] = input[index] + bias[inner];
             }
