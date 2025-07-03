@@ -110,7 +110,7 @@ namespace einsum::backend {
                                0,
                                0);
 
-                if (_use_bias) {
+                if (_use_bias) {  // possibly add last_access
                     add_bias(l_ptr_out, l_ptr_bias, l_ptr_out);
                 }
 
@@ -362,6 +362,10 @@ namespace einsum::backend {
                                _ldc,
                                0,
                                0);
+
+                if (_use_bias) {  // possibly add last_access
+                    add_bias(l_ptr_out, ptr_bias, l_ptr_out);
+                }
 
                 // call last touch kernel if necessary
             }
