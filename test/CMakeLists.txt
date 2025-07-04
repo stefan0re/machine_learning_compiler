@@ -13,6 +13,7 @@ FetchContent_MakeAvailable(Catch2)
 set(TEST_SOURCES
     mini_jit/test_instructions.cpp
     mini_jit/test_generators.cpp
+    mini_jit/test_gemm.cpp
     einsum/test_einsum_tree.cpp
     einsum/test_einsum_binary.cpp
     tensor/test_tensor.cpp

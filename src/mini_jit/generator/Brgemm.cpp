@@ -101,7 +101,7 @@ void mini_jit::generator::Brgemm::gen_microkernel(backend::Kernel& i_kernel,
                                                                 0,
                                                                 0));
 }
-
+// TODO: remove transpose parameter
 mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint32_t m,
                                                                            uint32_t n,
                                                                            uint32_t k,
