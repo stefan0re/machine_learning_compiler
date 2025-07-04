@@ -209,7 +209,7 @@ namespace einsum::backend {
                     }
                 }
                 _prim_m_id = _tensor_in0->id[i].loop_id;
-                _prim_m_id = _tensor_in0->id[i].dim_sizes;
+                _prim_m_size = _tensor_in0->id[i].dim_sizes;
                 found_m = true;
             }
             if (_tensor_in1->id[i].dim_t == 3 && _tensor_in1->id[i].stride == 1) {

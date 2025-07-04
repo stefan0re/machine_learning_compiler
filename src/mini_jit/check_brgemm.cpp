@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     const int64_t br_stride_a = lda * k;
     const int64_t br_stride_b = ldb * n;
 
-    std::cout << "Dimensions: "<< std::endl;
+    std::cout << "Dimensions: " << std::endl;
     std::cout << " M = " << m << std::endl;
     std::cout << " N = " << n << std::endl;
     std::cout << " K = " << k << std::endl;
@@ -73,6 +73,19 @@ int main(int argc, char *argv[]) {
             // std::cout << "Error: " << l_c_1[i] << " != " << l_c_2[i] << std::endl;
         }
     }
+
+    auto tp0 = std::chrono::high_resolution_clock::now();
+    for (uint32_t i = 0; i < 400000; i++) {
+        l_kernel(l_a, l_b, l_c_2,
+                 lda, ldb, ldc,
+                 br_stride_a, br_stride_b);
+    }
+    auto tp1 = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(tp1 - tp0).count();
+    std::cout << "Duration: " << duration << " ms" << std::endl;
+    double gflops = (2.0 * m * n * k * 400000) / (duration * 1e6);  // 2 * M * N * K operations
+    std::cout << "GFLOPS: " << gflops << std::endl;
+    std::cout << "CSV:" << m << "," << n << "," << k << "," << duration << "," << gflops << std::endl;
 
     if (l_diff < 1e-4) {
         l_diff = 0;

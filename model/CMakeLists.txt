@@ -8,7 +8,7 @@ set(EXECUTABLE_NAME run_model)
 
 
 set(SOURCE_FILES
-    model.cpp
+    simple_matmul.cpp
     ../src/tensor/tensor.cpp
     ../src/mini_jit/generator/Brgemm.cpp
     ../src/mini_jit/generator/Util.cpp
