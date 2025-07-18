@@ -56,7 +56,7 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_element(simd_fp_t reg_dest,
 uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
                                                    gpr_t add_src,
                                                    int32_t imm9,
-                                                   arr_spec_t i_dtype ) {
+                                                   arr_spec_t i_dtype) {
     uint32_t l_inst = 0x3c40'0400;
 
     l_inst |= (reg_dst & 0x1f);
@@ -67,11 +67,11 @@ uint32_t mini_jit::instructions::InstGen::neon_ldr(simd_fp_t reg_dst,
     return l_inst;
 }
 
-uint32_t mini_jit::instructions::InstGen::neon_str( simd_fp_t reg_dst,
-                                                    gpr_t add_src,
-                                                    int32_t imm9,
-                                                    arr_spec_t i_dtype ) {
-    uint32_t l_inst = 0xfc00'0400;
+uint32_t mini_jit::instructions::InstGen::neon_str(simd_fp_t reg_dst,
+                                                   gpr_t add_src,
+                                                   int32_t imm9,
+                                                   arr_spec_t i_dtype) {
+    uint32_t l_inst = 0x3c00'0400;
 
     l_inst |= (reg_dst & 0x1f);
     l_inst |= i_dtype;
@@ -104,13 +104,13 @@ uint32_t mini_jit::instructions::InstGen::neon_fmla_by_element(simd_fp_t reg_des
  */
 uint32_t mini_jit::instructions::InstGen::neon_ld1_no_offset(simd_fp_t reg_dst,
                                                              gpr_t add_src,
-                                                             vector_count_t v_reg_count ) {
+                                                             vector_count_t v_reg_count) {
     uint32_t l_inst = 0x4c402000;
 
     l_inst |= (reg_dst & 0x1F);       // Rt: bits 4:0
     l_inst |= (add_src & 0x1F) << 5;  // Rn: bits 9:5
     l_inst |= (0b10) << 10;           // size: bits 11:10
-    l_inst |= v_reg_count;           // opcode: bits 15:12
+    l_inst |= v_reg_count;            // opcode: bits 15:12
     l_inst |= 0b1 << 30;              // Q (size): 31
 
     return l_inst;
@@ -139,13 +139,13 @@ uint32_t mini_jit::instructions::InstGen::neon_ld1_scalar_index(simd_fp_t reg_ds
  */
 uint32_t mini_jit::instructions::InstGen::neon_st1_no_offset(simd_fp_t reg_dst,
                                                              gpr_t add_src,
-                                                             vector_count_t v_reg_count ) {
+                                                             vector_count_t v_reg_count) {
     uint32_t l_inst = 0x0C00'2000;
 
     l_inst |= (reg_dst & 0x1F);       // Rt: bits 4:0
     l_inst |= (add_src & 0x1F) << 5;  // Rn: bits 9:5
     l_inst |= (0b10) << 10;           // size: bits 11:10
-    l_inst |= v_reg_count;           // opcode: bits 15:12
+    l_inst |= v_reg_count;            // opcode: bits 15:12
     l_inst |= 0b1 << 30;              // Q (size): 31
 
     return l_inst;
@@ -282,42 +282,41 @@ uint32_t mini_jit::instructions::InstGen::neon_st1_multiple(simd_fp_t reg_base,
     return l_ins;
 }
 
-
-uint32_t mini_jit::instructions::InstGen::neon_trn( simd_fp_t reg_dst,
+uint32_t mini_jit::instructions::InstGen::neon_trn(simd_fp_t reg_dst,
                                                    simd_fp_t reg_src1,
                                                    simd_fp_t reg_src2,
                                                    int variant /* 1 or 2 */) {
     uint32_t l_ins = 0;
 
-    if( variant == 1) {
-        l_ins = 0x4e802800; // TRN1
-    } else if( variant == 2) {
-        l_ins = 0x4e806800; // TRN2
+    if (variant == 1) {
+        l_ins = 0x4e802800;  // TRN1
+    } else if (variant == 2) {
+        l_ins = 0x4e806800;  // TRN2
     } else {
         std::cerr << "Invalid variant for TRN instruction: " << variant << std::endl;
-        return 0; // Invalid variant
+        return 0;  // Invalid variant
     }
 
     l_ins |= (reg_dst & 0x1f);
     l_ins |= (reg_src1 & 0x1f) << 5;
     l_ins |= (reg_src2 & 0x1f) << 16;
-    
+
     return l_ins;
 }
 
-uint32_t mini_jit::instructions::InstGen::neon_zip( simd_fp_t reg_dst,
+uint32_t mini_jit::instructions::InstGen::neon_zip(simd_fp_t reg_dst,
                                                    simd_fp_t reg_src1,
                                                    simd_fp_t reg_src2,
                                                    int variant /* 1 or 2 */) {
     uint32_t l_ins = 0;
 
-    if( variant == 1) {
-        l_ins = 0x4ec03800; // ZIP1
-    } else if( variant == 2) {
-        l_ins = 0x4ec07800; // ZIP2
+    if (variant == 1) {
+        l_ins = 0x4ec03800;  // ZIP1
+    } else if (variant == 2) {
+        l_ins = 0x4ec07800;  // ZIP2
     } else {
         std::cerr << "Invalid variant for ZIP instruction: " << variant << std::endl;
-        return 0; // Invalid variant
+        return 0;  // Invalid variant
     }
 
     l_ins |= (reg_dst & 0x1f);
@@ -327,9 +326,9 @@ uint32_t mini_jit::instructions::InstGen::neon_zip( simd_fp_t reg_dst,
     return l_ins;
 }
 
-uint32_t mini_jit::instructions::InstGen::neon_eor( simd_fp_t reg_dst,
-                                                    simd_fp_t reg_src1,
-                                                    simd_fp_t reg_src2){
+uint32_t mini_jit::instructions::InstGen::neon_eor(simd_fp_t reg_dst,
+                                                   simd_fp_t reg_src1,
+                                                   simd_fp_t reg_src2) {
     uint32_t l_ins = 0x6e201c00;
 
     l_ins |= (reg_dst & 0x1f);
@@ -337,6 +336,4 @@ uint32_t mini_jit::instructions::InstGen::neon_eor( simd_fp_t reg_dst,
     l_ins |= (reg_src2 & 0x1f) << 16;
 
     return l_ins;
-
-
 }

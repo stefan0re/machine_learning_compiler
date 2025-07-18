@@ -36,15 +36,20 @@ class mini_jit::generator::Unary {
         success = 0
     };
 
-    void gen_transpose_micro( uint32_t i_m,
-                              uint32_t i_n);
+    void gen_transpose_micro(uint32_t i_m,
+                             uint32_t i_n);
 
-    void gen_transpose( uint32_t i_m,
-                               uint32_t i_n);
-    
-    void gen_zero();
+    void gen_transpose(uint32_t i_m,
+                       uint32_t i_n);
 
-    void gen_relu();
+    void gen_zero(uint32_t m,
+                  uint32_t n);
+
+    void gen_relu(uint32_t m,
+                  uint32_t n);
+
+    void gen_identity(uint32_t m,
+                      uint32_t n);
 
     /**
      * @brief Generate a kernel for a unary primitive.

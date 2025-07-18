@@ -301,7 +301,7 @@ namespace einsum::backend {
         }
 
         if (_prim_last_touch == prim_t::relu) {
-            _unary_last_touch.gen_relu();
+            _unary_last_touch.gen_relu(_prim_m_size, _prim_n_size);
             _unary_last_touch_kernel = _unary_last_touch.get_kernel();
         }
 

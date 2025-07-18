@@ -10,28 +10,29 @@
 
 using namespace mini_jit::generator;
 
-void benchmark_gemm() {
+void benchmark_brgemm() {
     int64_t iterations = 0;
     double mean_gflops = 0.0;
+    int br = 16;
     int k_sizes[5] = {1, 16, 32, 64, 128};
     for (size_t n = 1; n < 65; n++) {
         for (size_t m = 1; m < 65; m++) {
             for (int k : k_sizes) {
                 iterations++;
                 mini_jit::generator::Brgemm l_brgemm;
-                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
+                l_brgemm.generate(m, n, k, br, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
 
-                float *l_a = (float *)malloc(m * k * sizeof(float));
-                float *l_b = (float *)malloc(k * n * sizeof(float));
+                float *l_a = (float *)malloc(br * m * k * sizeof(float));
+                float *l_b = (float *)malloc(br * k * n * sizeof(float));
                 float *l_c_jit = (float *)malloc(m * n * sizeof(float));
                 float *l_c_ref = (float *)malloc(m * n * sizeof(float));
 
                 srand48(time(NULL));
 
-                for (int i = 0; i < m * k; i++) {
+                for (int i = 0; i < br * m * k; i++) {
                     l_a[i] = (float)drand48();
                 }
-                for (int i = 0; i < k * n; i++) {
+                for (int i = 0; i < br * k * n; i++) {
                     l_b[i] = (float)drand48();
                 }
                 for (int i = 0; i < m * n; i++) {
@@ -39,11 +40,13 @@ void benchmark_gemm() {
                     l_c_ref[i] = l_c_jit[i];
                 }
 
-                gemm_ref(l_a, l_b, l_c_ref,
-                         m, n, k,
-                         m, k, m);
+                brgemm_ref(l_a, l_b, l_c_ref,
+                           m, n, k, br,
+                           m, k, m, m * k, n * k);
                 mini_jit::generator::Brgemm::kernel_t l_kernel = l_brgemm.get_kernel();
-                l_kernel(l_a, l_b, l_c_jit, m, k, m, 0, 0);
+                l_kernel(l_a, l_b, l_c_jit,
+                         m, k, m,
+                         m * k, k * n);
 
                 double l_error = 0.0;
                 for (size_t i = 0; i < m * n; i++) {
@@ -57,7 +60,9 @@ void benchmark_gemm() {
                 // get iteration by testing a few iterations
                 auto l_start = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < 10; i++) {
-                    l_kernel(l_a, l_b, l_c_jit, m, k, m, 0, 0);
+                    l_kernel(l_a, l_b, l_c_jit,
+                             m, k, m,
+                             m * k, k * n);
                 }
                 auto l_end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> l_duration = l_end - l_start;
@@ -65,7 +70,9 @@ void benchmark_gemm() {
 
                 l_start = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < iteration; i++) {
-                    l_kernel(l_a, l_b, l_c_jit, m, k, m, 0, 0);
+                    l_kernel(l_a, l_b, l_c_jit,
+                             m, k, m,
+                             m * k, k * n);
                 }
                 l_end = std::chrono::high_resolution_clock::now();
                 l_duration = l_end - l_start;
@@ -76,7 +83,7 @@ void benchmark_gemm() {
                 std::cout << "  GFLOPS: " << gflops << std::endl;
                 mean_gflops += gflops;
 
-                std::cout << "CSV:" << m << "," << n << "," << k << ","
+                std::cout << "CSV:" << m << "," << n << "," << k << "," << br << ","
                           << m << "," << k << "," << m << "," << "0,0,"
                           << l_duration.count() << "," << gflops << std::endl;
                 std::cout << "--------------------------" << std::endl;
@@ -95,5 +102,5 @@ void benchmark_gemm() {
 }
 
 int main() {
-    benchmark_gemm();
+    benchmark_brgemm();
 }
