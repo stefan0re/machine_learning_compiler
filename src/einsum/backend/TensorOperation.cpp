@@ -109,26 +109,6 @@ namespace einsum::backend {
         }
     }
 
-    TensorOperation::error_t TensorOperation::optimize() {
-        return TensorOperation::error_t::success;
-    }
-
-    TensorOperation::error_t TensorOperation::split_dimensions() {
-        return TensorOperation::error_t::success;
-    }
-
-    TensorOperation::error_t TensorOperation::fuse_dimensions() {
-        return TensorOperation::error_t::success;
-    }
-
-    TensorOperation::error_t TensorOperation::reorder_dimensions() {
-        return TensorOperation::error_t::success;
-    }
-
-    TensorOperation::error_t TensorOperation::identify_primitives() {
-        return TensorOperation::error_t::success;
-    }
-
     /** The folowing is set here:
      * - First touch primitive
      * - Main primitive
@@ -234,6 +214,261 @@ namespace einsum::backend {
                                                 bool last_access) {
     }
 
+    TensorOperation::error_t TensorOperation::optimize() {
+        fuse_dimensions();
+        split_dimensions();
+        identify_primitives();
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::split_dimensions() {
+        // split M dimension if larger than 128
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _dim_sizes[i] > 128) {
+                std::vector<int64_t> pf = prime_factors(_dim_sizes[i]);
+                int64_t split_size_0 = find_new_size(pf);
+                int64_t split_size_1 = _dim_sizes[i] / split_size_0;
+                if (split_size_0 == 1 || split_size_1 == 1) {
+                    continue;  // no split possible
+                }
+                // refactor dimension i
+                _dim_sizes[i] = split_size_0;
+
+                // add new dimension
+                _dim_types.insert(_dim_types.begin() + i + 1, dim_t::m);
+                _exec_types.insert(_exec_types.begin() + i + 1, exec_t::seq);
+                _dim_sizes.insert(_dim_sizes.begin() + i + 1, split_size_1);
+                _strides_in0.insert(_strides_in0.begin() + i + 1, _strides_in0[i] * split_size_0);
+                _strides_in1.insert(_strides_in1.begin() + i + 1, _strides_in1[i] * split_size_0);
+                _strides_out.insert(_strides_out.begin() + i + 1, _strides_out[i] * split_size_0);
+            }
+        }
+
+        // split N dimension if larger than 128
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::n && _dim_sizes[i] > 128) {
+                std::vector<int64_t> pf = prime_factors(_dim_sizes[i]);
+                int64_t split_size_0 = find_new_size(pf);
+                int64_t split_size_1 = _dim_sizes[i] / split_size_0;
+                if (split_size_0 == 1 || split_size_1 == 1) {
+                    continue;  // no split possible
+                }
+                // refactor dimension i
+                _dim_sizes[i] = split_size_0;
+
+                // add new dimension
+                _dim_types.insert(_dim_types.begin() + i + 1, dim_t::n);
+                _exec_types.insert(_exec_types.begin() + i + 1, exec_t::seq);
+                _dim_sizes.insert(_dim_sizes.begin() + i + 1, split_size_1);
+                _strides_in0.insert(_strides_in0.begin() + i + 1, _strides_in0[i] * split_size_0);
+                _strides_in1.insert(_strides_in1.begin() + i + 1, _strides_in1[i] * split_size_0);
+                _strides_out.insert(_strides_out.begin() + i + 1, _strides_out[i] * split_size_0);
+            }
+        }
+
+        // split K dimension if larger than 128
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k && _dim_sizes[i] > 128) {
+                std::vector<int64_t> pf = prime_factors(_dim_sizes[i]);
+                int64_t split_size_0 = find_new_size(pf);
+                int64_t split_size_1 = _dim_sizes[i] / split_size_0;
+                if (split_size_0 == 1 || split_size_1 == 1) {
+                    continue;  // no split possible
+                }
+                // refactor dimension i
+                _dim_sizes[i] = split_size_0;
+
+                // add new dimension
+                _dim_types.insert(_dim_types.begin() + i + 1, dim_t::k);
+                _exec_types.insert(_exec_types.begin() + i + 1, exec_t::seq);
+                _dim_sizes.insert(_dim_sizes.begin() + i + 1, split_size_1);
+                _strides_in0.insert(_strides_in0.begin() + i + 1, _strides_in0[i] * split_size_0);
+                _strides_in1.insert(_strides_in1.begin() + i + 1, _strides_in1[i] * split_size_0);
+                _strides_out.insert(_strides_out.begin() + i + 1, _strides_out[i] * split_size_0);
+            }
+        }
+
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::fuse_dimensions() {
+        // fuse M dimension if smaller than 64
+        for (size_t i = 1; i < _dim_types.size() - 1; i++) {
+            if (_dim_types[i] == dim_t::m && _dim_sizes[i] < 64) {
+                int64_t tmp_stride_in0 = _strides_in0[i];
+                int64_t tmp_stride_out = _strides_out[i];
+                int64_t tmp_dim_size = _dim_sizes[i];
+                for (size_t j = 0; j < _dim_sizes.size(); j++) {
+                    // fuse with smaller stride
+                    if ((tmp_stride_in0 == _strides_in0[j] * tmp_dim_size) && (tmp_stride_out == _strides_out[j] * tmp_dim_size)) {
+                        // fuse dimensions
+                        _dim_sizes[j] *= tmp_dim_size;
+                        // remove dimension i
+                        _dim_types.erase(_dim_types.begin() + i);
+                        _exec_types.erase(_exec_types.begin() + i);
+                        _dim_sizes.erase(_dim_sizes.begin() + i);
+                        _strides_in0.erase(_strides_in0.begin() + i);
+                        _strides_in1.erase(_strides_in1.begin() + i);
+                        _strides_out.erase(_strides_out.begin() + i);
+                    }  // fuse with bigger stride
+                    else if (tmp_stride_in0 * _dim_sizes[i] == _strides_in0[j] && tmp_stride_out * _dim_sizes[i] == _strides_out[j]) {
+                        // fuse dimensions
+                        _dim_sizes[j] *= tmp_dim_size;
+                        _strides_in0[j] = _strides_in0[i];
+                        _strides_out[j] = _strides_out[i];
+                        // remove dimension i
+                        _dim_types.erase(_dim_types.begin() + i);
+                        _exec_types.erase(_exec_types.begin() + i);
+                        _dim_sizes.erase(_dim_sizes.begin() + i);
+                        _strides_in0.erase(_strides_in0.begin() + i);
+                        _strides_in1.erase(_strides_in1.begin() + i);
+                        _strides_out.erase(_strides_out.begin() + i);
+                    }
+                }
+            }
+        }
+
+        // fuse N dimension if smaller than 64
+        for (size_t i = 1; i < _dim_types.size() - 1; i++) {
+            if (_dim_types[i] == dim_t::n && _dim_sizes[i] < 64) {
+                int64_t tmp_stride_in1 = _strides_in1[i];
+                int64_t tmp_stride_out = _strides_out[i];
+                int64_t tmp_dim_size = _dim_sizes[i];
+                for (size_t j = 0; j < _dim_sizes.size(); j++) {
+                    // fuse with smaller stride
+                    if ((tmp_stride_in1 == _strides_in1[j] * tmp_dim_size) && (tmp_stride_out == _strides_out[j] * tmp_dim_size)) {
+                        // fuse dimensions
+                        _dim_sizes[j] *= tmp_dim_size;
+                        // remove dimension i
+                        _dim_types.erase(_dim_types.begin() + i);
+                        _exec_types.erase(_exec_types.begin() + i);
+                        _dim_sizes.erase(_dim_sizes.begin() + i);
+                        _strides_in0.erase(_strides_in0.begin() + i);
+                        _strides_in1.erase(_strides_in1.begin() + i);
+                        _strides_out.erase(_strides_out.begin() + i);
+                    }  // fuse with bigger stride
+                    else if (tmp_stride_in1 * _dim_sizes[i] == _strides_in1[j] && tmp_stride_out * _dim_sizes[i] == _strides_out[j]) {
+                        // fuse dimensions
+                        _dim_sizes[j] *= tmp_dim_size;
+                        _strides_in1[j] = _strides_in1[i];
+                        _strides_out[j] = _strides_out[i];
+                        // remove dimension i
+                        _dim_types.erase(_dim_types.begin() + i);
+                        _exec_types.erase(_exec_types.begin() + i);
+                        _dim_sizes.erase(_dim_sizes.begin() + i);
+                        _strides_in0.erase(_strides_in0.begin() + i);
+                        _strides_in1.erase(_strides_in1.begin() + i);
+                        _strides_out.erase(_strides_out.begin() + i);
+                    }
+                }
+            }
+        }
+
+        // fuse K dimension if smaller than 64
+        for (size_t i = 1; i < _dim_types.size() - 1; i++) {
+            if (_dim_types[i] == dim_t::k && _dim_sizes[i] < 64) {
+                int64_t tmp_stride_in0 = _strides_in0[i];
+                int64_t tmp_stride_in1 = _strides_in1[i];
+                int64_t tmp_dim_size = _dim_sizes[i];
+                for (size_t j = 0; j < _dim_sizes.size(); j++) {
+                    // fuse with smaller stride
+                    if ((tmp_stride_in0 == _strides_in0[j] * tmp_dim_size) && (tmp_stride_in1 == _strides_in1[j] * tmp_dim_size)) {
+                        // fuse dimensions
+                        _dim_sizes[j] *= tmp_dim_size;
+                        // remove dimension i
+                        _dim_types.erase(_dim_types.begin() + i);
+                        _exec_types.erase(_exec_types.begin() + i);
+                        _dim_sizes.erase(_dim_sizes.begin() + i);
+                        _strides_in0.erase(_strides_in0.begin() + i);
+                        _strides_in1.erase(_strides_in1.begin() + i);
+                        _strides_out.erase(_strides_out.begin() + i);
+                    }  // fuse with bigger stride
+                    else if (tmp_stride_in0 * tmp_dim_size == _strides_in0[j] && tmp_stride_in1 * tmp_dim_size == _strides_in1[j]) {
+                        // fuse dimensions
+                        _dim_sizes[j] *= tmp_dim_size;
+                        _strides_in0[j] = _strides_in0[i];
+                        _strides_in1[j] = _strides_in1[i];
+                        // remove dimension i
+                        _dim_types.erase(_dim_types.begin() + i);
+                        _exec_types.erase(_exec_types.begin() + i);
+                        _dim_sizes.erase(_dim_sizes.begin() + i);
+                        _strides_in0.erase(_strides_in0.begin() + i);
+                        _strides_in1.erase(_strides_in1.begin() + i);
+                        _strides_out.erase(_strides_out.begin() + i);
+                    }
+                }
+            }
+        }
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::reorder_dimensions() {
+        return TensorOperation::error_t::success;
+    }
+
+    TensorOperation::error_t TensorOperation::identify_primitives() {
+        // identify prim M
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::m && _strides_in0[i] == 1 && _strides_out[i] == 1) {
+                _id_prim_m = i;
+                _exec_types[i] = exec_t::prim;
+                break;
+            }
+        }
+
+        // identify prim N
+        int64_t smallest_stride = 1e18;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            // find smallest stride in N dimension
+            if (_dim_types[i] == dim_t::n && _strides_in1[i] > 0) {
+                smallest_stride = std::min(smallest_stride, _strides_in1[i]);
+            }
+        }
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (smallest_stride == _strides_in1[i] && _dim_types[i] == dim_t::n) {
+                _id_prim_n = i;
+                _exec_types[i] = exec_t::prim;
+                break;
+            }
+        }
+
+        // identify prim K
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (_dim_types[i] == dim_t::k && _strides_in1[i] == 1) {
+                _id_prim_k = i;
+                _exec_types[i] = exec_t::prim;
+                break;
+            }
+        }
+
+        // identify prim BR
+        smallest_stride = 1e18;
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            // find smalles stride in BR dimension
+            if (_dim_types[i] == dim_t::k && _strides_in1[i] > 1) {
+                smallest_stride = std::min(smallest_stride, _strides_in1[i]);
+            }
+        }
+        for (size_t i = 0; i < _dim_types.size(); i++) {
+            if (smallest_stride == _strides_in1[i] && _dim_types[i] == dim_t::k) {
+                if (_dim_sizes[i] > 16) {
+                    continue;  // skip if size is 1
+                }
+                _id_prim_br = i;
+                _exec_types[i] = exec_t::prim;
+                break;
+            }
+        }
+
+        // check if all ids are set
+        if (_id_prim_m == -1 || _id_prim_n == -1 || _id_prim_k == -1) {
+            std::cerr << "Error: Not all primitive ids are set correctly." << std::endl;
+            return TensorOperation::error_t::compile_failed;
+        }
+
+        return TensorOperation::error_t::success;
+    }
+
     int64_t TensorOperation::get_flops_count() {
         int64_t flops = 2;
         for (size_t i = 0; i < _dim_sizes.size(); i++) {
@@ -248,6 +483,4 @@ namespace einsum::backend {
         return flops - minus;
     }
 
-    void TensorOperation::print() {
-    }
 }  // namespace einsum::backend

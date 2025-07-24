@@ -95,7 +95,6 @@ class einsum::backend::TensorOperation {
      * @param prim_last_touch   Type of the last touch primitive.
      * @param in0               First input tensor.
      * @param in1               Second input tensor (use nullptr if unary).
-     * @param bias              Bias tensor (use nullptr if no bias).
      * @param out               Output tensor.
      *
      * @return error_t::success on success, another error_t value otherwise.
@@ -130,25 +129,22 @@ class einsum::backend::TensorOperation {
     /**
      * @brief Splits dimensions to improve parallelism and memory access patterns.
      *
-     * splitting M and K dims because more relevant for brgemm
-     *
      */
     error_t split_dimensions();
 
     /**
-     * Fuses dimensions to reduce the number of loops and improve efficiency.
-     *
+     * @brief Fuses dimensions
      */
     error_t fuse_dimensions();
 
     /**
-     * Reorders dimensions to optimize memory access patterns and computation.
+     * @brief Reorders dimensions
      *
      */
     error_t reorder_dimensions();
 
     /**
-     * Identifies primitives for efficient computation based on tensor properties.
+     * @brief Identifies primitives.
      *
      */
     error_t identify_primitives();
@@ -178,7 +174,6 @@ class einsum::backend::TensorOperation {
      * @param id_loop      Dimension id of the loop which is executed.
      * @param ptr_in0      Pointer to the first input tensor's data.
      * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
-     * @param ptr_bias     Pointer to the bias tensor's data (use nullptr if no bias).
      * @param ptr_out      Pointer to the output tensor's data.
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
@@ -211,9 +206,9 @@ class einsum::backend::TensorOperation {
                                char* ptr_out,
                                bool first_access,
                                bool last_access);
-
-    void print();
-
+    /**
+     * @brief Returns the number of floating-point operations (FLOPs) for the tensor operation.
+     */
     int64_t get_flops_count();
 
    private:
