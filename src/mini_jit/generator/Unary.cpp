@@ -361,6 +361,6 @@ namespace mini_jit::generator {
     }
 
     mini_jit::generator::Unary::kernel_t mini_jit::generator::Unary::get_kernel() const {
-        return reinterpret_cast<kernel_t>(m_kernel.get_kernel());
+        return reinterpret_cast<kernel_t>(const_cast<void*>(m_kernel.get_kernel()));
     }
 }  // namespace mini_jit::generator

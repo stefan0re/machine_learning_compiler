@@ -14,27 +14,9 @@ include_directories(
 )
 
 set(LIB_SOURCES
-    ./trees/einsum_trees.cpp
+    # ./trees/einsum_trees.cpp
     ./backend/TensorOperation.cpp
     ./include/einsum_ref.cpp
-)
-
-add_library(einsum STATIC ${LIB_SOURCES})
-
-target_include_directories(einsum
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/backend>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/trees>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-)
-
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(einsum PUBLIC -O3)
-endif()
-
-set_target_properties(einsum PROPERTIES
-    POSITION_INDEPENDENT_CODE ON
 )
 
 set(EXTERNAL_SOURCES
@@ -48,3 +30,20 @@ set(EXTERNAL_SOURCES
     ../mini_jit/include/gemm_ref.cpp
 )
 
+add_library(einsum STATIC ${LIB_SOURCES} ${EXTERNAL_SOURCES})
+
+target_include_directories(einsum
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/backend>
+        # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/trees>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(einsum PUBLIC -O3)
+endif()
+
+set_target_properties(einsum PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)

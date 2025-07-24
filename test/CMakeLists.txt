@@ -29,7 +29,7 @@ target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/tensor
     ${CMAKE_CURRENT_SOURCE_DIR}/einsum
     ${CMAKE_CURRENT_SOURCE_DIR}/mini_jit
-    ${CMAKE_CURRENT_SOURCE_DIR}/src    # falls du dort auch TensorOperation.h usw. hast
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(tests

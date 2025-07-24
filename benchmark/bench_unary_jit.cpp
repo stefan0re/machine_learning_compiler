@@ -24,11 +24,11 @@ void benchmark_unary_jit(Unary::ptype_t i_type,
     float* l_out_ref = new float[l_m * l_n];
 
     for (size_t i = 0; i < l_m * l_n; i++) {
-        l_in[i] = (float)drand48() * 10 - 5;
+        l_in[i] = (float)i + 1;  // drand48() * 10 - 5;
     }
 
     for (size_t i = 0; i < l_m * l_n; i++) {
-        l_out[i] = (float)drand48() * 10 - 5;
+        l_out[i] = (float)i + 1;  // drand48() * 10 - 5;
     }
 
     for (size_t i = 0; i < l_m * l_n; i++) {
@@ -38,7 +38,20 @@ void benchmark_unary_jit(Unary::ptype_t i_type,
             l_out_ref[i] = std::max(0.0f, l_in[i]);
         } else if (i_type == Unary::ptype_t::identity) {
             l_out_ref[i] = l_in[i];
+        } else {
+            break;
         }
+    }
+
+    if (i_type == Unary::ptype_t::trans) {
+        float* l_in_transposed = new float[l_m * l_n];
+        for (size_t j = 0; j < l_n; j++) {
+            for (size_t i = 0; i < l_m; i++) {
+                l_in_transposed[l_n * i + j] = l_in[j * l_m + i];
+            }
+        }
+        delete[] l_out_ref;
+        l_out_ref = l_in_transposed;
     }
 
     Unary l_unary;
@@ -65,7 +78,7 @@ void benchmark_unary_jit(Unary::ptype_t i_type,
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = end - start;
 
-    long iterations = 50.0 / duration.count();
+    long iterations = 100.0 / duration.count();
 
     // measure GiB/s of the kernel
     start = std::chrono::high_resolution_clock::now();

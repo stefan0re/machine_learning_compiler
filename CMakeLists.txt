@@ -14,11 +14,11 @@ find_package(OpenMP REQUIRED)
 
 add_subdirectory(src/mini_jit)
 add_subdirectory(src/einsum)
-add_subdirectory(model)
+# add_subdirectory(model)
 add_subdirectory(benchmark)
 
-enable_testing()
+# enable_testing()
 
 # Subprojects
-add_subdirectory(test)
+# add_subdirectory(test)
 

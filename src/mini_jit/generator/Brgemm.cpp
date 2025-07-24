@@ -721,5 +721,5 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 }
 
 mini_jit::generator::Brgemm::kernel_t mini_jit::generator::Brgemm::get_kernel() const {
-    return reinterpret_cast<kernel_t>(m_kernel.get_kernel());
+    return reinterpret_cast<kernel_t>(const_cast<void*>(m_kernel.get_kernel()));
 }
