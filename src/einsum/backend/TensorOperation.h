@@ -214,6 +214,8 @@ class einsum::backend::TensorOperation {
 
     void print();
 
+    int64_t get_flops_count();
+
    private:
     // BRGEMM
     mini_jit::generator::Brgemm _brgemm;

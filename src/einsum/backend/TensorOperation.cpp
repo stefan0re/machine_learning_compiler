@@ -58,9 +58,18 @@ namespace einsum::backend {
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
             // derive if this is first or last access to the output block
+            if (l_it == 0 && id_loop == 0) {
+                first_access = true;
+            }
+            if ((id_loop == _loop_ids.size() - 1) && (_dim_types[_loop_ids[id_loop]] != dim_t::k)) {
+                last_access = true;
+            } else if ((id_loop == _loop_ids.size() - 1) && (_dim_types[_loop_ids[id_loop]] == dim_t::k) && (l_it == l_size - 1)) {
+                last_access = true;
+            } else {
+                last_access = false;
+            }
 
             // update pointer with strides
-
             char* l_ptr_in0 = const_cast<char*>(ptr_in0);
             char* l_ptr_in1 = const_cast<char*>(ptr_in1);
             char* l_ptr_out = ptr_out;
@@ -79,6 +88,9 @@ namespace einsum::backend {
                              false);
             } else {
                 // call first touch kernel if necessary
+                if (first_access && _prim_first_touch != prim_t::none) {
+                    _unary_first_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
                 // call main kernel
                 _brgemm_kernel(l_ptr_in0,
                                l_ptr_in1,
@@ -90,6 +102,9 @@ namespace einsum::backend {
                                _br_stride_b);
 
                 // call last touch kernel if necessary
+                if (last_access && _prim_last_touch != prim_t::none) {
+                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
             }
         }
     }
@@ -217,6 +232,20 @@ namespace einsum::backend {
                                                 char* ptr_out,
                                                 bool first_access,
                                                 bool last_access) {
+    }
+
+    int64_t TensorOperation::get_flops_count() {
+        int64_t flops = 2;
+        for (size_t i = 0; i < _dim_sizes.size(); i++) {
+            flops *= _dim_sizes[i];
+        }
+        int64_t minus = 1;
+        for (size_t i = 0; i < _dim_sizes.size(); i++) {
+            if (_dim_types[i] == dim_t::m || _dim_types[i] == dim_t::n) {
+                minus *= _dim_sizes[i];
+            }
+        }
+        return flops - minus;
     }
 
     void TensorOperation::print() {
