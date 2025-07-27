@@ -131,61 +131,64 @@ namespace mini_jit::generator {
                                                        inst::InstGen::x6,
                                                        inst::InstGen::x3));
         // set M 10 and N 11 loop
-        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x11, n_blocks_full, 0));
+        if (n_blocks_full > 0) {
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x11, n_blocks_full, 0));
 
-        m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x11, inst::InstGen::x11, 1, 0));
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x11, inst::InstGen::x11, 1, 0));
 
-        std::size_t n_loop_pos = m_kernel.get_size();
-        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x10, m_blocks_full, 0));
+            std::size_t n_loop_pos = m_kernel.get_size();
+            if (m_blocks_full > 0) {
+                m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x10, m_blocks_full, 0));
 
-        m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x10, inst::InstGen::x10, 1, 0));
+                m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x10, inst::InstGen::x10, 1, 0));
 
-        std::size_t m_loop_pos = m_kernel.get_size();
-        gen_transpose_micro_4x4(4, 4);
+                std::size_t m_loop_pos = m_kernel.get_size();
+                gen_transpose_micro_4x4(4, 4);
 
-        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x0,
-                                                                    inst::InstGen::x0,
-                                                                    inst::InstGen::x5,
-                                                                    0,
-                                                                    0));
+                m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x0,
+                                                                            inst::InstGen::x0,
+                                                                            inst::InstGen::x5,
+                                                                            0,
+                                                                            0));
 
-        m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x0,
-                                                       inst::InstGen::x0,
-                                                       4 * 4,
-                                                       0));
-        m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x10,
-                                                       (m_loop_pos - m_kernel.get_size()) / 4 - 1));
-        if (m_blocks_reminder > 0) {
-            gen_transpose_micro_reminder(m_blocks_reminder, 4);
-        } else {
-            // if no reminder, we need to adjust a pointer
-            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0,
+                m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x0,
+                                                               inst::InstGen::x0,
+                                                               4 * 4,
+                                                               0));
+                m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x10,
+                                                               (m_loop_pos - m_kernel.get_size()) / 4 - 1));
+            }
+            if (m_blocks_reminder > 0) {
+                gen_transpose_micro_reminder(m_blocks_reminder, 4);
+            } else {
+                // if no reminder, we need to adjust a pointer
+                m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0,
+                                                                            inst::InstGen::x0,
+                                                                            inst::InstGen::x5,
+                                                                            0,
+                                                                            0));
+            }
+
+            // adjust a and b pointer
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x0,
                                                                         inst::InstGen::x0,
-                                                                        inst::InstGen::x5,
+                                                                        inst::InstGen::x12,
                                                                         0,
                                                                         0));
+
+            m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x1,
+                                                                        inst::InstGen::x1,
+                                                                        inst::InstGen::x6,
+                                                                        0,
+                                                                        0));
+
+            m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x1,
+                                                           inst::InstGen::x1,
+                                                           4 * 4,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x11,
+                                                           (n_loop_pos - m_kernel.get_size()) / 4 - 1));
         }
-
-        // adjust a and b pointer
-        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x0,
-                                                                    inst::InstGen::x0,
-                                                                    inst::InstGen::x12,
-                                                                    0,
-                                                                    0));
-
-        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x1,
-                                                                    inst::InstGen::x1,
-                                                                    inst::InstGen::x6,
-                                                                    0,
-                                                                    0));
-
-        m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x1,
-                                                       inst::InstGen::x1,
-                                                       4 * 4,
-                                                       0));
-        m_kernel.add_instr(inst::InstGen::base_br_cbnz(inst::InstGen::x11,
-                                                       (n_loop_pos - m_kernel.get_size()) / 4 - 1));
-
         // handle reminder N column
         if (n_blocks_reminder > 0) {
             m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x5, n_blocks_reminder, 0));
@@ -320,7 +323,8 @@ namespace mini_jit::generator {
                     m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v31), false));
                 }
             } else {
-                for (size_t i = 0; i < reg_for_m_col; i++) {
+                size_t iteration = (m % 4) > 0 ? reg_for_m_col + 1 : reg_for_m_col;
+                for (size_t i = 0; i < iteration; i++) {
                     m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v31), false));
                 }
             }

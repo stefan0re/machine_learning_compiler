@@ -37,11 +37,11 @@ void benchmark_unary_jit(Unary::ptype_t i_type,
     float* l_out_ref = new float[l_m * l_n];
 
     for (size_t i = 0; i < l_m * l_n; i++) {
-        l_in[i] = (float)i + 1;  // drand48() * 10 - 5;
+        l_in[i] = (float)drand48() * 10 - 5;
     }
 
     for (size_t i = 0; i < l_m * l_n; i++) {
-        l_out[i] = (float)i + 1;  // drand48() * 10 - 5;
+        l_out[i] = (float)drand48() * 10 - 5;
     }
 
     for (size_t i = 0; i < l_m * l_n; i++) {
@@ -65,7 +65,7 @@ void benchmark_unary_jit(Unary::ptype_t i_type,
 
     Unary::kernel_t unary_kernel = l_unary.get_kernel();
 
-    unary_kernel(l_in, l_out, l_m, l_n);
+    unary_kernel(l_in, l_out, l_m, l_m);
 
     double l_error = 0.0;
     for (size_t i = 0; i < l_m * l_n; i++) {
@@ -98,10 +98,6 @@ void benchmark_unary_jit(Unary::ptype_t i_type,
     std::cout << "Performance: " << gibs_per_sec << " GiB/s" << std::endl;
     std::cout << "Iterations: " << iterations << std::endl;
     std::cout << "Duration: " << duration.count() << " seconds" << std::endl;
-
-    delete[] l_in;
-    delete[] l_out;
-    delete[] l_out_ref;
 }
 
 void test_transpose(int i_m,

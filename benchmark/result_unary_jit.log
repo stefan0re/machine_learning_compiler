@@ -1,0 +1,103 @@
+Running benchmarks for type: 0
+Running benchmark for type 0 with value 50
+Running Unary 0 Benchmark with: M = 50, N = 50
+Total Error: 0
+Performance: 109.604 GiB/s
+Iterations: 6996921
+Duration: 1.18908 seconds
+Running benchmark for type 0 with value 64
+Running Unary 0 Benchmark with: M = 64, N = 64
+Total Error: 0
+Performance: 123.136 GiB/s
+Iterations: 12370113
+Duration: 3.06575 seconds
+Running benchmark for type 0 with value 512
+Running Unary 0 Benchmark with: M = 512, N = 512
+Total Error: 0
+Performance: 129.489 GiB/s
+Iterations: 307847
+Duration: 4.64337 seconds
+Running benchmark for type 0 with value 2048
+Running Unary 0 Benchmark with: M = 2048, N = 2048
+Total Error: 0
+Performance: 94.6051 GiB/s
+Iterations: 20712
+Duration: 6.8416 seconds
+===============================================
+Running benchmarks for type: 1
+Running benchmark for type 1 with value 50
+Running Unary 1 Benchmark with: M = 50, N = 50
+Total Error: 0
+Performance: 115.572 GiB/s
+Iterations: 22857142
+Duration: 3.68384 seconds
+Running benchmark for type 1 with value 64
+Running Unary 1 Benchmark with: M = 64, N = 64
+Total Error: 0
+Performance: 130.021 GiB/s
+Iterations: 14999250
+Duration: 3.52053 seconds
+Running benchmark for type 1 with value 512
+Running Unary 1 Benchmark with: M = 512, N = 512
+Total Error: 0
+Performance: 107.17 GiB/s
+Iterations: 258340
+Duration: 4.70815 seconds
+Running benchmark for type 1 with value 2048
+Running Unary 1 Benchmark with: M = 2048, N = 2048
+Total Error: 0
+Performance: 70.8844 GiB/s
+Iterations: 10681
+Duration: 4.70881 seconds
+===============================================
+Running benchmarks for type: 2
+Running benchmark for type 2 with value 50
+Running Unary 2 Benchmark with: M = 50, N = 50
+Total Error: 0
+Performance: 112.422 GiB/s
+Iterations: 21819768
+Duration: 3.61516 seconds
+Running benchmark for type 2 with value 64
+Running Unary 2 Benchmark with: M = 64, N = 64
+Total Error: 0
+Performance: 127.45 GiB/s
+Iterations: 15001500
+Duration: 3.59206 seconds
+Running benchmark for type 2 with value 512
+Running Unary 2 Benchmark with: M = 512, N = 512
+Total Error: 0
+Performance: 105.272 GiB/s
+Iterations: 268575
+Duration: 4.98291 seconds
+Running benchmark for type 2 with value 2048
+Running Unary 2 Benchmark with: M = 2048, N = 2048
+Total Error: 0
+Performance: 70.9882 GiB/s
+Iterations: 10732
+Duration: 4.72438 seconds
+===============================================
+Running benchmarks for type: 3
+Running benchmark for type 3 with value 50
+Running Unary 3 Benchmark with: M = 50, N = 50
+Total Error: 0
+Performance: 65.3051 GiB/s
+Iterations: 15285845
+Duration: 4.35986 seconds
+Running benchmark for type 3 with value 64
+Running Unary 3 Benchmark with: M = 64, N = 64
+Total Error: 0
+Performance: 83.9639 GiB/s
+Iterations: 4411699
+Duration: 1.60348 seconds
+Running benchmark for type 3 with value 512
+Running Unary 3 Benchmark with: M = 512, N = 512
+Total Error: 0
+Performance: 4.1031 GiB/s
+Iterations: 11059
+Duration: 5.26421 seconds
+Running benchmark for type 3 with value 2048
+Running Unary 3 Benchmark with: M = 2048, N = 2048
+Total Error: 0
+Performance: 3.50702 GiB/s
+Iterations: 546
+Duration: 4.86525 seconds
