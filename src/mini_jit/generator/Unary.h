@@ -36,8 +36,10 @@ class mini_jit::generator::Unary {
         success = 0
     };
 
-    void gen_transpose_micro(uint32_t i_m,
-                             uint32_t i_n);
+    void gen_transpose_micro_4x4(uint32_t i_m,
+                                 uint32_t i_n);
+    void gen_transpose_micro_reminder(uint32_t i_m,
+                                      uint32_t i_n);
 
     void gen_transpose(uint32_t i_m,
                        uint32_t i_n);
