@@ -115,24 +115,202 @@ namespace mini_jit::generator {
         }
     }
 
-    void Unary::gen_zero() {
-        for (uint32_t i = 0; i < 32; i++) {
+    void Unary::gen_zero(uint32_t m,
+                         uint32_t n) {
+        for (uint32_t i = 0; i < 4; i++) {
             m_kernel.add_instr(inst::InstGen::neon_eor(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
                                                        static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
                                                        static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i)));
         }
+        // help for N loops
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x13, m * 4, 0));
+
+        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x13,
+                                                                    inst::InstGen::x3,
+                                                                    inst::InstGen::x13,
+                                                                    0,
+                                                                    0));
+
+        // set N loop counter
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::N_LOOP_COUNT_REG, n, 0));
+        // sub N loop register
+        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::N_LOOP_COUNT_REG,
+                                                       Util::N_LOOP_COUNT_REG,
+                                                       1,
+                                                       0));
+
+        std::size_t loop_pos_n = m_kernel.get_size();
+
+        if ((m / 16) > 0) {
+            // set M loop counter
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::M_LOOP_COUNT_REG, m / 16, 0));
+            // sub M loop register
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::M_LOOP_COUNT_REG,
+                                                           Util::M_LOOP_COUNT_REG,
+                                                           1,
+                                                           0));
+
+            // inner store loop
+            std::size_t loop_pos_m = m_kernel.get_size();
+            for (size_t i = 0; i < 4; i++) {
+                m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + (i % 4)), inst::InstGen::x1, 16, inst::InstGen::arr_spec_t::q));
+            }
+
+            // BRANCH M
+            m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::M_LOOP_COUNT_REG,
+                                                           (loop_pos_m - m_kernel.get_size()) / 4 - 1));
+        }
+        for (size_t i = 0; i < (m % 16); i++) {
+            m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + (i % 4)), inst::InstGen::x1, 4, inst::InstGen::arr_spec_t::s));
+        }
+
+        // BRANCH N
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1, inst::InstGen::x1, inst::InstGen::x13, 0, 0));
+        m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::N_LOOP_COUNT_REG,
+                                                       (loop_pos_n - m_kernel.get_size()) / 4 - 1));
     }
+
     // assuming that vr 31 is not used by C accumulator
-    void Unary::gen_relu() {
+    void Unary::gen_relu(uint32_t m,
+                         uint32_t n) {
         m_kernel.add_instr(inst::InstGen::neon_eor(inst::InstGen::v31,
                                                    inst::InstGen::v31,
                                                    inst::InstGen::v31));
-        for (uint32_t i = 0; i < 31; i++) {
-            m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
-                                                               static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v31),
-                                                               static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i),
-                                                               false));
+        // help for N loops
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x13, m * 4, 0));
+
+        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x13,
+                                                                    inst::InstGen::x3,
+                                                                    inst::InstGen::x13,
+                                                                    0,
+                                                                    0));
+        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x14,
+                                                                    inst::InstGen::x2,
+                                                                    inst::InstGen::x13,
+                                                                    0,
+                                                                    0));
+
+        int reg_for_m_col = m / 4;
+        int use_loop = reg_for_m_col / 31;
+        reg_for_m_col -= use_loop * 31;
+
+        // set N loop counter
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::N_LOOP_COUNT_REG, n, 0));
+        // sub N loop register
+        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::N_LOOP_COUNT_REG,
+                                                       Util::N_LOOP_COUNT_REG,
+                                                       1,
+                                                       0));
+        std::size_t loop_pos_n = m_kernel.get_size();
+
+        for (; use_loop > -1; use_loop--) {
+            if (use_loop > 0) {
+                for (size_t i = 0; i < 31; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x7, 16, inst::InstGen::arr_spec_t::q));
+                }
+            } else {
+                for (size_t i = 0; i < reg_for_m_col; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x7, 16, inst::InstGen::arr_spec_t::q));
+                }
+                for (size_t i = 0; i < (m % 4); i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_ld1_scalar_index(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + reg_for_m_col), inst::InstGen::x7, i));
+                    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x7, inst::InstGen::x7, 4, 0));
+                }
+            }
+
+            // USE relu
+            if (use_loop > 0) {
+                for (size_t i = 0; i < 31; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v31), false));
+                }
+            } else {
+                for (size_t i = 0; i < reg_for_m_col; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v31), false));
+                }
+            }
+
+            if (use_loop > 0) {
+                for (size_t i = 0; i < 31; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x8, 16, inst::InstGen::arr_spec_t::q));
+                }
+            } else {
+                for (size_t i = 0; i < reg_for_m_col; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x8, 16, inst::InstGen::arr_spec_t::q));
+                }
+                for (size_t i = 0; i < (m % 4); i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_st1_scalar_index(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + reg_for_m_col), inst::InstGen::x8, i));
+                    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8, inst::InstGen::x8, 4, 0));
+                }
+            }
         }
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0, inst::InstGen::x0, inst::InstGen::x14, 0, 0));
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1, inst::InstGen::x1, inst::InstGen::x13, 0, 0));
+        m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::N_LOOP_COUNT_REG,
+                                                       (loop_pos_n - m_kernel.get_size()) / 4 - 1));
+    }
+
+    void Unary::gen_identity(uint32_t m,
+                             uint32_t n) {
+        // help for N loops
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(inst::InstGen::x13, m * 4, 0));
+
+        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x13,
+                                                                    inst::InstGen::x3,
+                                                                    inst::InstGen::x13,
+                                                                    0,
+                                                                    0));
+        m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(inst::InstGen::x14,
+                                                                    inst::InstGen::x2,
+                                                                    inst::InstGen::x13,
+                                                                    0,
+                                                                    0));
+
+        int reg_for_m_col = m / 4;
+        int use_loop = reg_for_m_col / 32;
+        reg_for_m_col -= use_loop * 32;
+
+        // set N loop counter
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::N_LOOP_COUNT_REG, n, 0));
+        // sub N loop register
+        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::N_LOOP_COUNT_REG,
+                                                       Util::N_LOOP_COUNT_REG,
+                                                       1,
+                                                       0));
+        std::size_t loop_pos_n = m_kernel.get_size();
+
+        for (; use_loop > -1; use_loop--) {
+            if (use_loop > 0) {
+                for (size_t i = 0; i < 32; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x7, 16, inst::InstGen::arr_spec_t::q));
+                }
+            } else {
+                for (size_t i = 0; i < reg_for_m_col; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x7, 16, inst::InstGen::arr_spec_t::q));
+                }
+                for (size_t i = 0; i < (m % 4); i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_ld1_scalar_index(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + reg_for_m_col), inst::InstGen::x7, i));
+                    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x7, inst::InstGen::x7, 4, 0));
+                }
+            }
+
+            if (use_loop > 0) {
+                for (size_t i = 0; i < 32; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x8, 16, inst::InstGen::arr_spec_t::q));
+                }
+            } else {
+                for (size_t i = 0; i < reg_for_m_col; i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + i), inst::InstGen::x8, 16, inst::InstGen::arr_spec_t::q));
+                }
+                for (size_t i = 0; i < (m % 4); i++) {
+                    m_kernel.add_instr(inst::InstGen::neon_st1_scalar_index(static_cast<inst::InstGen::simd_fp_t>(inst::InstGen::v0 + reg_for_m_col), inst::InstGen::x8, i));
+                    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8, inst::InstGen::x8, 4, 0));
+                }
+            }
+        }
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0, inst::InstGen::x0, inst::InstGen::x14, 0, 0));
+        m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1, inst::InstGen::x1, inst::InstGen::x13, 0, 0));
+        m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::N_LOOP_COUNT_REG,
+                                                       (loop_pos_n - m_kernel.get_size()) / 4 - 1));
     }
 
     Unary::error_t Unary::generate(uint32_t m,
@@ -159,54 +337,11 @@ namespace mini_jit::generator {
             gen_transpose(m,
                           n);
         } else if (ptype == Unary::ptype_t::zero) {
-            Util::KernelSize l_kernelsize;
-            l_kernelsize.M = m;
-            l_kernelsize.N = n;
-
-            m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x5,
-                                                                inst::InstGen::x3));
-
-            gen_zero();
-
-            Util::generator_store_reg_block(m_kernel,
-                                            l_kernelsize,
-                                            inst::InstGen::x1);
+            gen_zero(m, n);
         } else if (ptype == Unary::ptype_t::identity) {
-            Util::KernelSize l_kernelsize;
-            l_kernelsize.M = m;
-            l_kernelsize.N = n;
-
-            m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x5,
-                                                                inst::InstGen::x3));
-
-            // load C
-            Util::generator_load_reg_block(m_kernel,
-                                           l_kernelsize,
-                                           inst::InstGen::x0);
-
-            // store C
-            Util::generator_store_reg_block(m_kernel,
-                                            l_kernelsize,
-                                            inst::InstGen::x1);
+            gen_identity(m, n);
         } else if (ptype == Unary::ptype_t::relu) {
-            Util::KernelSize l_kernelsize;
-            l_kernelsize.M = m;
-            l_kernelsize.N = n;
-
-            m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x5,
-                                                                inst::InstGen::x3));
-
-            // load C
-            Util::generator_load_reg_block(m_kernel,
-                                           l_kernelsize,
-                                           inst::InstGen::x0);
-
-            gen_relu();
-
-            // store C
-            Util::generator_store_reg_block(m_kernel,
-                                            l_kernelsize,
-                                            inst::InstGen::x1);
+            gen_relu(m, n);
         }
 
         // procedure call standard (load from stack)
@@ -226,6 +361,6 @@ namespace mini_jit::generator {
     }
 
     mini_jit::generator::Unary::kernel_t mini_jit::generator::Unary::get_kernel() const {
-        return reinterpret_cast<kernel_t>(m_kernel.get_kernel());
+        return reinterpret_cast<kernel_t>(const_cast<void*>(m_kernel.get_kernel()));
     }
 }  // namespace mini_jit::generator

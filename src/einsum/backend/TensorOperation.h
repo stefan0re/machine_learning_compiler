@@ -57,40 +57,33 @@ class einsum::backend::TensorOperation {
         compile_failed = 3,
         execute_failed = 4
     };
-
-    // scalars
+    /* Setup values */
     dtype_t _dtype;
     prim_t _prim_first_touch;  // first touch primitive
     prim_t _prim_main;         // main primitive
     prim_t _prim_last_touch;   // last touch primitive
 
-    int _prim_m_id = -1;  // id of the M dimension in input tensor 0
-    int _prim_n_id = -1;  // id of the N dimension in input tensor 1
-    int _prim_k_id = -1;  // id of the K dimension in input tensor 0 and 1
+    std::vector<dim_t> _dim_types;
+    std::vector<exec_t> _exec_types;
+    std::vector<int64_t> _dim_sizes;
+    std::vector<int64_t> _strides_in0;
+    std::vector<int64_t> _strides_in1;
+    std::vector<int64_t> _strides_out;
 
-    int _prim_m_size = -1;
-    int _prim_n_size = -1;
-    int _prim_k_size = -1;
+    /* Compile Values */
+    std::vector<int64_t> _loop_ids;  // ids of the loops dimensions
+    int64_t _id_prim_m;
+    int64_t _id_prim_n;
+    int64_t _id_prim_k;
+    int64_t _id_prim_br;
+    int64_t _id_parallel_loop = -1;
 
-    int64_t _lda = 0;
-    int64_t _ldb = 0;
-    int64_t _ldc = 0;
-
-    int _id_first_primitive_loop = -1;
-    int _size_parallel_loop = 0;
-
-    int _last_touch_id = -1;
-
-    bool _use_bias = false;  // flag to indicate if bias is used
-
-    std::vector<int32_t> _loop_order;
-
-    Tensor* _tensor_in0;   // first input tensor
-    Tensor* _tensor_in1;   // second input tensor (use nullptr if unary)
-    Tensor* _tensor_bias;  // bias tensor (use nullptr if no bias)
-    Tensor* _tensor_out;   // output tensor
-
-    // owned storage
+    /* Runtime Values */
+    int64_t _lda;
+    int64_t _ldb;
+    int64_t _ldc;
+    int64_t _br_stride_a = 0;
+    int64_t _br_stride_b = 0;
 
     using kernel_t = mini_jit::generator::Brgemm::kernel_t;
 
@@ -103,7 +96,6 @@ class einsum::backend::TensorOperation {
      * @param prim_last_touch   Type of the last touch primitive.
      * @param in0               First input tensor.
      * @param in1               Second input tensor (use nullptr if unary).
-     * @param bias              Bias tensor (use nullptr if no bias).
      * @param out               Output tensor.
      *
      * @return error_t::success on success, another error_t value otherwise.
@@ -112,10 +104,12 @@ class einsum::backend::TensorOperation {
                   prim_t prim_first_touch,
                   prim_t prim_main,
                   prim_t prim_last_touch,
-                  Tensor* in0,
-                  Tensor* in1,
-                  Tensor* bias,
-                  Tensor* out);
+                  std::span<const dim_t> dim_types,
+                  std::span<const exec_t> exec_types,
+                  std::span<const int64_t> dim_sizes,
+                  std::span<const int64_t> strides_in0,
+                  std::span<const int64_t> strides_in1,
+                  std::span<const int64_t> strides_out);
 
     /**
      * @brief Optimizes tensor contraction for efficient computation.
@@ -136,25 +130,22 @@ class einsum::backend::TensorOperation {
     /**
      * @brief Splits dimensions to improve parallelism and memory access patterns.
      *
-     * splitting M and K dims because more relevant for brgemm
-     *
      */
     error_t split_dimensions();
 
     /**
-     * Fuses dimensions to reduce the number of loops and improve efficiency.
-     *
+     * @brief Fuses dimensions
      */
     error_t fuse_dimensions();
 
     /**
-     * Reorders dimensions to optimize memory access patterns and computation.
+     * @brief Reorders dimensions
      *
      */
     error_t reorder_dimensions();
 
     /**
-     * Identifies primitives for efficient computation based on tensor properties.
+     * @brief Identifies primitives.
      *
      */
     error_t identify_primitives();
@@ -175,7 +166,6 @@ class einsum::backend::TensorOperation {
      **/
     void execute(void const* tensor_in0,
                  void const* tensor_in1,
-                 void const* tensor_bias,
                  void* tensor_out);
 
     /**
@@ -185,7 +175,6 @@ class einsum::backend::TensorOperation {
      * @param id_loop      Dimension id of the loop which is executed.
      * @param ptr_in0      Pointer to the first input tensor's data.
      * @param ptr_in1      Pointer to the second input tensor's data (use nullptr if unary).
-     * @param ptr_bias     Pointer to the bias tensor's data (use nullptr if no bias).
      * @param ptr_out      Pointer to the output tensor's data.
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
@@ -193,21 +182,9 @@ class einsum::backend::TensorOperation {
     void execute_iter(int64_t id_loop,
                       char const* ptr_in0,
                       char const* ptr_in1,
-                      char const* ptr_bias,
                       char* ptr_out,
                       bool first_access,
                       bool last_access);
-
-    /**
-     * @brief Adds bias to the output tensor.
-     *
-     * @param ptr_in Pointer to the input tensor's data in row major.
-     * @param ptr_bias Pointer to the bias tensor's data in row major.
-     * @param ptr_out Pointer to the output tensor's data in row major.
-     */
-    void add_bias(char const* ptr_in,
-                  char const* ptr_bias,
-                  char* ptr_out);
 
     /**
      * Generates a first touch kernel with the given parameters.
@@ -224,14 +201,16 @@ class einsum::backend::TensorOperation {
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
      **/
-    void execute_iter_parallel(char const* ptr_in0,
+    void execute_iter_parallel(int64_t id_loop,
+                               char const* ptr_in0,
                                char const* ptr_in1,
-                               char const* ptr_bias,
                                char* ptr_out,
                                bool first_access,
                                bool last_access);
-
-    void print();
+    /**
+     * @brief Returns the number of floating-point operations (FLOPs) for the tensor operation.
+     */
+    int64_t get_flops_count();
 
    private:
     // BRGEMM

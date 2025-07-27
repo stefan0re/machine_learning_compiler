@@ -617,15 +617,24 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
             bias_tensor = new Tensor(bias_dims);
         }
 
+        std::span<TensorOperation::dim_t> dim_types_span(dim_types);
+        std::span<TensorOperation::exec_t> exec_types_span(exec_types);
+        std::span<int64_t> dim_sizes_span(dim_sizes);
+        std::span<int64_t> strides_in0_span(strides_in0);
+        std::span<int64_t> strides_in1_span(strides_in1);
+        std::span<int64_t> strides_out_span(strides_out);
+
         TensorOperation::error_t result = node->op.setup(
             dtype,
             prim_first_touch,
             prim_main,
             prim_last_touch,
-            node->left_tensor,
-            node->right_tensor,
-            bias_tensor,
-            node->out_tensor);
+            dim_types_span,
+            exec_types_span,
+            dim_sizes_span,
+            strides_in0_span,
+            strides_in1_span,
+            strides_out_span);
 
         if (result != TensorOperation::error_t::success) {
             std::cerr << "Setup failed for contraction operation" << std::endl;
@@ -713,7 +722,7 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
 
         // Execute the tensor operation
-        node->op.execute(left_output, right_output, bias, output);
+        node->op.execute(left_output, right_output, output);
         if (node->left_child->node_type != EinsumTree::node_t::leaf) {
             // If the left child is not a leaf, we need to clean up the left output
             delete[] static_cast<float*>(left_output);
@@ -733,7 +742,7 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
 
         // Execute the permutation operation
-        node->op.execute(child_output, nullptr, nullptr, output);
+        node->op.execute(child_output, nullptr, output);
     } else {
         std::cerr << "Unsupported node type for execution: " << static_cast<int>(node->node_type) << std::endl;
         delete[] output_f;  // Clean up allocated memory

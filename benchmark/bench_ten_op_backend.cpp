@@ -1,14 +1,23 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
-#include <cmath>
-#include <cstdlib>
-#include <iostream>
-#include <string>
 
-#include "../../src/einsum/backend/TensorOperation.h"
+#include <chrono>
+#include <iostream>
+
+#include "../src/einsum/backend/TensorOperation.h"
 
 using namespace einsum::backend;
 
+/**
+ * dtype	            FP32
+    prim_first_touch	None
+    prim_main	        GEMM
+    prim_last_touch	    None
+    dim_types	        ( M, N, K, M, N, K )
+    exec_types	        ( Seq, Seq, Seq, Prim, Prim, Prim )
+    dim_sizes	        ( 32, 32, 8, 32, 32, 32 )
+    strides_in0	        ( 8192, 0, 1024, 1, 0, 32 )
+    strides_in1	        ( 0, 8192, 1024, 0, 32, 1 )
+    strides_out	        ( 32768, 1024, 0, 1, 32, 0 )
+ */
 void example1_2_ref(float* in0,
                     float* in1,
                     float* out) {
@@ -33,7 +42,9 @@ void example1_2_ref(float* in0,
     }
 }
 
-TEST_CASE("Einsum::Backend::TensorOperation 1. pbtc example", "First pbtc example") {
+void first_example() {
+    std::cout << "Running first example..." << std::endl;
+
     TensorOperation tensor_op;
 
     std::vector<TensorOperation::dim_t> i_dim_types = {TensorOperation::dim_t::m,
@@ -108,7 +119,18 @@ TEST_CASE("Einsum::Backend::TensorOperation 1. pbtc example", "First pbtc exampl
         error += std::abs(tensor_out[i] - tensor_out_ref[i]);
     }
     std::cout << "  Total error first example: " << error << std::endl;
-    REQUIRE(error < 1e-5);
+
+    // benchmark execution time
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < 200; i++) {
+        tensor_op.execute(tensor_in0, tensor_in1, tensor_out);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Execution time for third example: " << elapsed.count() << " seconds" << std::endl;
+    double gflops = tensor_op.get_flops_count() / elapsed.count() / 1e9;
+    gflops *= 200;
+    std::cout << "  GFLOPS for third example: " << gflops << std::endl;
 
     // cleanup
     delete[] tensor_in0;
@@ -117,7 +139,21 @@ TEST_CASE("Einsum::Backend::TensorOperation 1. pbtc example", "First pbtc exampl
     delete[] tensor_out_ref;
 }
 
-TEST_CASE("Einsum::Backend::TensorOperation 2. pbtc example", "Second pbtc example") {
+/**
+ * dtype	            FP32
+    prim_first_touch	None
+    prim_main	        GEMM
+    prim_last_touch	    None
+    dim_types	        ( M, N, K, M, N, K )
+    exec_types	        ( Seq, Seq, Prim, Prim, Prim, Prim )
+    dim_sizes	        ( 32, 32, 8, 32, 32, 32 )
+    strides_in0	        ( 8192, 0, 1024, 1, 0, 32 )
+    strides_in1	        ( 0, 8192, 1024, 0, 32, 1 )
+    strides_out	        ( 32768, 1024, 0, 1, 32, 0 )
+ */
+void second_example() {
+    std::cout << "Running second example..." << std::endl;
+
     TensorOperation tensor_op;
 
     std::vector<TensorOperation::dim_t> i_dim_types = {TensorOperation::dim_t::m,
@@ -192,7 +228,18 @@ TEST_CASE("Einsum::Backend::TensorOperation 2. pbtc example", "Second pbtc examp
         error += std::abs(tensor_out[i] - tensor_out_ref[i]);
     }
     std::cout << "  Total error second example: " << error << std::endl;
-    REQUIRE(error < 1e-5);
+
+    // benchmark execution time
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < 200; i++) {
+        tensor_op.execute(tensor_in0, tensor_in1, tensor_out);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Execution time for third example: " << elapsed.count() << " seconds" << std::endl;
+    double gflops = tensor_op.get_flops_count() / elapsed.count() / 1e9;
+    gflops *= 200;
+    std::cout << "  GFLOPS for third example: " << gflops << std::endl;
 
     // cleanup
     delete[] tensor_in0;
@@ -201,7 +248,23 @@ TEST_CASE("Einsum::Backend::TensorOperation 2. pbtc example", "Second pbtc examp
     delete[] tensor_out_ref;
 }
 
-TEST_CASE("Einsum::Backend::TensorOperation 3 pbtc example", "Third pbtc example") {
+/**
+ * dtype	            FP32
+    prim_first_touch	None
+    prim_main	        GEMM
+    prim_last_touch	    RELU
+    dim_types	        ( M, N, K, M, N, K )
+    exec_types	        ( Seq, Seq, Prim, Prim, Prim, Prim )
+    dim_sizes	        ( 32, 32, 8, 32, 32, 32 )
+    strides_in0	        ( 8192, 0, 1024, 1, 0, 32 )
+    strides_in1	        ( 0, 8192, 1024, 0, 32, 1 )
+    strides_out	        ( 32768, 1024, 0, 1, 32, 0 )
+ */
+void third_example() {
+    // Testing first example
+
+    std::cout << "Running third example with ReLU activation..." << std::endl;
+
     TensorOperation tensor_op;
 
     std::vector<TensorOperation::dim_t> i_dim_types = {TensorOperation::dim_t::m,
@@ -284,10 +347,34 @@ TEST_CASE("Einsum::Backend::TensorOperation 3 pbtc example", "Third pbtc example
         }
     }
     std::cout << "  Total error third example: " << error << std::endl;
-    REQUIRE(error < 1e-5);
+
+    // benchmark execution time
+    auto start = std::chrono::high_resolution_clock::now();
+    for (size_t i = 0; i < 200; i++) {
+        tensor_op.execute(tensor_in0, tensor_in1, tensor_out);
+    }
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Execution time for third example: " << elapsed.count() << " seconds" << std::endl;
+    double gflops = tensor_op.get_flops_count() / elapsed.count() / 1e9;
+    gflops *= 200;
+    std::cout << "  GFLOPS for third example: " << gflops << std::endl;
+
     // cleanup
     delete[] tensor_in0;
     delete[] tensor_in1;
     delete[] tensor_out;
     delete[] tensor_out_ref;
+}
+
+int main() {
+    std::cout << "Benchmarking Tensor contraction settings ..." << std::endl;
+
+    first_example();
+    std::cout << "----------------------------------------" << std::endl;
+    second_example();
+    std::cout << "----------------------------------------" << std::endl;
+    third_example();
+
+    return EXIT_SUCCESS;
 }

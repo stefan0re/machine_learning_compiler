@@ -12,11 +12,12 @@ FetchContent_MakeAvailable(Catch2)
 
 set(TEST_SOURCES
     mini_jit/test_instructions.cpp
-    mini_jit/test_generators.cpp
-    einsum/test_einsum_tree.cpp
-    einsum/test_einsum_binary.cpp
-    tensor/test_tensor.cpp
+    mini_jit/test_gemm.cpp
+    mini_jit/test_brgemm.cpp
+    mini_jit/test_unary.cpp
     test_utils/test_utils.cpp
+    einsum/test_einsum_binary.cpp
+    einsum/test_einsum_tree.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})
@@ -26,7 +27,7 @@ target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/tensor
     ${CMAKE_CURRENT_SOURCE_DIR}/einsum
     ${CMAKE_CURRENT_SOURCE_DIR}/mini_jit
-    ${CMAKE_CURRENT_SOURCE_DIR}/src    # falls du dort auch TensorOperation.h usw. hast
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
 
 target_link_libraries(tests
