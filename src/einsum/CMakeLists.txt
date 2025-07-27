@@ -17,20 +17,10 @@ set(LIB_SOURCES
     ./trees/einsum_trees.cpp
     ./backend/TensorOperation.cpp
     ./include/einsum_ref.cpp
-)
-
-set(EXTERNAL_SOURCES
     ../tensor/tensor.cpp
-    ../mini_jit/generator/Brgemm.cpp
-    ../mini_jit/generator/Util.cpp
-    ../mini_jit/backend/Kernel.cpp
-    ../mini_jit/instructions/neon.cpp
-    ../mini_jit/instructions/base.cpp
-    ../mini_jit/generator/Unary.cpp
-    ../mini_jit/include/gemm_ref.cpp
 )
 
-add_library(einsum STATIC ${LIB_SOURCES} ${EXTERNAL_SOURCES})
+add_library(einsum STATIC ${LIB_SOURCES})
 
 target_include_directories(einsum
     PUBLIC
@@ -38,9 +28,14 @@ target_include_directories(einsum
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/backend>
         # $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/trees>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mini_jit>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mini_jit/backend>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mini_jit/generator>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mini_jit/instructions>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../mini_jit/include>
 )
 
-target_link_libraries(einsum PUBLIC OpenMP::OpenMP_CXX)
+target_link_libraries(einsum PUBLIC mini_jit OpenMP::OpenMP_CXX)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(einsum PUBLIC -O3)
