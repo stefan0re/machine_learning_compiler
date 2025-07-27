@@ -14,7 +14,7 @@ include_directories(
 )
 
 set(LIB_SOURCES
-    # ./trees/einsum_trees.cpp
+    ./trees/einsum_trees.cpp
     ./backend/TensorOperation.cpp
     ./include/einsum_ref.cpp
 )

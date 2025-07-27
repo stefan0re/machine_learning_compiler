@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include "../src/einsum/backend/TensorOperation.h"
-#include "../src/tensor/tensor.h"
 
 using namespace einsum::backend;
 
@@ -43,18 +42,6 @@ void example1_2_ref(float* in0,
     }
 }
 
-/**
- * dtype	            FP32
-    prim_first_touch	None
-    prim_main	        GEMM
-    prim_last_touch	    None
-    dim_types	        ( M, N, K, M, N, K )
-    exec_types	        ( Seq, Seq, Seq, Prim, Prim, Prim )
-    dim_sizes	        ( 32, 32, 8, 32, 32, 32 )
-    strides_in0	        ( 8192, 0, 1024, 1, 0, 32 )
-    strides_in1	        ( 0, 8192, 1024, 0, 32, 1 )
-    strides_out	        ( 32768, 1024, 0, 1, 32, 0 )
- */
 void first_example() {
     std::cout << "Running first example..." << std::endl;
 

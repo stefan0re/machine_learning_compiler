@@ -5,7 +5,7 @@ void test::matmul::generate_matrix(uint32_t height, uint32_t width, float* M, bo
     for (uint32_t i = 0; i < height; i++) {
         for (uint32_t j = 0; j < width; j++) {
             int index = j * height + i;
-            float rand_float = static_cast<float>(rand()) / RAND_MAX;
+            float rand_float = static_cast<float>(rand()) / (float)RAND_MAX;
             rand_float = rand_float * (MAX - MIN) + MIN;
             if (visualization) {
                 rand_float = std::trunc(rand_float);

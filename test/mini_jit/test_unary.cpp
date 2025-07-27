@@ -11,7 +11,7 @@
 using namespace mini_jit::generator;
 
 TEST_CASE("MiniJit::Unary Tests Unary ZERO", "[MiniJit][UNARY]") {
-    int sizes[5] = {32, 50, 64, 512, 2048};
+    int sizes[8] = {32, 50, 64, 100, 222, 243, 512, 2048};
     for (int size : sizes) {
         int l_m = size;
         int l_n = size;

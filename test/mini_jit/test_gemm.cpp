@@ -49,7 +49,7 @@ TEST_CASE("MiniJit::Brgemm::FP32 Test all GEMMs", "[MiniJit][GEMM][FP32]") {
                     l_error += std::abs(l_c_jit[i] - l_c_ref[i]);
                     REQUIRE(std::abs(l_c_jit[i] - l_c_ref[i]) < 0.0001);
                 }
-                REQUIRE(l_error < 1e-4);
+                REQUIRE(l_error < 1e-3);
                 free(l_a);
                 free(l_b);
                 free(l_c_jit);

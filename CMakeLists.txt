@@ -17,8 +17,8 @@ add_subdirectory(src/einsum)
 # add_subdirectory(model)
 add_subdirectory(benchmark)
 
-# enable_testing()
+enable_testing()
 
 # Subprojects
-# add_subdirectory(test)
+add_subdirectory(test)
 
