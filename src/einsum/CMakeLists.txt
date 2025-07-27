@@ -40,6 +40,8 @@ target_include_directories(einsum
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
 )
 
+target_link_libraries(einsum PUBLIC OpenMP::OpenMP_CXX)
+
 if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     target_compile_options(einsum PUBLIC -O3)
 endif()

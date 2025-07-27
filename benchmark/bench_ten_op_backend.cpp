@@ -135,14 +135,14 @@ void first_example() {
 
     // benchmark execution time
     auto start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 200; i++) {
         tensor_op.execute(tensor_in0, tensor_in1, tensor_out);
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "  Execution time for third example: " << elapsed.count() << " seconds" << std::endl;
     double gflops = tensor_op.get_flops_count() / elapsed.count() / 1e9;
-    gflops *= 100;
+    gflops *= 200;
     std::cout << "  GFLOPS for third example: " << gflops << std::endl;
 
     // cleanup
@@ -244,14 +244,14 @@ void second_example() {
 
     // benchmark execution time
     auto start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 200; i++) {
         tensor_op.execute(tensor_in0, tensor_in1, tensor_out);
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "  Execution time for third example: " << elapsed.count() << " seconds" << std::endl;
     double gflops = tensor_op.get_flops_count() / elapsed.count() / 1e9;
-    gflops *= 100;
+    gflops *= 200;
     std::cout << "  GFLOPS for third example: " << gflops << std::endl;
 
     // cleanup
@@ -363,14 +363,14 @@ void third_example() {
 
     // benchmark execution time
     auto start = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < 100; i++) {
+    for (size_t i = 0; i < 200; i++) {
         tensor_op.execute(tensor_in0, tensor_in1, tensor_out);
     }
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = end - start;
     std::cout << "  Execution time for third example: " << elapsed.count() << " seconds" << std::endl;
     double gflops = tensor_op.get_flops_count() / elapsed.count() / 1e9;
-    gflops *= 100;
+    gflops *= 200;
     std::cout << "  GFLOPS for third example: " << gflops << std::endl;
 
     // cleanup

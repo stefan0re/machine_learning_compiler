@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     }
 
     auto tp0 = std::chrono::high_resolution_clock::now();
-    for (uint32_t i = 0; i < 400000; i++) {
+    for (uint32_t i = 0; i < 200000; i++) {
         l_kernel(l_a, l_b, l_c_2,
                  lda, ldb, ldc,
                  br_stride_a, br_stride_b);
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     auto tp1 = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(tp1 - tp0).count();
     std::cout << "Duration: " << duration << " ms" << std::endl;
-    double gflops = (2.0 * m * n * k * 400000) / (duration * 1e6);  // 2 * M * N * K operations
+    double gflops = (2.0 * m * n * k * br_k * 200000) / (duration * 1e6);  // 2 * M * N * K operations
     std::cout << "GFLOPS: " << gflops << std::endl;
     std::cout << "CSV:" << m << "," << n << "," << k << "," << duration << "," << gflops << std::endl;
 

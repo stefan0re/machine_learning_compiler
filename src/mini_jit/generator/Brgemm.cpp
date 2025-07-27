@@ -19,13 +19,26 @@ void mini_jit::generator::Brgemm::gen_microkernel(backend::Kernel& i_kernel,
     l_m_block[1] = i_kernelsize.M % 4;
 
     // load values for A
-    for (size_t i = 0; i < l_m_block[0]; i++) {
-        m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(l_vreg_count),
-                                                   Util::WORKING_ADDRESS_A_REG,
-                                                   16,
-                                                   inst::InstGen::arr_spec_t::q));
-        l_vreg_count += 1;
-        l_vreg_count_a++;
+    if (l_m_block[0] > 0) {
+        inst::InstGen::vector_count_t v_count;
+        if (l_m_block[0] == 4) {
+            v_count = inst::InstGen::vector_count_t::vc4;
+        } else if (l_m_block[0] == 3) {
+            v_count = inst::InstGen::vector_count_t::vc3;
+        } else if (l_m_block[0] == 2) {
+            v_count = inst::InstGen::vector_count_t::vc2;
+        } else if (l_m_block[0] == 1) {
+            v_count = inst::InstGen::vector_count_t::vc1;
+        }
+        i_kernel.add_instr(inst::InstGen::neon_ld1_no_offset(static_cast<inst::InstGen::simd_fp_t>(l_vreg_count),
+                                                             Util::WORKING_ADDRESS_A_REG,
+                                                             v_count));
+        i_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_A_REG,
+                                                       Util::WORKING_ADDRESS_A_REG,
+                                                       l_m_block[0] * 4 * 4,
+                                                       0));
+        l_vreg_count += l_m_block[0];
+        l_vreg_count_a += l_m_block[0];
     }
     if (l_m_block[1] > 0) {
         // load remaining values for A
@@ -65,12 +78,16 @@ void mini_jit::generator::Brgemm::gen_microkernel(backend::Kernel& i_kernel,
                                                    l_m_block[0] * 16 + l_m_block[1] * 4,
                                                    0));
 
-    int32_t l_b_vector_register = l_vreg_count;
+    int32_t l_b_vector_register = l_vreg_count - 1;
 
     // compute with fmla
     for (size_t i = 0; i < i_used_reg_count; i++) {
         // load B value
         if (i % l_vreg_count_a == 0) {
+            l_b_vector_register += 1;
+            if (l_b_vector_register > 31) {
+                l_b_vector_register = l_vreg_count;
+            }
             m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(l_b_vector_register),
                                                        Util::WORKING_ADDRESS_B_REG,
                                                        0,
@@ -89,12 +106,6 @@ void mini_jit::generator::Brgemm::gen_microkernel(backend::Kernel& i_kernel,
     }
 
     // restore Working B
-    m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
-                                                   i_kernelsize.N,
-                                                   0));
-    m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
-                                                   Util::HELP_REG_1,
-                                                   Util::LEADING_DIM_B_REG));
     m_kernel.add_instr(inst::InstGen::base_sub_shifted_register(Util::WORKING_ADDRESS_B_REG,
                                                                 Util::WORKING_ADDRESS_B_REG,
                                                                 Util::HELP_REG_1,
@@ -192,6 +203,16 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         }
         // set K loop  counter
         m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
+        // prepare B restore in K loop
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                       kernelsize_big.N,
+                                                       0));
+        m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                       Util::HELP_REG_1,
+                                                       Util::LEADING_DIM_B_REG));
+        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::HELP_REG_1,
+                                                       Util::HELP_REG_1,
+                                                       4, 0));
         // sub K loop register
         m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::K_LOOP_COUNT_REG,
                                                        Util::K_LOOP_COUNT_REG,
@@ -209,10 +230,6 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                     Util::LEADING_DIM_A_REG,
                                                                     0,
                                                                     0));
-        m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG,
-                                                       Util::WORKING_ADDRESS_B_REG,
-                                                       4,
-                                                       0));
 
         /* cbnz K loop */
         m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
@@ -338,6 +355,15 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
             // set K loop  counter
             m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                           kernelsize_reminder_big.N,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_B_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           4, 0));
             // sub K loop register
             m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::K_LOOP_COUNT_REG,
                                                            Util::K_LOOP_COUNT_REG,
@@ -357,11 +383,6 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                         Util::LEADING_DIM_A_REG,
                                                                         0,
                                                                         0));
-            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG,
-                                                           Util::WORKING_ADDRESS_B_REG,
-                                                           4,
-                                                           0));
-
             /* cbnz K loop */
             m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
                                                            (k_loop_pos - m_kernel.get_size()) / 4 - 1));
@@ -506,6 +527,15 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
         }
         // set K loop  counter
         m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
+        m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                       kernelsize_small.N,
+                                                       0));
+        m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                       Util::HELP_REG_1,
+                                                       Util::LEADING_DIM_B_REG));
+        m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::HELP_REG_1,
+                                                       Util::HELP_REG_1,
+                                                       4, 0));
         // sub K loop register
         m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::K_LOOP_COUNT_REG,
                                                        Util::K_LOOP_COUNT_REG,
@@ -522,10 +552,6 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
                                                                     Util::LEADING_DIM_A_REG,
                                                                     0,
                                                                     0));
-        m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG,
-                                                       Util::WORKING_ADDRESS_B_REG,
-                                                       4,
-                                                       0));
         /* cbnz K loop */
         m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,
                                                        (k_loop_pos - m_kernel.get_size()) / 4 - 1));
@@ -647,6 +673,16 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
             // set K loop  counter
             m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::K_LOOP_COUNT_REG, k, 0));
+            m_kernel.add_instr(inst::InstGen::base_mov_imm(Util::HELP_REG_1,
+                                                           kernelsize_reminder_small.N,
+                                                           0));
+            m_kernel.add_instr(inst::InstGen::base_mul_reg(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           Util::LEADING_DIM_B_REG));
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::HELP_REG_1,
+                                                           Util::HELP_REG_1,
+                                                           4, 0));
             // sub K loop register
             m_kernel.add_instr(inst::InstGen::base_sub_imm(Util::K_LOOP_COUNT_REG,
                                                            Util::K_LOOP_COUNT_REG,
@@ -660,16 +696,12 @@ mini_jit::generator::Brgemm::error_t mini_jit::generator::Brgemm::generate(uint3
 
             mini_jit::generator::Brgemm::gen_microkernel(m_kernel, kernelsize_reminder_small, reg_count_reminder_small);
 
-            // adjust Working A and B
+            // adjust Working A
             m_kernel.add_instr(inst::InstGen::base_add_shifted_register(Util::WORKING_ADDRESS_A_REG,
                                                                         Util::WORKING_ADDRESS_A_REG,
                                                                         Util::LEADING_DIM_A_REG,
                                                                         0,
                                                                         0));
-            m_kernel.add_instr(inst::InstGen::base_add_imm(Util::WORKING_ADDRESS_B_REG,
-                                                           Util::WORKING_ADDRESS_B_REG,
-                                                           4,
-                                                           0));
 
             /* cbnz K loop */
             m_kernel.add_instr(inst::InstGen::base_br_cbnz(Util::K_LOOP_COUNT_REG,

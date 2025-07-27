@@ -76,6 +76,7 @@ class einsum::backend::TensorOperation {
     int64_t _id_prim_n;
     int64_t _id_prim_k;
     int64_t _id_prim_br;
+    int64_t _id_parallel_loop = -1;
 
     /* Runtime Values */
     int64_t _lda;
@@ -200,9 +201,9 @@ class einsum::backend::TensorOperation {
      * @param first_access True if first time accessing data of output tensor.
      * @param last_access  True if last time accessing data of output tensor.
      **/
-    void execute_iter_parallel(char const* ptr_in0,
+    void execute_iter_parallel(int64_t id_loop,
+                               char const* ptr_in0,
                                char const* ptr_in1,
-                               char const* ptr_bias,
                                char* ptr_out,
                                bool first_access,
                                bool last_access);

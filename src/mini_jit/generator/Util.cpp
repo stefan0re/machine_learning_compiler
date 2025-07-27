@@ -462,16 +462,14 @@ namespace mini_jit::generator {
         i_kernel.add_instr(InstGen::base_mul_reg(Util::HELP_REG_1, Util::HELP_REG_1, Util::LEADING_DIM_C_REG));
 
         for (; l_n_count < i_kernelsize.N; l_n_count++) {
+            bool l_is_full_load = false;
             int32_t l_m_count = 0;
             while (l_m_count < i_kernelsize.M) {
                 if ((i_kernelsize.M - l_m_count) > 15) {
                     i_kernel.add_instr(InstGen::neon_ld1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
                                                                    i_register,
                                                                    InstGen::vector_count_t::vc4));
-                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
-                                                             i_register,
-                                                             64,
-                                                             0));
+                    l_is_full_load = 1;
                     l_reg_count += 4;
                     l_m_count += 16;
                 } else if ((i_kernelsize.M - l_m_count) > 11) {
@@ -530,10 +528,12 @@ namespace mini_jit::generator {
                 }
             }
             // Add Leading dimension
-            i_kernel.add_instr(InstGen::base_sub_imm(i_register,
-                                                     i_register,
-                                                     i_kernelsize.M * 4,
-                                                     0));
+            if (!l_is_full_load) {
+                i_kernel.add_instr(InstGen::base_sub_imm(i_register,
+                                                         i_register,
+                                                         i_kernelsize.M * 4,
+                                                         0));
+            }
             i_kernel.add_instr(InstGen::base_add_shifted_register(i_register,
                                                                   i_register,
                                                                   Util::LEADING_DIM_C_REG,
@@ -560,15 +560,13 @@ namespace mini_jit::generator {
 
         for (; l_n_count < i_kernelsize.N; l_n_count++) {
             int32_t l_m_count = 0;
+            bool l_is_full_store = false;
             while (l_m_count < i_kernelsize.M) {
                 if ((i_kernelsize.M - l_m_count) > 15) {
                     i_kernel.add_instr(InstGen::neon_st1_no_offset(static_cast<InstGen::simd_fp_t>(l_reg_count),
                                                                    i_register,
                                                                    InstGen::vector_count_t::vc4));
-                    i_kernel.add_instr(InstGen::base_add_imm(i_register,
-                                                             i_register,
-                                                             64,
-                                                             0));
+                    l_is_full_store = true;
                     l_reg_count += 4;
                     l_m_count += 16;
                 } else if ((i_kernelsize.M - l_m_count) > 11) {
@@ -628,10 +626,12 @@ namespace mini_jit::generator {
                 }
             }
             // Add Leading dimension
-            i_kernel.add_instr(InstGen::base_sub_imm(i_register,
-                                                     i_register,
-                                                     i_kernelsize.M * 4,
-                                                     0));
+            if (!l_is_full_store) {
+                i_kernel.add_instr(InstGen::base_sub_imm(i_register,
+                                                         i_register,
+                                                         i_kernelsize.M * 4,
+                                                         0));
+            }
             i_kernel.add_instr(InstGen::base_add_shifted_register(i_register,
                                                                   i_register,
                                                                   Util::LEADING_DIM_C_REG,

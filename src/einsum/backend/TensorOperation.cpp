@@ -46,7 +46,17 @@ namespace einsum::backend {
         char const* l_ptr_in1 = static_cast<char const*>(tensor_in1);
         char* l_ptr_out = static_cast<char*>(tensor_out);
 
-        execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+        // Check if the first loop should be executed in parallel
+        bool use_parallel = false;
+        if (_loop_ids.size() > 0 && _exec_types[_loop_ids[0]] == exec_t::shared) {
+            use_parallel = true;
+        }
+
+        if (use_parallel) {
+            execute_iter_parallel(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+        } else {
+            execute_iter(0, l_ptr_in0, l_ptr_in1, l_ptr_out, false, false);
+        }
     }
     void TensorOperation::execute_iter(int64_t id_loop,
                                        char const* ptr_in0,
@@ -54,11 +64,14 @@ namespace einsum::backend {
                                        char* ptr_out,
                                        bool first_access,
                                        bool last_access) {
-        int64_t l_size = _dim_sizes[_loop_ids[id_loop]];
+        int64_t l_size = 1;
+        if (_loop_ids.size() > 0) {
+            l_size = _dim_sizes[_loop_ids[id_loop]];
+        }
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
             // derive if this is first or last access to the output block
-            if (l_it == 0 && id_loop == 0) {
+            if (id_loop == 0) {
                 first_access = true;
             }
             if ((id_loop == _loop_ids.size() - 1) && (_dim_types[_loop_ids[id_loop]] != dim_t::k)) {
@@ -74,11 +87,12 @@ namespace einsum::backend {
             char* l_ptr_in1 = const_cast<char*>(ptr_in1);
             char* l_ptr_out = ptr_out;
 
-            l_ptr_in0 += l_it * _strides_in0[_loop_ids[id_loop]] * 4;
-            l_ptr_in1 += l_it * _strides_in1[_loop_ids[id_loop]] * 4;
-            l_ptr_out += l_it * _strides_out[_loop_ids[id_loop]] * 4;
-
-            if (id_loop < _loop_ids.size() - 1) {
+            if (_loop_ids.size() > 0) {
+                l_ptr_in0 += l_it * _strides_in0[_loop_ids[id_loop]] * 4;
+                l_ptr_in1 += l_it * _strides_in1[_loop_ids[id_loop]] * 4;
+                l_ptr_out += l_it * _strides_out[_loop_ids[id_loop]] * 4;
+            }
+            if ((_loop_ids.size() > 0) && (id_loop < _loop_ids.size() - 1)) {
                 // recursive function call
                 execute_iter(id_loop + 1,
                              l_ptr_in0,
@@ -109,6 +123,74 @@ namespace einsum::backend {
         }
     }
 
+    void TensorOperation::execute_iter_parallel(int64_t id_loop,
+                                                const char* ptr_in0,
+                                                const char* ptr_in1,
+                                                char* ptr_out,
+                                                bool first_access,
+                                                bool last_access) {
+        int64_t l_size = 1;
+        if (_loop_ids.size() > 0) {
+            l_size = _dim_sizes[_loop_ids[id_loop]];
+        }
+
+#pragma omp parallel for
+        for (int64_t l_it = 0; l_it < l_size; l_it++) {
+            // derive if this is first or last access to the output block
+            bool local_first_access = first_access;
+            bool local_last_access = false;
+
+            if (id_loop == 0) {
+                local_first_access = true;
+            }
+            if ((id_loop == _loop_ids.size() - 1) && (_dim_types[_loop_ids[id_loop]] != dim_t::k)) {
+                local_last_access = true;
+            } else if ((id_loop == _loop_ids.size() - 1) && (_dim_types[_loop_ids[id_loop]] == dim_t::k) && (l_it == l_size - 1)) {
+                local_last_access = true;
+            }
+
+            // update pointer with strides
+            char* l_ptr_in0 = const_cast<char*>(ptr_in0);
+            char* l_ptr_in1 = const_cast<char*>(ptr_in1);
+            char* l_ptr_out = ptr_out;
+
+            if (_loop_ids.size() > 0) {
+                l_ptr_in0 += l_it * _strides_in0[_loop_ids[id_loop]] * 4;
+                l_ptr_in1 += l_it * _strides_in1[_loop_ids[id_loop]] * 4;
+                l_ptr_out += l_it * _strides_out[_loop_ids[id_loop]] * 4;
+            }
+
+            if ((_loop_ids.size() > 0) && (id_loop < _loop_ids.size() - 1)) {
+                // recursive function call (sequential from here)
+                execute_iter(id_loop + 1,
+                             l_ptr_in0,
+                             l_ptr_in1,
+                             l_ptr_out,
+                             false,
+                             false);
+            } else {
+                // call first touch kernel if necessary
+                if (local_first_access && _prim_first_touch != prim_t::none) {
+                    _unary_first_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
+                // call main kernel
+                _brgemm_kernel(l_ptr_in0,
+                               l_ptr_in1,
+                               l_ptr_out,
+                               _lda,
+                               _ldb,
+                               _ldc,
+                               _br_stride_a,
+                               _br_stride_b);
+
+                // call last touch kernel if necessary
+                if (local_last_access && _prim_last_touch != prim_t::none) {
+                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                }
+            }
+        }
+    }
+
     /** The folowing is set here:
      * - First touch primitive
      * - Main primitive
@@ -119,9 +201,11 @@ namespace einsum::backend {
      */
     TensorOperation::error_t TensorOperation::compile() {
         // Initialize loop_ids
-        for (size_t i = 0; i < _exec_types.size(); i++) {
-            if (_exec_types[i] == exec_t::seq || _exec_types[i] == exec_t::shared) {
-                _loop_ids.push_back(i);
+        if (_loop_ids.size() == 0) {
+            for (size_t i = 0; i < _exec_types.size(); i++) {
+                if (_exec_types[i] == exec_t::seq || _exec_types[i] == exec_t::shared) {
+                    _loop_ids.push_back(i);
+                }
             }
         }
 
@@ -206,18 +290,15 @@ namespace einsum::backend {
         return TensorOperation::error_t::success;
     }
 
-    void TensorOperation::execute_iter_parallel(const char* ptr_in0,
-                                                const char* ptr_in1,
-                                                const char* ptr_bias,
-                                                char* ptr_out,
-                                                bool first_access,
-                                                bool last_access) {
-    }
+    /********************************************/
+    /** IR for optimizations on TensorOperation */
+    /********************************************/
 
     TensorOperation::error_t TensorOperation::optimize() {
         fuse_dimensions();
         split_dimensions();
         identify_primitives();
+        reorder_dimensions();
         return TensorOperation::error_t::success;
     }
 
@@ -403,6 +484,41 @@ namespace einsum::backend {
     }
 
     TensorOperation::error_t TensorOperation::reorder_dimensions() {
+        // seperate Dimensions
+        std::vector<int64_t> m_loops;
+        std::vector<int64_t> n_loops;
+        std::vector<int64_t> k_loops;
+
+        for (size_t i = 0; i < _exec_types.size(); i++) {
+            if (_exec_types[i] == exec_t::seq || _exec_types[i] == exec_t::shared) {
+                if (_dim_types[i] == dim_t::m) {
+                    m_loops.push_back(i);
+                } else if (_dim_types[i] == dim_t::n) {
+                    n_loops.push_back(i);
+                } else if (_dim_types[i] == dim_t::k) {
+                    k_loops.push_back(i);
+                }
+            }
+        }
+
+        // assign loop dimensions to _loop_ids vector
+        size_t max_loops_per_dim = std::max({m_loops.size(), n_loops.size(), k_loops.size()});
+        for (size_t i = 0; i < max_loops_per_dim; i++) {
+            if (i < m_loops.size()) {
+                _loop_ids.push_back(m_loops[i]);
+            }
+            if (i < n_loops.size()) {
+                _loop_ids.push_back(n_loops[i]);
+            }
+            if (i < k_loops.size()) {
+                _loop_ids.push_back(k_loops[i]);
+            }
+        }
+        if (_loop_ids.size() > 0 && _dim_types[_loop_ids[0]] != dim_t::k) {
+            _id_parallel_loop = _loop_ids[0];
+            _exec_types[_id_parallel_loop] = exec_t::shared;
+        }
+
         return TensorOperation::error_t::success;
     }
 
