@@ -183,6 +183,7 @@ namespace einsum::backend {
                                _br_stride_a,
                                _br_stride_b);
 
+
                 // call last touch kernel if necessary
                 if (local_last_access && _prim_last_touch != prim_t::none) {
                     _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
@@ -594,6 +595,7 @@ namespace einsum::backend {
         for (size_t i = 0; i < _dim_sizes.size(); i++) {
             if (_dim_types[i] == dim_t::m || _dim_types[i] == dim_t::n) {
                 minus *= _dim_sizes[i];
+
             }
         }
         return flops - minus;

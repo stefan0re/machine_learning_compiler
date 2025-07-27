@@ -126,9 +126,14 @@ class einsum::trees::EinsumTree {
    public:
     /**
      * @brief Construct a new Einsum Tree object and parses string representation.
+     *
      * The string representation should be in the format:
      * "[left_tensor_notation],[right_tensor_notation]->[output_tensor_notation]"
      * Example: "[0,1],[1,2]->[0,2]"
+     *
+     * If unary operations are supposed to be used, use:
+     * "[left_tensor_notation, first_touch_operant],[right_tensor_notation, first_touch_operant]->[output_tensor_notation]last_touch_operant"
+     * Example: "[0,1,z],[1,2]->[0,2]r"
      *
      * @param str_repr String representation of the einsum operation.
      * @param id_dims Vector of dimensions for each tensor ID in the einsum operation.
@@ -148,7 +153,8 @@ class einsum::trees::EinsumTree {
      * @brief Executes the Einsum tree with the provided input tensors.
      *
      * @param inputs Vector of input tensors to be used in the execution.
-     * @return void* Pointer to the output tensor after execution.
+     * @param biases Vector of bias tensors to be used in the execution.
+     * @param output Tensor, which is returned from root contraction.
      */
     void execute(std::vector<void*> inputs, std::vector<void*> biases, void* output);
     /**

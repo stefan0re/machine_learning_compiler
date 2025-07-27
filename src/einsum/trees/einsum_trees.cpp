@@ -11,11 +11,23 @@ using namespace einsum::trees;
 using namespace einsum::backend;
 
 EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims, bool use_bias) {
+    // set class attribures
     this->id_dims = id_dims;
-    this->use_bias = use_bias;
+    this->use_bias = use_bias;  // flag for using biases
 
+    /*
+        Stack shows the state of parsing.
+        'l': a left child was added last iteration
+        'r': next child to be added has to be right
+        'd': a right child was added last iteration
+        'u': go one step up (to parent)
+        'w': write into current node
+    */
+
+    // initialize not empty stack
     std::vector<char> stack = {'l'};
 
+    // intitialize the root node
     this->root = new TreeNode{
         static_cast<int32_t>(this->size),  // id
         EinsumTree::node_t::leaf,          // node_type
@@ -36,6 +48,7 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims, bool
 
     TreeNode* current = this->root;
 
+    // loop over all characters in string representation
     for (char character : str_repr) {
         if (character == '[') {
             if (stack.back() == 'l' || stack.back() == 'd') {
@@ -156,6 +169,7 @@ EinsumTree::EinsumTree(std::string str_repr, std::vector<uint32_t> id_dims, bool
         }
     }
 
+    // set tensors for each contraction
     identify();
 }
 
