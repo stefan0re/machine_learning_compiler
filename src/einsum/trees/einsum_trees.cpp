@@ -692,7 +692,7 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
     }
 
     // For non-leaf nodes, we need to allocate output memory
-    int32_t size = 1;
+    uint32_t size = 1;
     for (auto id : node->out_tensor->id) {
         size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
     }
