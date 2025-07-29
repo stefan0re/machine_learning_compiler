@@ -141,6 +141,10 @@ class Setup:
         with open(filename, "w") as f:
             for name, param in model.named_parameters():
                 if param.requires_grad:
+                    # row-major (C-style) order
+                    # Tensor(out_features, in_features)
+                    # -> w[0,0], w[0,1], ..., w[0,N-1], w[1,0], ..., w[O-1,N-1]
+                    # with O = out_features, N = in_features
                     flat = param.detach().numpy().flatten()
                     line = ",".join(str(x) for x in flat)
                     f.write(line + "\n")

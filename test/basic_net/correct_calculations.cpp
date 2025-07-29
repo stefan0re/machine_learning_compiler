@@ -14,11 +14,22 @@ void relu(Tensor& vec) {
 }
 
 // Matrix-vector multiplication: y = x * W^T + b
+// in row-major access pattern
 void matmul_add(const Tensor& x, const Tensor& W, const Tensor& b, Tensor& out) {
+    /*
+    W = [w1.1, w1.2, w1.3, w1.4,        [x1,   [y1,
+         w2.1, w2.2, w2.3, w2.4,   *     x2, =  y2,
+         w3.1, w3.2, w3.3, w3.4,         x3,    y3,
+                ......          ]        x4]    ...]
+
+    -> y1 = w1.1 * x1 + w1.2 + w1.3 * w3 + w1.4 * w4 + b1.1
+    -> Tensor(4, 64) -> stride: (64, 1)
+    */
     for (size_t i = 0; i < out.size; ++i) {
         float sum = 0.0f;
         for (size_t j = 0; j < x.size; ++j) {
-            sum += x.data[j] * W.data[i * j];
+            // for each value in X and each row in W
+            sum += x.data[j] * W.data[64 * i + j];
         }
         out.data[i] = sum + b.data[i];
     }
