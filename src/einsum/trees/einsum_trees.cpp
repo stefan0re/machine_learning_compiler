@@ -698,8 +698,8 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
     }
 
     float* output_f = new float[out_size]();  // Initialize to zero
-
     if (this->use_bias && node->node_type == EinsumTree::node_t::contraction) {
+        // get correct bias for this node
         float* bias = nullptr;
         for (size_t i = 0; i < biases.size(); i++) {
             if (node->id == this->bias_ids[i]) {
@@ -708,6 +708,7 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
             }
         }
 
+        // get n and m dimensions of output tensor
         uint32_t n_size = 1;
         uint32_t m_size = 1;
         for (auto id : node->out_tensor->id) {
@@ -718,13 +719,11 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
             }
         }
 
-        for (size_t i = 0; i < m_size; i++) {
-            for (size_t j = 0; j < n_size; j++) {
-                output_f[j * m_size + i] = bias[j];
-            }
+        // fill each column with the corresponding bias value
+        for (size_t j = 0; j < n_size; j++) {
+            std::fill(&output_f[j * m_size], &output_f[j * m_size + m_size], bias[j]);
         }
     }
-
     void* output = static_cast<void*>(output_f);
 
     if (node->node_type == EinsumTree::node_t::contraction) {
