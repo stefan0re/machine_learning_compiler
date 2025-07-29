@@ -15,8 +15,8 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple binary operation", "[Einsum][Trees
     std::string str_repr = "[1,0],[2,1]->[2,0]";
     EinsumTree tree = EinsumTree(str_repr, {7, 46, 88});
     tree.optimize();
-    tree.print();
     tree.lower();
+    tree.print();
     float* in0 = new float[7 * 46];
     float* in1 = new float[46 * 88];
     float* out = new float[7 * 88];
@@ -52,8 +52,8 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple bias op", "[Einsum][Trees][EinsumT
     // m=5, n=6, k=4
     EinsumTree tree = EinsumTree(str_repr, {5, 4, 6}, true);
     tree.optimize();
-    tree.print();
     tree.lower();
+    tree.print();
     float* in0 = new float[5 * 4];
     float* in1 = new float[4 * 6];
     float* bias = new float[6];
@@ -96,8 +96,8 @@ TEST_CASE("Einsum::Trees::EinsumTrees::large bias tree", "[Einsum][Trees][Einsum
     // m=5, n=6, k=4
     EinsumTree tree = EinsumTree(str_repr, {5, 4, 6, 7, 8}, true);
     tree.optimize();
-    tree.print();
     tree.lower();
+    tree.print();
     float* in0 = new float[5 * 4];
     float* in1 = new float[4 * 6];
     float* bias0 = new float[6];
@@ -133,11 +133,11 @@ TEST_CASE("Einsum::Trees::EinsumTrees::large bias tree", "[Einsum][Trees][Einsum
     }
 
     for (size_t i = 0; i < 7; i++) {
-        bias1[i] = (float)(i + 1);
+        bias1[i] = (float)drand48();
     }
 
     for (size_t i = 0; i < 8; i++) {
-        bias2[i] = (float)(i + 1);
+        bias2[i] = (float)drand48();
     }
 
     for (size_t i = 0; i < 5 * 8; i++) {
@@ -149,9 +149,9 @@ TEST_CASE("Einsum::Trees::EinsumTrees::large bias tree", "[Einsum][Trees][Einsum
                                  static_cast<void*>(in1),
                                  static_cast<void*>(in2),
                                  static_cast<void*>(in3)};
-    std::vector<void*> biases = {static_cast<void*>(bias0),
+    std::vector<void*> biases = {static_cast<void*>(bias2),
                                  static_cast<void*>(bias1),
-                                 static_cast<void*>(bias2)};
+                                 static_cast<void*>(bias0)};
 
     tree.execute(inputs, biases, out);
 
