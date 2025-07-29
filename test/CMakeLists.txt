@@ -18,6 +18,7 @@ set(TEST_SOURCES
     test_utils/test_utils.cpp
     einsum/test_einsum_binary.cpp
     einsum/test_einsum_tree.cpp
+    basic_net/correct_calculations.cpp
 )
 
 add_executable(tests ${TEST_SOURCES})

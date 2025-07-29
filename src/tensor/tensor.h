@@ -5,6 +5,7 @@
 
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 class Tensor {
@@ -17,6 +18,7 @@ class Tensor {
         int exec_t = 99;
     };
 
+    size_t size;
     float* data = nullptr;
 
     std::vector<DimInfo> id;
@@ -24,12 +26,16 @@ class Tensor {
     // constructor taking n dimension sizes
     // template definitions must be visible to every translation unit that uses them,
     // so define it in the header
-    template <typename... Dims>
+    template <typename... Dims,
+              typename = std::enable_if_t<(std::conjunction_v<std::is_integral<Dims>...>)>>
     Tensor(Dims... dims) {
         // store each dimension size in a vector
         std::vector<int> sizes = {dims...};
 
         setup(sizes);
+
+        size = (static_cast<size_t>(dims) * ...);
+        data = new float[size];
     }
 
     Tensor(std::vector<u_int32_t> dims);
@@ -70,6 +76,20 @@ class Tensor {
      * @return Tensor A tensor populated with the parsed float values.
      */
     static Tensor from_csv(std::string path);
+
+    /**
+     * @brief Compare this tensor with anothe
+     *
+     * @param tensor The tensor that should be compared with.
+     * @param delta A small margin to compensate floating point calculation errors.
+     * @return bool True if the tensors are equal.
+     */
+    bool compare(Tensor& tensor, float delta);
+
+    /**
+     * @brief Print the raw data of the Tensor
+     */
+    void print();
 
    private:
     void setup(std::vector<int> sizes);

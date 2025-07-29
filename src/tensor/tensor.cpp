@@ -3,6 +3,7 @@
 #include <fstream>
 #include <initializer_list>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -11,6 +12,9 @@
 Tensor::Tensor(std::vector<u_int32_t> dims) {
     std::vector<int> sizes(dims.begin(), dims.end());
     setup(sizes);
+
+    size = std::accumulate(dims.begin(), dims.end(), size_t{1}, std::multiplies<>());
+    data = new float[size];
 }
 
 // fill DimInfos and strides with the help of dimension size vector
@@ -44,6 +48,36 @@ void Tensor::swap(int i, int j) {
         throw std::out_of_range("Swap indices out of range.");
     }
     std::swap(id[i], id[j]);
+}
+
+// compare a tensor with another
+bool Tensor::compare(Tensor& tensor, float delta) {
+    bool ret = true;
+
+    // check for equal size first
+    if (size == tensor.size) {
+        for (int i = 0; i < size; i++) {
+            // if the error is bigger than the delta
+            if (delta < abs(data[i] - tensor.data[i])) {
+                std::cout << "Differe in " << i << ": " << data[i] << " != " << tensor.data[i] << std::endl;
+                ret = false;
+            }
+        }
+
+        return ret;
+
+    } else {
+        std::cout << "Tensors have diffrent sizes." << std::endl;
+        return false;
+    }
+}
+
+// print 1D Tensors
+void Tensor::print() {
+    for (int i = 0; i < size; i++) {
+        std::cout << data[i] << " , ";
+    }
+    std::cout << std::endl;
 }
 
 // utility to print the Tensor structure
@@ -96,7 +130,8 @@ std::vector<Tensor> Tensor::from_torchpp(std::string path, int in_size) {
             // calculate the size of the output layer
             out_size = values.size() / in_size;
             // create the tensor
-            Tensor t = Tensor(in_size, out_size);
+            // this is the pytorch row-major standart
+            Tensor t = Tensor(out_size, in_size);
             // update the in_size to the ouput layer so it
             // becomes the new input layer
             in_size = out_size;
