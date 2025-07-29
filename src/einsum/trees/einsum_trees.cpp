@@ -692,12 +692,39 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
     }
 
     // For non-leaf nodes, we need to allocate output memory
-    uint32_t size = 1;
+    uint32_t out_size = 1;
     for (auto id : node->out_tensor->id) {
-        size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
+        out_size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
     }
 
-    float* output_f = new float[size]();  // Initialize to zero
+    float* output_f = new float[out_size]();  // Initialize to zero
+
+    if (this->use_bias && node->node_type == EinsumTree::node_t::contraction) {
+        float* bias = nullptr;
+        for (size_t i = 0; i < biases.size(); i++) {
+            if (node->id == this->bias_ids[i]) {
+                bias = (float*)biases[i];
+                break;
+            }
+        }
+
+        uint32_t n_size = 1;
+        uint32_t m_size = 1;
+        for (auto id : node->out_tensor->id) {
+            if (id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+                n_size *= id.dim_sizes;
+            } else if (id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
+                m_size *= id.dim_sizes;
+            }
+        }
+
+        for (size_t i = 0; i < m_size; i++) {
+            for (size_t j = 0; j < n_size; j++) {
+                output_f[j * m_size + i] = bias[j];
+            }
+        }
+    }
+
     void* output = static_cast<void*>(output_f);
 
     if (node->node_type == EinsumTree::node_t::contraction) {
@@ -709,16 +736,6 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
             std::cerr << "Failed to execute child nodes." << std::endl;
             delete[] output_f;  // Clean up allocated memory
             return nullptr;
-        }
-
-        void* bias = nullptr;
-        if (this->use_bias) {
-            for (size_t i = 0; i < biases.size(); i++) {
-                if (node->id == this->bias_ids[i]) {
-                    bias = biases[i];
-                    break;
-                }
-            }
         }
 
         // Execute the tensor operation
