@@ -50,6 +50,27 @@ void Tensor::swap(int i, int j) {
     std::swap(id[i], id[j]);
 }
 
+// compare a tensor with another
+bool Tensor::compare(Tensor& tensor) {
+    bool ret = true;
+
+    // check for equal size first
+    if (size == tensor.size) {
+        for (int i = 0; i < size; i++) {
+            if (data[i] != tensor.data[i]) {
+                std::cout << "Differe in " << i << ": " << data[i] << " != " << tensor.data[i] << std::endl;
+                ret = false;
+            }
+        }
+
+        return ret;
+
+    } else {
+        std::cout << "Tensors have diffrent sizes." << std::endl;
+        return false;
+    }
+}
+
 // utility to print the Tensor structure
 void Tensor::info() const {
     for (const auto& dim : id) {

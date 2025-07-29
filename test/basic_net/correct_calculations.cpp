@@ -61,14 +61,19 @@ TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
     Tensor W3 = model[4];
     Tensor b3 = model[5];
 
+    // load example input and output
+    Tensor example = Tensor::from_csv("../../python/data/example.csv");
+
     // input
     Tensor input = Tensor(4);
-    input.data = new float[4]{5.1f, 3.5f, 1.4f, 0.2f};
+    input.data = new float[4]{example.data[0], example.data[1], example.data[2], example.data[3]};
 
     // output
     Tensor output = Tensor(3);
+    Tensor output_ref = Tensor(3);
+    output_ref.data = new float[3]{example.data[4], example.data[5], example.data[6]};
 
     forward(input, W1, b1, W2, b2, W3, b3, output);
 
-    REQUIRE(1);
+    REQUIRE(output.compare(output_ref));
 }

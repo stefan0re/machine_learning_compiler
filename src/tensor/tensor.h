@@ -77,6 +77,14 @@ class Tensor {
      */
     static Tensor from_csv(std::string path);
 
+    /**
+     * @brief Compare this tensor with anothe
+     *
+     * @param tensor The tensor that should be compared with.
+     * @return bool True if the tensors are equal.
+     */
+    bool compare(Tensor& tensor);
+
    private:
     void setup(std::vector<int> sizes);
 };
