@@ -1,15 +1,6 @@
 GEMM Code-Generation
 ====================
 
-Task 1: Neon Batch-Reduce GEMM
-------------------------------
-
-
-
-
-Task 2: Code-Generation
------------------------
-
 The solutions to this second task can be found in `this directory <https://github.com/stefan0re/machine_learning_compiler/tree/main/src/mini_jit/generator>`_.
 
 GEMM
@@ -18,49 +9,72 @@ ____
 get_kernel_sizes
 ++++++++++++++++
 
-In order to be able to process all matrix sizes, we first need to figure out the sizes of the sub-matrices and kernels. Thus, we implemented a algorithm that return these kernel sizes based on the dimensions of the :math:`C` matrix. First, we split the matrix into 2-4 sub-matrices. We split in a dimension if it is not dividable by 4 (a kernel would not completely fill registers). If both dimension are not dividable by 4, :math:`C` looks as follows:
+In order to be able to process all matrix sizes, we first need to figure out the sizes of the sub-matrices and kernels. Thus, we implemented a algorithm that return these kernel sizes based on the dimensions of the :math:`C` matrix. 
 
 .. image:: ../_static/matrix_areas.png
     :alt: :math:`C` Matrix areas
 
-After we have defined the areas, we define the kernel for each area. For each kernel, we iterate over all numbers between 1 and 16 for both :math:`m` and :math:`n` and calculate how many registers an :math:`A` column, :math:`B` row and the :math:`C` Matrix for this configuration of dimensions have to occupy. We filter all configuration of dimensions if this number of registers exceeds 32 (maximal number of registers) or if the respective kernel dimensions do not divide the dimensions of the area. If an kernel passed, we calculate the score which is a heuristic based on how square the kernel is, how much bigger :math:`m` is compared to :math:`n`, and how many registers will not be used by the kernel. 
+The first thing to do is to make sure that there are enough vector registers for loading A and B columns/rows and for holding the C matrix.
+We have decided to use a maximum blocking of 16 values in the M dimension (line 32), because they worked in the previous examples and then iteratively approach the use of all 32 vector registers. This can be seen in lines 15-17.
+Derived from the “big” kernel, only the edge column is then created on the right-hand side, which will probably get a less good N (line 28).
 
 .. code-block:: C++
     :linenos:
 
-    // get used registers
-    int32_t A_regs = (m_temp - (m_temp % 4)) / 4 + ((m_temp % 4 == 0) ? 0 : 1);
-    int32_t B_regs = (n_temp - (n_temp % 4)) / 4 + ((n_temp % 4 == 0) ? 0 : 1);
-
-    int32_t C_size = m_temp * n_temp;
-    int32_t C_regs = (C_size - (C_size % 4)) / 4 + ((C_size % 4 == 0) ? 0 : 1);
-
-    int32_t used_reg_space = A_regs + B_regs + C_regs;
-
-    if (max_reg_space >= used_reg_space && (area.M % m_temp == 0 && area.N % n_temp == 0)) {
-        // metric for how square the rectangle spanned by n_temp and m_temp is
-        double squareness_deficit = fabs(((double)n_temp / (double)m_temp) - 1);
-
-        // metrix for how much bigger m is compared to n
-        double n_greater_m_deficit = (double)n_temp / (double)m_temp;
-
-        // relative number of unused registers
-        double registers_left = (max_reg_space - used_reg_space) / (double)max_reg_space;
-
-        double score = w_sd * squareness_deficit + w_rl * registers_left + w_mn * n_greater_m_deficit;
-
-        if (score < min_score) {
-            min_score = score;
-            best_m = m_temp;
-            best_n = n_temp;
+    void mini_jit::generator::Util::get_kernel_sizes_brgemm(int32_t m,
+                                                            int32_t n,
+                                                            mini_jit::generator::Util::KernelSize &kernelsize_big,
+                                                            mini_jit::generator::Util::KernelSize &kernelsize_small,
+                                                            int32_t &i_used_vector_reg_count_big,
+                                                            int32_t &i_used_vector_reg_count_small) {
+        int32_t max_n_blocking = 30;
+        int32_t m_blocks = 0;
+        if (m > 12) {
+            m_blocks = 4;
+        } else {
+            m_blocks = (m + 3) / 4;  // up_div
         }
+
+        while (m_blocks * max_n_blocking + m_blocks + 1 > 32) {
+            max_n_blocking--;
+        }
+
+        if (max_n_blocking > n) {
+            max_n_blocking = n;
+        }
+
+        kernelsize_big.M32 = (m > 15) ? 16 : m;
+        kernelsize_big.N = max_n_blocking;
+        i_used_vector_reg_count_big = m_blocks * max_n_blocking;
+
+        kernelsize_small.M = (m > 15) ? 16 : m;
+        kernelsize_small.N = n % max_n_blocking;
+
+        i_used_vector_reg_count_small = m_blocks * kernelsize_small.N;
     }
 
-The kernel with the smallest score is chosen as the kernel for the respective area.
+The JIT-generator function for the GEMM is pretty much strate forward after this blocking.
+The accumulation on a C submatrix is first made in a K loop.
+For this we wrote a microkernel function that only handles the compute.
+After this block we go to the next block in M direction until the whole M dimension is done.
+The M loop is made around each nano-kernel, except for the last edge case.
+The addresses for A and C must be recalculated. The B address only needs to be reset.
+Around this is then looped again in N in order to calculate the sub-matrices up to the last edge case, which is then processed separately.
+
+The full implementation can be seen in this `here <https://github.com/stefan0re/machine_learning_compiler/blob/main/src/mini_jit/generator/Brgemm.cpp>`_, and here are `tests <https://github.com/stefan0re/machine_learning_compiler/blob/main/test/mini_jit/test_gemm.cpp>`_ for all sizes.
+In our test we have to test cases one with the leading dimensions equal to the M K and M, and another one with random bigger leading dimensions.
+
+TODO: link to csv file with full sweep and report the mean performance of all kernels.
+
 
 Batch-Reduce GEMM
 _________________
 
+A batch reduce includes a further K dimension in the kernel, so it ensures that not only one loop is looped around the inner microkernel, but a second one is added.
+The second K dimension does not have to be directly after the first one in the memory, because you can use BR_strides as an offset to the next K dimension address. 
+Therefore, we added if statements to the existing GEMM code to handle the second K dimension.
+After each inner K loop, the address of the next outer K is calculated with the runtime parameters :code:`br_stride_a` and :code:`br_stride_b` which are in a seperate generall purpose register.
 
-We all worked on the tasks in equal parts.
-This week's work is available under this commit on GitHub: 
+Again as with our regular GEMM we have written tests to verify the correctness of the code. (`Link <https://github.com/stefan0re/machine_learning_compiler/blob/main/test/mini_jit/test_brgemm.cpp>`_).
+
+TODO: report arithmetic mean performance of all settings.

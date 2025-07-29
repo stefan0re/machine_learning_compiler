@@ -4,170 +4,116 @@ Unary Operations
 Task 1: Unary Primitives
 ------------------------
 
-The solutions to this second task can be found in `this directory <https://github.com/stefan0re/machine_learning_compiler/tree/main/src/mini_jit/generator>`_.
+Unary primitives only work with an input matrix and an output matrix.
+With the exception of the Transpose operation, all unary operations are performed element by element.
+We have decided to use 4 different sub-generators and thus process transpose and identity independently of each other.
 
-In order to implement the unary primitives space efficiently, we first define a code frame that will call the corresponding functions for the primitive. This code frame firstly always defines the areas of the matrix. This is done by a function that operates just as the get_kernel_sizes function from last week. As soon as we have defined all matrix areas, the procedure call standard calls are added to the buffer. Afterwards we iterate through each area: first, we put the pointers to the matrices to the beginning of the respective area.
+Zero Primitive
+^^^^^^^^^^^^^^
 
-.. code-block:: C++
-    :linenos:
-
-    // Store pointers of A and B to x7, x8
-    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x7,
-                                                        inst::InstGen::x0));
-    m_kernel.add_instr(inst::InstGen::base_mov_register(inst::InstGen::x8,
-                                                        inst::InstGen::x1));
-
-    // add offset for working area
-    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x7,
-                                                    inst::InstGen::x7,
-                                                    (int32_t)area.offset,
-                                                    0));
-    m_kernel.add_instr(inst::InstGen::base_add_imm(inst::InstGen::x8,
-                                                    inst::InstGen::x8,
-                                                    (int32_t)area.offset,
-                                                    0));
-
-Then, we initialize both the :math:`n` and :math:`m` loops, by setting the counters and check-pointing the amount of instructions in the buffer. Inside the M loop, we first load the :math:`A` Matrix. Then we call the function that adds all instructions for either the zero, relu or identity primitives. Finally, we store all values in the :math:`B` Matrix.
-
-Afterwards, the pointers jump to the next logical location in context of the loop and we generate the final procedure call standard instructions.
-
-For us this works as long both :math:`n` and :math:`m` are potencies of 2, sadly a not found bug keeps us from using any other dimensions.
-
-Zero
-____
-
-By utilizing the movi instruction we move zero into each register.
-
-.. code-block:: C++
-    :linenos:
-
-    int32_t Unary::gen_unary_zero(mini_jit::generator::Util::KernelSize kernelsize) {
-            // count how many vectors are in use
-            int32_t reg_count = 0;
-            int32_t op_count = 0;
-            // m_kernel.add_instr(0x4F030480);  // place 100
-
-            // total number of elements needed to load
-            int count = kernelsize.M;
-            int quads = count / 4;
-            int rem = count % 4;
-
-            for (int j = 0; j < kernelsize.N; j++) {
-                // for each row with each quad = (4s)
-                for (int i = 0; i < quads; i++) {
-                    m_kernel.add_instr(inst::InstGen::neon_movi_zero(static_cast<inst::InstGen::simd_fp_t>(reg_count++), true, false));
-                    op_count++;
-                }
-            }
-
-            for (int i = 0; i < rem; i++) {
-                // load one element at a time (.s[N])
-                m_kernel.add_instr(
-                    inst::InstGen::neon_movi_zero(
-                        static_cast<inst::InstGen::simd_fp_t>(reg_count), true, false));
-                op_count++;
-            }
-
-            return reg_count;
-        }
-
-This implementation yields in the following underwhelming results in the benchmark:
+The zero primitive basically does not need any loads in the registers, so we first set the registers v0-v3 to 0 with the eor instruction. 
+Then we run over the M dimension and write the zeros to the corresponding places in the output tensor.
+Finally we loop over the N dimension (columns) and tada, the values in the output matrix are 0.
+Here is our performance for a few matrix sizes:
 
 .. code-block:: text
-    :linenos:
 
-    ---------------------------------
-    Benchmarking Unary: Zero 
-    Matrix dimensions of 64x64
-    16
+    Running Unary ZERO Benchmark with: M = 50, N = 50
+    Total Error: 0
+    Performance: 109.604 GiB/s
+    Iterations: 6996921
+    Duration: 1.18908 seconds
+    Running Unary ZERO Benchmark with: M = 64, N = 64
+    Total Error: 0
+    Performance: 123.136 GiB/s
+    Iterations: 12370113
+    Duration: 3.06575 seconds
+    Running Unary ZERO Benchmark with: M = 512, N = 512
+    Total Error: 0
+    Performance: 129.489 GiB/s
+    Iterations: 307847
+    Duration: 4.64337 seconds
+    Running Unary ZERO Benchmark with: M = 2048, N = 2048
+    Total Error: 0
+    Performance: 94.6051 GiB/s
+    Iterations: 20712
+    Duration: 6.8416 seconds
 
-    Iterations:     2500000 times
-    Duration:       0.996954 sec
-    Throughput:     10.2713 GFLOPS
+The performance of this kernel is quite acceptable, of course one have to keep in mind that it only writes and does not load anything
+So the OPS calculation is perhaps a little misleading, here we include the the loads because the operation says we zero the input and write it to output.
+However you do it, it is never completely correct :D.
+The last case loses some performance, probably because the matrix is so large.
 
-    ---------------------------------
-    Benchmarking Unary: Zero 
-    Matrix dimensions of 512x512
-    16
+Identity Primitive
+^^^^^^^^^^^^^^^^^^
 
-    Iterations:     1000000 times
-    Duration:       0.438079 sec
-    Throughput:     9.34991 GFLOPS
-
-ReLU
-____
-
-We implemented the ReLU by, firstly loading zero into the register v31 with movi and for each register holding an value of :math:`A` calling fmax.
-
-.. code-block:: C++
-    :linenos:
-
-    int32_t Unary::gen_unary_relu(mini_jit::generator::Util::KernelSize kernelsize) {
-        // count how many vectors are in use
-        int32_t reg_count = 0;
-        int32_t op_count = 0;
-
-        // total number of elements needed to load
-        int count = kernelsize.M;
-        int quads = count / 4;
-        int rem = count % 4;
-        m_kernel.add_instr(inst::InstGen::neon_movi_zero(inst::InstGen::simd_fp_t::v31, true, false));
-        op_count++;
-
-        for (int j = 0; j < kernelsize.N; j++) {
-            // for each row with each quad = (4s)
-            for (int i = 0; i < quads; i++) {
-                m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                                   static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                                   inst::InstGen::simd_fp_t::v31,
-                                                                   false));
-                reg_count++;
-                op_count++;
-            }
-        }
-
-        for (int i = 0; i < rem; i++) {
-            // load one element at a time (.s[N])
-            m_kernel.add_instr(inst::InstGen::neon_fmax_vector(static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                               static_cast<inst::InstGen::simd_fp_t>(reg_count),
-                                                               inst::InstGen::simd_fp_t::v31,
-                                                               false));
-            op_count++;
-        }
-
-        return reg_count;
-    }
-
-Again this implementation is not as optimized as wished as the benchmarking results show:
+The identity primitive is a bit more complex, as it has to load the input matrix and write it to the output matrix and be aware of the diffent leading dimension.
+However, the same tactic is used as with the zero kernel, except that nothing has to be zeroed, so we use all vector registers for the copy operation.
+Performance results can be seen here:
 
 .. code-block:: text
-    :linenos:
 
-    ---------------------------------
-    Benchmarking Unary: Relu 
-    Matrix dimensions of 64x64
+    Running Unary IDENTITY Benchmark with: M = 50, N = 50
+    Total Error: 0
+    Performance: 115.572 GiB/s
+    Iterations: 22857142
+    Duration: 3.68384 seconds
+    Running Unary IDENTITY Benchmark with: M = 64, N = 64
+    Total Error: 0
+    Performance: 130.021 GiB/s
+    Iterations: 14999250
+    Duration: 3.52053 seconds
+    Running Unary IDENTITY Benchmark with: M = 512, N = 512
+    Total Error: 0
+    Performance: 107.17 GiB/s
+    Iterations: 258340
+    Duration: 4.70815 seconds
+    Running Unary IDENTITY Benchmark with: M = 2048, N = 2048
+    Total Error: 0
+    Performance: 70.8844 GiB/s
+    Iterations: 10681
+    Duration: 4.70881 seconds
 
-    Iterations:     2500000 times
-    Duration:       0.957973 sec
-    Throughput:     10.6892 GFLOPS
+As you can see, the best performance is achieved with a 64x64 matrix. Here we come close to the peak value from the zero primitive again.
 
-    ---------------------------------
-    Benchmarking Unary: Relu 
-    Matrix dimensions of 512x512
 
-    Iterations:     100000 times
-    Duration:       0.0384401 sec
-    Throughput:     10.6555 GFLOPS
+ReLU Primitive
+^^^^^^^^^^^^^^
 
-Identity
-________
+The ReLU implementation is most similar to that of Identity, but here the last vector register v31 cannot be used for copying as it is needed for the max comparison with 0.
+Therefore we set it to 0 at the beginning with the eor instruction and perform a fmax comparison with the v31 register every time before we store a vector register with data from the input matrix into the ouput matrix.
+The performance results are as follows:
 
-We implemented the identity matrix in the simplest possible way: by iterating through the input matrix A element by element and storing each value in B with the corresponding offset based on the size (assuming that A and B are square matrices).
+.. code-block:: text
+
+    Running Unary RELU Benchmark with: M = 50, N = 50
+    Total Error: 0
+    Performance: 112.422 GiB/s
+    Iterations: 21819768
+    Duration: 3.61516 seconds
+    Running Unary RELU Benchmark with: M = 64, N = 64
+    Total Error: 0
+    Performance: 127.45 GiB/s
+    Iterations: 15001500
+    Duration: 3.59206 seconds
+    Running Unary RELU Benchmark with: M = 512, N = 512
+    Total Error: 0
+    Performance: 105.272 GiB/s
+    Iterations: 268575
+    Duration: 4.98291 seconds
+    Running Unary RELU Benchmark with: M = 2048, N = 2048
+    Total Error: 0
+    Performance: 70.9882 GiB/s
+    Iterations: 10732
+    Duration: 4.72438 seconds
+
+As expected, the results are very similar to those from the identity implementation, as the fmax does not generate any real overhead.
 
 Task 2: Transposition
 ---------------------
 The neon 8 by 8 identity kernel can be found at: https://github.com/stefan0re/machine_learning_compiler/hello_assembly/assembly_examples/neon.
 First, it consists of a set of loads:
+
 .. code-block:: text
     :linenos:
     
@@ -238,5 +184,88 @@ This implementation is optimized:
     Throughput:     11.221 GFLOPS
 
 
-We all worked on the tasks in equal parts.
-This week's work is available under this commit on GitHub: 
+
+Learning from this example, we then set to work on the generator for transpositions.
+
+
+Transpose Primitive
+^^^^^^^^^^^^^^^^^^^
+
+In order not to lose track of the rows and columns, we have decided to write a fixed microkernel for 4x4 transpositions.
+This works like the assembly code described above.
+Therefore we loop as much as we can until we reach the limits in M and N where the kernel does not fit anymore because :code:`m_rest == 3` or :code:`n_rest == 2`.
+For these cases we have the microkernel gen_transpose_micro_reminder, which work without tricky TRN or ZIP functions and uses the advantage that at most 12 values have to be transposed since either M or N is less than 4.
+This kernel therefore loads each individual value to be transposed into a separate vector register and then stores the values at the correct position in the transposed output matrix.
+So thank God for 32 vector registers, plenty of room for each value to stretch out and live the good life!
+Here is the function that handles the edge cases:
+
+.. code-block:: C++
+
+    void Unary::gen_transpose_micro_reminder(uint32_t i_m,
+                                            uint32_t i_n) {
+        // load each value to seperate register
+        int32_t v_reg_count = 0;
+        for (size_t l_n = 0; l_n < i_n; l_n++) {
+            for (size_t l_m = 0; l_m < i_m; l_m++) {
+                m_kernel.add_instr(inst::InstGen::neon_ldr(static_cast<inst::InstGen::simd_fp_t>(v_reg_count++),
+                                                        inst::InstGen::x0,
+                                                        4,
+                                                        inst::InstGen::arr_spec_t::s));
+            }
+            // set to next column
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x0, inst::InstGen::x0, 4 * i_m, 0));
+            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x0,
+                                                                        inst::InstGen::x0,
+                                                                        inst::InstGen::x2,
+                                                                        0,
+                                                                        0));
+        }
+        v_reg_count = 0;
+        // store values from seperate register
+        for (size_t l_m = 0; l_m < i_m; l_m++) {
+            for (size_t l_n = 0; l_n < i_n; l_n++) {
+                m_kernel.add_instr(inst::InstGen::neon_str(static_cast<inst::InstGen::simd_fp_t>(v_reg_count),
+                                                        inst::InstGen::x1,
+                                                        4,
+                                                        inst::InstGen::arr_spec_t::s));
+                v_reg_count += i_m;
+            }
+            m_kernel.add_instr(inst::InstGen::base_sub_imm(inst::InstGen::x1, inst::InstGen::x1, 4 * i_n, 0));
+            m_kernel.add_instr(inst::InstGen::base_add_shifted_register(inst::InstGen::x1,
+                                                                        inst::InstGen::x1,
+                                                                        inst::InstGen::x3,
+                                                                        0,
+                                                                        0));
+            v_reg_count -= i_m * i_n;
+            v_reg_count += 1;
+        }
+    }
+
+As with the GEMM, the transpose kernels are processed first in the M and then in the N direction.
+Here are the performance results:
+
+.. code-block:: text
+
+    Running Unary TRANS Benchmark with: M = 50, N = 50
+    Total Error: 0
+    Performance: 65.3051 GiB/s
+    Iterations: 15285845
+    Duration: 4.35986 seconds
+    Running Unary TRANS Benchmark with: M = 64, N = 64
+    Total Error: 0
+    Performance: 83.9639 GiB/s
+    Iterations: 4411699
+    Duration: 1.60348 seconds
+    Running Unary TRANS Benchmark with: M = 512, N = 512
+    Total Error: 0
+    Performance: 4.1031 GiB/s
+    Iterations: 11059
+    Duration: 5.26421 seconds
+    Running Unary TRANS Benchmark with: M = 2048, N = 2048
+    Total Error: 0
+    Performance: 3.50702 GiB/s
+    Iterations: 546
+    Duration: 4.86525 seconds
+
+Our implementation seems to work quite well for smaller matrices, but unfortunately larger matrices the performance crashes.
+We assume that the transposition simply generates out of control memory accesses that with larger matrices the memory subsystem no longer knows what is going on.
