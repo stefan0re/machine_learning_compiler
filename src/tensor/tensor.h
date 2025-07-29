@@ -85,6 +85,11 @@ class Tensor {
      */
     bool compare(Tensor& tensor);
 
+    /**
+     * @brief Print the raw data of the Tensor
+     */
+    void print();
+
    private:
     void setup(std::vector<int> sizes);
 };

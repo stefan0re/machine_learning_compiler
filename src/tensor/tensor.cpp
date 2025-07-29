@@ -71,6 +71,14 @@ bool Tensor::compare(Tensor& tensor) {
     }
 }
 
+// print 1D Tensors
+void Tensor::print() {
+    for (int i = 0; i < size; i++) {
+        std::cout << data[i] << " , ";
+    }
+    std::cout << std::endl;
+}
+
 // utility to print the Tensor structure
 void Tensor::info() const {
     for (const auto& dim : id) {

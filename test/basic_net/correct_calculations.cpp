@@ -73,6 +73,11 @@ TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
     Tensor output_ref = Tensor(3);
     output_ref.data = new float[3]{example.data[4], example.data[5], example.data[6]};
 
+    // DEBUG
+    input.print();
+    output_ref.print();
+    b1.print();
+
     forward(input, W1, b1, W2, b2, W3, b3, output);
 
     REQUIRE(output.compare(output_ref));
