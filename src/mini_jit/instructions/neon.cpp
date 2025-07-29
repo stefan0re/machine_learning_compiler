@@ -337,3 +337,15 @@ uint32_t mini_jit::instructions::InstGen::neon_eor(simd_fp_t reg_dst,
 
     return l_ins;
 }
+
+uint32_t mini_jit::instructions::InstGen::neon_ldr_reg_offset(simd_fp_t reg_dst,
+                                                              gpr_t reg_src,
+                                                              gpr_t reg_offset) {
+    uint32_t l_ins = 0x3ce06800;
+
+    l_ins |= (reg_dst & 0x1f);
+    l_ins |= (reg_src & 0x1f) << 5;
+    l_ins |= (reg_offset & 0x1f) << 16;
+
+    return l_ins;
+}
