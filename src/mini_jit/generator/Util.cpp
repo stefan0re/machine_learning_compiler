@@ -652,7 +652,7 @@ namespace mini_jit::generator {
                                                             mini_jit::generator::Util::KernelSize &kernelsize_small,
                                                             int32_t &i_used_vector_reg_count_big,
                                                             int32_t &i_used_vector_reg_count_small) {
-        int32_t max_n_blocking = 30;
+        int32_t max_n_blocking = 9;
         int32_t m_blocks = 0;
         if (m > 12) {
             m_blocks = 4;
