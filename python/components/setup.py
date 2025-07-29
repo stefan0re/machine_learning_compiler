@@ -85,7 +85,8 @@ class Setup:
         print(f"c: {c}")
         print(f"d: {d}")
         print(f"e: {e}")
-        print(f"[[[b,a],[c,b]->[c,a]],[d,c]->[d,a]],[e,d]->[e,a]")
+        # match standard PyTorch format (batch-first)
+        print(f"[[[a,b], [c,b] -> [a,c]], [d,c] -> [a,d]], [e,d] -> [a,e]]")
         print("Done.")
 
     def load_and_save_dataset(self, output_path: str) -> Tuple[List, List, List, List]:

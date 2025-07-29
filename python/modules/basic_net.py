@@ -2,7 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-# Define the model
+# define the model
 class BasicNet(nn.Module):
     def __init__(self, input_size, hidden1_size, hidden2_size, output_size):
         super(BasicNet, self).__init__()

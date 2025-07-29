@@ -1,0 +1,79 @@
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <cmath>
+#include <iostream>
+#include <vector>
+
+#include "../../src/tensor/tensor.h"
+
+// ReLU activation
+void relu(Tensor& vec) {
+    for (size_t i = 0; i < vec.id[0].dim_sizes; ++i) {
+        vec.data[i] = std::max(0.0f, vec.data[i]);
+    }
+}
+
+// Matrix-vector multiplication: y = x * W^T + b
+void matmul_add(const Tensor& x, const Tensor& W, const Tensor& b, Tensor& out) {
+    for (size_t i = 0; i < out.id[0].dim_sizes; ++i) {
+        float sum = 0.0f;
+        for (size_t j = 0; j < x.id[0].dim_sizes; ++j) {
+            sum += x.data[j] * W.data[i * j];
+        }
+        out.data[i] = sum + b.data[i];
+    }
+}
+
+// Forward pass of BasicNet
+void forward(const Tensor& input,                 // size = b = 4
+             const Tensor& W1, const Tensor& b1,  // W1: [c][b], b1: [c]
+             const Tensor& W2, const Tensor& b2,  // W2: [d][c], b2: [d]
+             const Tensor& W3, const Tensor& b3,  // W3: [e][d], b3: [e]
+             Tensor& output)                      // output: size = e
+{
+    // Temporary tensors
+    Tensor z1, z2;
+
+    z1.id[0].dim_sizes = 64;
+    z1.data = new float[z1.id[0].dim_sizes];
+
+    z2.id[0].dim_sizes = 16;
+    z2.data = new float[z2.id[0].dim_sizes];
+
+    // fc1
+    matmul_add(input, W1, b1, z1);
+    relu(z1);
+
+    // fc2
+    matmul_add(z1, W2, b2, z2);
+    relu(z2);
+
+    // fc3
+    matmul_add(z2, W3, b3, output);
+
+    delete[] z1.data;
+    delete[] z2.data;
+}
+
+TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
+    // load the trained model
+    std::vector<Tensor> model = Tensor::from_torchpp("../../python/data/model.torchpp", 4);
+
+    Tensor W1 = model[0];
+    Tensor b1 = model[1];
+    Tensor W2 = model[2];
+    Tensor b2 = model[3];
+    Tensor W3 = model[4];
+    Tensor b3 = model[5];
+
+    // input
+    Tensor input = Tensor(4);
+    input.data = new float[4]{5.1f, 3.5f, 1.4f, 0.2f};
+
+    // output
+    Tensor output = Tensor(3);
+
+    forward(input, W1, b1, W2, b2, W3, b3, output);
+
+    REQUIRE(0);
+}
