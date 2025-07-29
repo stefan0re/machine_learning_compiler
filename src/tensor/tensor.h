@@ -81,9 +81,10 @@ class Tensor {
      * @brief Compare this tensor with anothe
      *
      * @param tensor The tensor that should be compared with.
+     * @param delta A small margin to compensate floating point calculation errors.
      * @return bool True if the tensors are equal.
      */
-    bool compare(Tensor& tensor);
+    bool compare(Tensor& tensor, float delta);
 
     /**
      * @brief Print the raw data of the Tensor

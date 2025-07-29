@@ -51,13 +51,14 @@ void Tensor::swap(int i, int j) {
 }
 
 // compare a tensor with another
-bool Tensor::compare(Tensor& tensor) {
+bool Tensor::compare(Tensor& tensor, float delta) {
     bool ret = true;
 
     // check for equal size first
     if (size == tensor.size) {
         for (int i = 0; i < size; i++) {
-            if (data[i] != tensor.data[i]) {
+            // if the error is bigger than the delta
+            if (delta < abs(data[i] - tensor.data[i])) {
                 std::cout << "Differe in " << i << ": " << data[i] << " != " << tensor.data[i] << std::endl;
                 ret = false;
             }
@@ -129,7 +130,8 @@ std::vector<Tensor> Tensor::from_torchpp(std::string path, int in_size) {
             // calculate the size of the output layer
             out_size = values.size() / in_size;
             // create the tensor
-            Tensor t = Tensor(in_size, out_size);
+            // this is the pytorch row-major standart
+            Tensor t = Tensor(out_size, in_size);
             // update the in_size to the ouput layer so it
             // becomes the new input layer
             in_size = out_size;

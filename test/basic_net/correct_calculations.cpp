@@ -29,7 +29,7 @@ void matmul_add(const Tensor& x, const Tensor& W, const Tensor& b, Tensor& out) 
         float sum = 0.0f;
         for (size_t j = 0; j < x.size; ++j) {
             // for each value in X and each row in W
-            sum += x.data[j] * W.data[64 * i + j];
+            sum += x.data[j] * W.data[i * W.id[0].stride + j * W.id[1].stride];
         }
         out.data[i] = sum + b.data[i];
     }
@@ -91,5 +91,5 @@ TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
 
     forward(input, W1, b1, W2, b2, W3, b3, output);
 
-    REQUIRE(output.compare(output_ref));
+    REQUIRE(output.compare(output_ref, 0.0001));
 }
