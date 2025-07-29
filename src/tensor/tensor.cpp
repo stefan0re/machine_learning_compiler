@@ -3,6 +3,7 @@
 #include <fstream>
 #include <initializer_list>
 #include <iostream>
+#include <numeric>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -11,6 +12,9 @@
 Tensor::Tensor(std::vector<u_int32_t> dims) {
     std::vector<int> sizes(dims.begin(), dims.end());
     setup(sizes);
+
+    size = std::accumulate(dims.begin(), dims.end(), size_t{1}, std::multiplies<>());
+    data = new float[size];
 }
 
 // fill DimInfos and strides with the help of dimension size vector

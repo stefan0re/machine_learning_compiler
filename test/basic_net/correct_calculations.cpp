@@ -8,16 +8,16 @@
 
 // ReLU activation
 void relu(Tensor& vec) {
-    for (size_t i = 0; i < vec.id[0].dim_sizes; ++i) {
+    for (size_t i = 0; i < vec.size; ++i) {
         vec.data[i] = std::max(0.0f, vec.data[i]);
     }
 }
 
 // Matrix-vector multiplication: y = x * W^T + b
 void matmul_add(const Tensor& x, const Tensor& W, const Tensor& b, Tensor& out) {
-    for (size_t i = 0; i < out.id[0].dim_sizes; ++i) {
+    for (size_t i = 0; i < out.size; ++i) {
         float sum = 0.0f;
-        for (size_t j = 0; j < x.id[0].dim_sizes; ++j) {
+        for (size_t j = 0; j < x.size; ++j) {
             sum += x.data[j] * W.data[i * j];
         }
         out.data[i] = sum + b.data[i];
@@ -32,13 +32,8 @@ void forward(const Tensor& input,                 // size = b = 4
              Tensor& output)                      // output: size = e
 {
     // Temporary tensors
-    Tensor z1, z2;
-
-    z1.id[0].dim_sizes = 64;
-    z1.data = new float[z1.id[0].dim_sizes];
-
-    z2.id[0].dim_sizes = 16;
-    z2.data = new float[z2.id[0].dim_sizes];
+    Tensor z1 = Tensor(64);
+    Tensor z2 = Tensor(16);
 
     // fc1
     matmul_add(input, W1, b1, z1);
@@ -75,5 +70,5 @@ TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
 
     forward(input, W1, b1, W2, b2, W3, b3, output);
 
-    REQUIRE(0);
+    REQUIRE(1);
 }

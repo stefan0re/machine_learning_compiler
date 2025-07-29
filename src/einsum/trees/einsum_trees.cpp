@@ -603,7 +603,7 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
 
         Tensor* bias_tensor = nullptr;
         if (this->use_bias) {
-            std::vector<int> bias_dims;
+            std::vector<u_int32_t> bias_dims;
             for (size_t i = 0; i < node->out_tensor->id.size(); i++) {
                 if (node->out_tensor->id[i].dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
                     bias_dims.push_back(node->out_tensor->id[i].dim_sizes);
