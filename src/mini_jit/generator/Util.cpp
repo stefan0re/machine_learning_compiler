@@ -396,7 +396,7 @@ namespace mini_jit::generator {
 
         if (is_relu) {
             i_kernel.add_instr(InstGen::neon_eor(InstGen::v31, InstGen::v31, InstGen::v31));
-            for (int i = 0; i < i_kernelsize.N * 4; i++) {
+            for (int i = 0; i < i_kernelsize.N * ((i_kernelsize.M + 3) / 4); i++) {
                 i_kernel.add_instr(InstGen::neon_fmax_vector(static_cast<InstGen::simd_fp_t>(i), static_cast<InstGen::simd_fp_t>(i), InstGen::v31, false));
             }
         }

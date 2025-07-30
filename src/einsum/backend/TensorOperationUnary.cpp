@@ -21,6 +21,13 @@ namespace einsum::backend {
     }
 
     TensorOperationUnary::error_t TensorOperationUnary::compile() {
+        if (_prim_main == prim_t::trans) {
+            for (size_t i = 0; i < _exec_types.size(); i++) {
+                _loop_ids.push_back(i);
+            }
+            return TensorOperationUnary::error_t::success;
+        }
+
         // check for loop dimensions
         for (size_t i = 0; i < _exec_types.size(); i++) {
             if (_exec_types[i] != exec_t::prim) {
@@ -46,14 +53,6 @@ namespace einsum::backend {
             }
         }
 
-        // print debug information
-
-        std::cout << "TensorOperationUnary::compile()" << std::endl;
-        std::cout << "  dtype: " << static_cast<int>(_dtype) << std::endl;
-        std::cout << "  prim_main: " << static_cast<int>(_prim_main) << std::endl;
-        std::cout << "  id_prim_m: " << _id_prim_m << std::endl;
-        std::cout << "  id_prim_n: " << _id_prim_n << std::endl;
-        std::cout << "  loop_ids: ";
         for (const auto& id : _loop_ids) {
             std::cout << id << " ";
         }
@@ -105,14 +104,28 @@ namespace einsum::backend {
                 l_ptr_out += l_it * _strides_out[_loop_ids[id_loop]] * 4;
             }
 
-            if ((_loop_ids.size() > 0) && (id_loop < _loop_ids.size() - 1)) {
-                // recursive function call
-                execute_iter(id_loop + 1,
-                             l_ptr_in0,
-                             l_ptr_out);
+            if (_prim_main == prim_t::trans) {
+                if ((_loop_ids.size() > 0) && (id_loop < _loop_ids.size() - 1)) {
+                    // recursive function call
+                    execute_iter(id_loop + 1,
+                                 l_ptr_in0,
+                                 l_ptr_out);
+
+                } else {
+                    float* input_pointer = reinterpret_cast<float*>(const_cast<char*>(l_ptr_in0));
+                    float* output_pointer = reinterpret_cast<float*>(l_ptr_out);
+                    output_pointer[0] = input_pointer[0];
+                }
             } else {
-                // call main kernel
-                _unary_kernel(l_ptr_in0, l_ptr_out, _ldi, _ldo);
+                if ((_loop_ids.size() > 0) && (id_loop < _loop_ids.size() - 1)) {
+                    // recursive function call
+                    execute_iter(id_loop + 1,
+                                 l_ptr_in0,
+                                 l_ptr_out);
+                } else {
+                    // call main kernel
+                    _unary_kernel(l_ptr_in0, l_ptr_out, _ldi, _ldo);
+                }
             }
         }
     }

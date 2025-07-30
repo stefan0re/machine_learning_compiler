@@ -302,7 +302,7 @@ namespace einsum::backend {
                                         static_cast<mini_jit::generator::Unary::ptype_t>(_prim_first_touch));
             _unary_first_touch_kernel = _unary_first_touch.get_kernel();
         }
-        if (!(_prim_last_touch == prim_t::none)) {
+        if (!(_prim_last_touch == prim_t::none) && !_is_last_touch_relu) {
             _unary_last_touch.generate(_dim_sizes[_id_prim_m],
                                        _dim_sizes[_id_prim_n],
                                        static_cast<mini_jit::generator::Unary::dtype_t>(_dtype),
