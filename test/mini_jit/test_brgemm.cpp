@@ -22,7 +22,7 @@ TEST_CASE("MiniJit::Brgemm::FP32 Tests BRGEMMs", "[MiniJit][GEMM][FP32]") {
         int16_t br = (int64_t)(drand48() * 16.0) + 1;
 
         mini_jit::generator::Brgemm l_brgemm;
-        l_brgemm.generate(m, n, k, br, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
+        l_brgemm.generate(m, n, k, br, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32, false);
 
         float *l_a = (float *)malloc(m * k * br * sizeof(float));
         float *l_b = (float *)malloc(k * n * br * sizeof(float));

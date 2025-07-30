@@ -85,6 +85,9 @@ class einsum::backend::TensorOperation {
     int64_t _br_stride_a = 0;
     int64_t _br_stride_b = 0;
 
+    /* last touch relu */
+    bool _is_last_touch_relu;
+
     using kernel_t = mini_jit::generator::Brgemm::kernel_t;
 
     /**
@@ -224,6 +227,10 @@ class einsum::backend::TensorOperation {
     // Unary last touch
     mini_jit::generator::Unary _unary_last_touch;
     mini_jit::generator::Unary::kernel_t _unary_last_touch_kernel{nullptr};
+
+    // BRGEMM last touch
+    mini_jit::generator::Brgemm _brgemm_last_touch;
+    kernel_t _brgemm_last_touch_kernel{nullptr};
 };
 
 #endif

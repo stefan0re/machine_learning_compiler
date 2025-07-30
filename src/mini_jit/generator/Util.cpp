@@ -290,167 +290,6 @@ namespace mini_jit::generator {
         m_kernel.force_clear();
     }
 
-    // I assume that get_kernel_size only return valid kernels, so there must be enough registers
-    // to fit each value in and that the working registers are aligned already.
-    int32_t Util::gen_matrix_load(mini_jit::backend::Kernel &i_kernel, Util::KernelSize kernelsize, InstGen::gpr_t pointer_register, uint32_t leading_dimension) {
-        // count how many vectors are in use
-        int32_t reg_count = 0;
-
-        // total number of elements needed to load
-        int count = kernelsize.M;
-        int quads = count / 4;
-        int rem = count % 4;
-
-        uint32_t ld_bytes = leading_dimension * 4;
-
-        // for each col
-        for (int j = 0; j < kernelsize.N; j++) {
-            // for each row with each quad = (4s)
-            for (int i = 0; i < quads; i++) {
-                // load four elements at once (4s)
-                i_kernel.add_instr(
-                    InstGen::neon_ld1_no_offset(
-                        static_cast<InstGen::simd_fp_t>(reg_count++),
-                        pointer_register,
-                        InstGen::vector_count_t::vc4));
-
-                // advance the base pointer by 4 elements
-                i_kernel.add_instr(
-                    InstGen::base_add_imm(
-                        pointer_register,
-                        pointer_register,
-                        16,
-                        /*no flags*/ 0));
-            }
-
-            // remainder
-            for (int i = 0; i < rem; i++) {
-                // load one element at a time (.s[N])
-                i_kernel.add_instr(
-                    InstGen::neon_ld1_scalar_index(
-                        static_cast<InstGen::simd_fp_t>(reg_count),
-                        pointer_register,
-                        i));
-
-                // advance the base pointer by 1 elements
-                i_kernel.add_instr(
-                    InstGen::base_add_imm(
-                        pointer_register,
-                        pointer_register,
-                        4,
-                        /*no flags*/ 0));
-            }
-
-            i_kernel.add_instr(
-                InstGen::base_sub_imm(
-                    pointer_register,
-                    pointer_register,
-                    kernelsize.M * 4,
-                    /*no flags*/ 0));
-
-            i_kernel.add_instr(
-                InstGen::base_add_imm(
-                    pointer_register,
-                    pointer_register,
-                    ld_bytes,
-                    /*no flags*/ 0));
-
-            (0 < rem) ? ++reg_count : reg_count;
-        }
-
-        i_kernel.add_instr(
-            InstGen::base_sub_imm(
-                pointer_register,
-                pointer_register,
-                ld_bytes * (kernelsize.N),
-                /*no flags*/ 0));
-
-        // DEBUG: write out / reset for debugging
-        /*m_kernel.write("debug_load_C.bin");
-        m_kernel.force_clear();*/
-
-        // if there was a remainder, another register is used
-        return reg_count;
-    }
-
-    void Util::gen_matrix_store(mini_jit::backend::Kernel &i_kernel, Util::KernelSize kernelsize, mini_jit::instructions::InstGen::gpr_t pointer_register, uint32_t leading_dimension) {
-        // count how many vectors are in use
-        int32_t reg_count = 0;
-
-        // total number of elements needed to load
-        int count = kernelsize.M;
-        int quads = count / 4;
-        int rem = count % 4;
-
-        uint32_t ld_bytes = leading_dimension * 4;
-
-        // for each col
-        for (int j = 0; j < kernelsize.N; j++) {
-            // for each row with each quad = (4s)
-            for (int i = 0; i < quads; i++) {
-                // load four elements at once (4s)
-                i_kernel.add_instr(
-                    InstGen::neon_st1_no_offset(
-                        static_cast<InstGen::simd_fp_t>(reg_count++),
-                        pointer_register,
-                        InstGen::vector_count_t::vc4));
-
-                // advance the base pointer by 4 elements
-                i_kernel.add_instr(
-                    InstGen::base_add_imm(
-                        pointer_register,
-                        pointer_register,
-                        16,
-                        /*no flags*/ 0));
-            }
-
-            // remainder
-            for (int i = 0; i < rem; i++) {
-                // load one element at a time (.s[N])
-                i_kernel.add_instr(
-                    InstGen::neon_st1_scalar_index(
-                        static_cast<InstGen::simd_fp_t>(reg_count),
-                        pointer_register,
-                        i));
-
-                // advance the base pointer by 1 elements
-                i_kernel.add_instr(
-                    InstGen::base_add_imm(
-                        pointer_register,
-                        pointer_register,
-                        4,
-                        /*no flags*/ 0));
-            }
-
-            i_kernel.add_instr(
-                InstGen::base_sub_imm(
-                    pointer_register,
-                    pointer_register,
-                    kernelsize.M * 4,
-                    /*no flags*/ 0));
-
-            i_kernel.add_instr(
-                InstGen::base_add_imm(
-                    pointer_register,
-                    pointer_register,
-                    ld_bytes,
-                    /*no flags*/ 0));
-
-            (0 < rem) ? ++reg_count : reg_count;
-        }
-
-        i_kernel.add_instr(
-            InstGen::base_sub_imm(
-                pointer_register,
-                pointer_register,
-                ld_bytes * (kernelsize.N),
-                /*no flags*/ 0));
-
-        // DEBUG: write out / reset for debugging
-        /*m_kernel.write("debug_store_C.bin");
-        m_kernel.force_clear();*/
-    }
-
     void Util::generator_load_reg_block(backend::Kernel &i_kernel,
                                         Util::KernelSize &i_kernelsize,
                                         InstGen::gpr_t i_register) {
@@ -550,9 +389,17 @@ namespace mini_jit::generator {
 
     void Util::generator_store_reg_block(backend::Kernel &i_kernel,
                                          Util::KernelSize &i_kernelsize,
-                                         InstGen::gpr_t i_register) {
+                                         InstGen::gpr_t i_register,
+                                         bool is_relu) {
         int32_t l_n_count = 0;
         int32_t l_reg_count = 0;
+
+        if (is_relu) {
+            i_kernel.add_instr(InstGen::neon_eor(InstGen::v31, InstGen::v31, InstGen::v31));
+            for (int i = 0; i < i_kernelsize.N * 4; i++) {
+                i_kernel.add_instr(InstGen::neon_fmax_vector(static_cast<InstGen::simd_fp_t>(i), static_cast<InstGen::simd_fp_t>(i), InstGen::v31, false));
+            }
+        }
 
         // prepare C restore register Help 1
         i_kernel.add_instr(InstGen::base_mov_imm(Util::HELP_REG_1, i_kernelsize.N, 0));
