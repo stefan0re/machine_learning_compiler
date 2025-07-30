@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     std::cout << " BR_STRIDE_B = " << br_stride_b << std::endl;
 
     mini_jit::generator::Brgemm l_brgemm;
-    l_brgemm.generate(m, n, k, br_k, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
+    l_brgemm.generate(m, n, k, br_k, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32, false);
 
     // initialize matrix
     float *l_a = (float *)malloc(lda * k * br_k * sizeof(float));

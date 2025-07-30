@@ -54,7 +54,8 @@ class mini_jit::generator::Brgemm {
                      uint32_t trans_a,
                      uint32_t trans_b,
                      uint32_t trans_c,
-                     dtype_t dtype);
+                     dtype_t dtype,
+                     bool is_relu);
 
     /*
      * Kernel type.

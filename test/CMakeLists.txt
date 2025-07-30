@@ -17,6 +17,7 @@ set(TEST_SOURCES
     mini_jit/test_unary.cpp
     test_utils/test_utils.cpp
     einsum/test_einsum_binary.cpp
+    einsum/test_einsum_unary.cpp
     einsum/test_einsum_tree.cpp
     basic_net/correct_calculations.cpp
 )

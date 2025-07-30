@@ -28,6 +28,12 @@ namespace einsum::backend {
         _prim_last_touch = prim_last_touch;
         _dtype = dtype;
 
+        if (_prim_last_touch == prim_t::relu) {
+            _is_last_touch_relu = true;
+        } else {
+            _is_last_touch_relu = false;
+        }
+
         // set vectors
         _dim_types.assign(dim_types.begin(), dim_types.end());
         _exec_types.assign(exec_types.begin(), exec_types.end());
@@ -105,19 +111,30 @@ namespace einsum::backend {
                 if (first_access && _prim_first_touch != prim_t::none) {
                     _unary_first_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                 }
-                // call main kernel
-                _brgemm_kernel(l_ptr_in0,
-                               l_ptr_in1,
-                               l_ptr_out,
-                               _lda,
-                               _ldb,
-                               _ldc,
-                               _br_stride_a,
-                               _br_stride_b);
+                if (_is_last_touch_relu && last_access) {
+                    _brgemm_last_touch_kernel(l_ptr_in0,
+                                              l_ptr_in1,
+                                              l_ptr_out,
+                                              _lda,
+                                              _ldb,
+                                              _ldc,
+                                              _br_stride_a,
+                                              _br_stride_b);
+                } else {
+                    // call main kernel
+                    _brgemm_kernel(l_ptr_in0,
+                                   l_ptr_in1,
+                                   l_ptr_out,
+                                   _lda,
+                                   _ldb,
+                                   _ldc,
+                                   _br_stride_a,
+                                   _br_stride_b);
 
-                // call last touch kernel if necessary
-                if (last_access && _prim_last_touch != prim_t::none) {
-                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                    // call last touch kernel if necessary
+                    if (last_access && _prim_last_touch != prim_t::none) {
+                        _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                    }
                 }
             }
         }
@@ -173,20 +190,30 @@ namespace einsum::backend {
                 if (local_first_access && _prim_first_touch != prim_t::none) {
                     _unary_first_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
                 }
-                // call main kernel
-                _brgemm_kernel(l_ptr_in0,
-                               l_ptr_in1,
-                               l_ptr_out,
-                               _lda,
-                               _ldb,
-                               _ldc,
-                               _br_stride_a,
-                               _br_stride_b);
+                if (_is_last_touch_relu && local_last_access) {
+                    _brgemm_last_touch_kernel(l_ptr_in0,
+                                              l_ptr_in1,
+                                              l_ptr_out,
+                                              _lda,
+                                              _ldb,
+                                              _ldc,
+                                              _br_stride_a,
+                                              _br_stride_b);
+                } else {
+                    // call main kernel
+                    _brgemm_kernel(l_ptr_in0,
+                                   l_ptr_in1,
+                                   l_ptr_out,
+                                   _lda,
+                                   _ldb,
+                                   _ldc,
+                                   _br_stride_a,
+                                   _br_stride_b);
 
-
-                // call last touch kernel if necessary
-                if (local_last_access && _prim_last_touch != prim_t::none) {
-                    _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                    // call last touch kernel if necessary
+                    if (local_last_access && _prim_last_touch != prim_t::none) {
+                        _unary_last_touch_kernel(l_ptr_out, l_ptr_out, _ldc, _ldc);
+                    }
                 }
             }
         }
@@ -250,8 +277,22 @@ namespace einsum::backend {
                          0,
                          0,
                          0,
-                         static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype));
+                         static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype),
+                         false);
         _brgemm_kernel = _brgemm.get_kernel();
+
+        if (_is_last_touch_relu) {
+            _brgemm_last_touch.generate(_dim_sizes[_id_prim_m],
+                                        _dim_sizes[_id_prim_n],
+                                        _dim_sizes[_id_prim_k],
+                                        (_id_prim_br != -1) ? _dim_sizes[_id_prim_br] : 1,
+                                        0,
+                                        0,
+                                        0,
+                                        static_cast<mini_jit::generator::Brgemm::dtype_t>(_dtype),
+                                        true);
+        }
+        _brgemm_last_touch_kernel = _brgemm_last_touch.get_kernel();
 
         // generate first/last touch primitive
         if (!(_prim_first_touch == prim_t::none)) {
@@ -261,7 +302,7 @@ namespace einsum::backend {
                                         static_cast<mini_jit::generator::Unary::ptype_t>(_prim_first_touch));
             _unary_first_touch_kernel = _unary_first_touch.get_kernel();
         }
-        if (!(_prim_last_touch == prim_t::none)) {
+        if (!(_prim_last_touch == prim_t::none) && !_is_last_touch_relu) {
             _unary_last_touch.generate(_dim_sizes[_id_prim_m],
                                        _dim_sizes[_id_prim_n],
                                        static_cast<mini_jit::generator::Unary::dtype_t>(_dtype),
@@ -595,7 +636,6 @@ namespace einsum::backend {
         for (size_t i = 0; i < _dim_sizes.size(); i++) {
             if (_dim_types[i] == dim_t::m || _dim_types[i] == dim_t::n) {
                 minus *= _dim_sizes[i];
-
             }
         }
         return flops - minus;

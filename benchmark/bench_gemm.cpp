@@ -19,7 +19,7 @@ void benchmark_gemm() {
             for (int k : k_sizes) {
                 iterations++;
                 mini_jit::generator::Brgemm l_brgemm;
-                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
+                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32, false);
 
                 float *l_a = (float *)malloc(m * k * sizeof(float));
                 float *l_b = (float *)malloc(k * n * sizeof(float));

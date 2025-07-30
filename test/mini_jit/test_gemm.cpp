@@ -18,7 +18,7 @@ TEST_CASE("MiniJit::Brgemm::FP32 Test all GEMMs", "[MiniJit][GEMM][FP32]") {
         for (size_t m = 1; m < 65; m++) {
             for (int k : k_sizes) {
                 mini_jit::generator::Brgemm l_brgemm;
-                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
+                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32, false);
 
                 float *l_a = (float *)malloc(m * k * sizeof(float));
                 float *l_b = (float *)malloc(k * n * sizeof(float));
@@ -65,7 +65,7 @@ TEST_CASE("MiniJit::Brgemm::FP32 Test bigger LD", "[MiniJit][GEMM][FP32]") {
         for (size_t m = 1; m < 65; m++) {
             for (int k : k_sizes) {
                 mini_jit::generator::Brgemm l_brgemm;
-                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32);
+                l_brgemm.generate(m, n, k, 1, 0, 0, 0, mini_jit::generator::Brgemm::dtype_t::fp32, false);
 
                 int l_lda = (int)(drand48() * 100) + 64;
                 int l_ldb = (int)(drand48() * 100) + 64;

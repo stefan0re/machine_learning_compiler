@@ -36,6 +36,9 @@ namespace mini_jit::generator {
         inline static constexpr mini_jit::instructions::InstGen::gpr_t HELP_REG_2 = mini_jit::instructions::InstGen::x14;
         inline static constexpr mini_jit::instructions::InstGen::gpr_t HELP_REG_3 = mini_jit::instructions::InstGen::x15;
 
+        inline static constexpr mini_jit::instructions::InstGen::gpr_t BR_STRIDE_A = mini_jit::instructions::InstGen::x17;
+        inline static constexpr mini_jit::instructions::InstGen::gpr_t BR_STRIDE_B = mini_jit::instructions::InstGen::x19;
+
         struct KernelSize {
             int M;
             int N;
@@ -98,22 +101,6 @@ namespace mini_jit::generator {
         static void gen_microkernel(KernelSize kernelsize,
                                     int32_t i_used_vector_reg_count);
 
-        /**
-         * @brief Load C block for the given kernel sizes.
-         * @param kernel The kernel sizes.
-         * @return used vector register count
-         */
-        static int32_t gen_matrix_load(mini_jit::backend::Kernel &m_kernel, KernelSize kernelsize, mini_jit::instructions::InstGen::gpr_t pointer_register, uint32_t leading_dimension);
-
-        /**
-         * @brief Store C block for the given kernel sizes.
-         * @param kernel The kernel sizes.
-         */
-        static void gen_matrix_store(mini_jit::backend::Kernel &m_kernel, KernelSize kernelsize, mini_jit::instructions::InstGen::gpr_t pointer_register, uint32_t leading_dimension);
-
-        /**
-         * @brief Load a block of B with the given kernel size to vector registers
-         */
         static void generator_load_reg_block(mini_jit::backend::Kernel &kernel,
                                              KernelSize &i_kernelsize,
                                              mini_jit::instructions::InstGen::gpr_t i_register);
@@ -123,7 +110,8 @@ namespace mini_jit::generator {
          */
         static void generator_store_reg_block(backend::Kernel &i_kernel,
                                               Util::KernelSize &i_kernelsize,
-                                              mini_jit::instructions::InstGen::gpr_t i_register);
+                                              mini_jit::instructions::InstGen::gpr_t i_register,
+                                              bool is_relu);
     };
 }  // namespace mini_jit::generator
 #endif
