@@ -84,6 +84,8 @@ namespace einsum::backend {
                 last_access = true;
             } else if ((id_loop == _loop_ids.size() - 1) && (_dim_types[_loop_ids[id_loop]] == dim_t::k) && (l_it == l_size - 1)) {
                 last_access = true;
+            } else if (_loop_ids.size() == 0) {
+                last_access = true;
             } else {
                 last_access = false;
             }

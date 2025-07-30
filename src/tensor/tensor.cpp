@@ -160,7 +160,7 @@ std::vector<Tensor> Tensor::from_torchpp(std::string path, int in_size) {
             // store the tensor
             layers.push_back(t);
         }
-        std::cout << line_count << std::endl;
+        // std::cout << line_count << std::endl;
         line_count++;
     }
 
