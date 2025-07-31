@@ -165,4 +165,91 @@ column with the corresponding bias value, since we work with column-major tensor
 .. image:: ../_static/bias_calc.png
     :alt: Visualization of bias calculation
 
+
+ReLU fusion
+^^^^^^^^^^^
+
+The ReLU activation function can be a bottleneck for our model performance, as it has to reload the values just computed into the registers and then take the max between 0 and the respective value.
+Then the values have to be stored again.
+To hide this memory bound operation, the last touch operation in the original implementation is made directly after the GEMM.
+We have now taken this to the extreme and included the last touch in the last GEMM kernel.
+
+.. code-block:: text
+
+    ...
+    fmla v21.4s, v25.4s, v30.s[0]
+    fmla v22.4s, v26.4s, v30.s[0]
+    fmla v23.4s, v27.4s, v30.s[0]
+    fmla v24.4s, v28.4s, v30.s[0]
+
+    cbnz x10, k_loop
+
+    eor	v31.16b, v31.16b, v31.16b
+
+    fmax v0.4s, v0.4s, v31.4s
+    fmax v1.4s, v1.4s, v31.4s
+    ...
+    fmax v23.4s, v23.4s, v31.4s
+    fmax v24.4s, v24.4s, v31.4s
+
+    st1	{v0.4s-v3.4s}, [x9]
+    add	x9, x9, x5
+    st1	{v4.4s-v7.4s}, [x9]
+    add	x9, x9, x5
+    st1	{v8.4s-v11.4s}, [x9]
+    add	x9, x9, x5
+    ...
+    
+In the assembly code above you can see how directly after the last K loop the RELU function is fused and only then the data is saved.
+This eliminates the need for a whole memory-bound read and write access.
+As an overhead, we have to produce another BRGEMM kernel just-in-time. Which we call at the last access to the output data.
+
+MLC vs PyTorch
+^^^^^^^^^^^^^^
+
+Now is the exciting time to see how our implementation compares to PyTorch.
+First, we represented the model as an einsum tree:
+
+.. code-block:: text
+
+    [[[1,0],[2,1]->[2,0]r],[3,2]->[3,0]r],[4,3]->[4,0]
+
+As you can see, ReLU activation functions are computed after the first two contractions, which can be easily identified by backend thanks to our extended einsum notation.
+This is what the input in our machine learning compiler looks like:
+
+.. code-block:: C++
+
+    std::string str_repr = "[[[1,0],[2,1]->[2,0]r],[3,2]->[3,0]r],[4,3]->[4,0]";
+    EinsumTree model_tree = EinsumTree(str_repr, {BATCH_SIZE, 4, 64, 16, 3}, true);
+
+We then apply our optimizations to this tree at every level.
+After that, we are ready to call the :code:`execute` function.
+It only receives the model input, the weight matrices and biases from the trained PyTorch model as input and can thus perform fast inference.
+
+As an example, here is a simple output from our `check_iris_model <https://github.com/stefan0re/machine_learning_compiler/blob/model_tests/benchmark/check_iris_model.cpp>`_ executable to ensure that the model calculates correctly.
+
+.. code-block:: text
+
+
+    Compare:    PyTorch /   C++   /    mlc 
+    compare 0: -18.3955 / -18.3955 / -18.3955
+    compare 1: -9.79693 / -9.79693 / -9.79693
+    compare 2: 27.2584 / 27.2584 / 27.2584
+
+That works and now it's time for hard numbers, let's see how our model performs against PyTorch with different batch sizes. :-)
+
+.. image:: ../_static/mlc_torch.png
+    :alt: Plot of MLC vs PyTorch performance
+
+In this plot you can see the execution speed of a forward pass through the network. For small batch sizes we are significantly faster than PyTorch.
+The larger the batch size, the more the two times converge.
+We also tested even larger batch sizes, which resulted in Pytorch being faster than our implementation from a batch size of 512.
+However, the difference was never greater than one millisecond.
+
+We are happy with our results, if you want to run the model benchmarks or any other benchmarks yourself you can do so with this command:
+
+.. code-block:: bash
+
+    ./build/bin/bench_iris_model 64
+
 We all worked on the tasks in equal parts.
