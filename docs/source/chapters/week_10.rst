@@ -397,6 +397,8 @@ Benchmarks
    * - Example 3
      - -
      - -
+
+Unfortunately, the strings with permutation nor worked for us because we still had a bug in the allocation of the tensors.
    
 We all worked on the tasks in equal parts.
 Our code can be viewed on `Github <https://github.com/stefan0re/machine_learning_compiler>`_ under version week10.
