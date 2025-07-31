@@ -846,3 +846,22 @@ void EinsumTree::delete_tree() {
     this->bias_ids.clear();
     this->id_dims.clear();
 }
+
+uint32_t EinsumTree::operations() {
+    uint32_t total_dims = 1;
+    for (auto dim : this->id_dims) {
+        total_dims *= dim;
+    }
+
+    uint32_t out_dims = 1;
+    for (auto id : this->root->out_tensor->id) {
+        if (id.dim_t == static_cast<int>(TensorOperation::dim_t::m) ||
+            id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+            out_dims *= id.dim_sizes;
+        }
+    }
+
+    uint32_t multiplications = total_dims;
+    uint32_t additions = total_dims - out_dims;
+    return multiplications + additions;
+}

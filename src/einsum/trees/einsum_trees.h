@@ -165,6 +165,12 @@ class einsum::trees::EinsumTree {
      * @brief Cleans up allocated memory from intermediate computations.
      */
     void cleanup();
+    /**
+     * @brief Returns the number of operations in the Einsum tree.
+     *
+     * @return uint32_t The number of operations in the tree.
+     */
+    uint32_t operations();
 
     /**
      * @brief Destructor for the EinsumTree class.
