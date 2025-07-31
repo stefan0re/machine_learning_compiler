@@ -157,3 +157,5 @@ To summarize, all three settings deliver good performance. T
 The performance increase from the first to the second example is due to the fact that a larger K loop is now made in the primitive. 
 In the third example, the performance drops only slightly, as there is additional overhead due to the ReLU.
 Nevertheless, we are very satisfied that it is only 2 GFLOPS, we know that it was significantly more before the fused implementation.
+
+To run our performance tests use the executable :code:`./build/bin/bench_ten_op_backend`, which can be run when you have built the project.
