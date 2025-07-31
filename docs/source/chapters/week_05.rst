@@ -95,6 +95,11 @@ Again as with our regular GEMM we have written tests to verify the correctness o
 Again our results can be seen in a CSV file that can be analyzed using the visualization tool from the lecture.
 Since we always use the same batch reduce size of 16, we have simply created the same type of CSV again, knowing that a batch size is used.
 `BRGEMM-CSV-Download <../_static/m4_brgemm.csv>`__
+The mean performance of all BRGEMM kernels is 81.73 GFLOPS. Which is better then the GEMM performance.
+We expected this, because we allway have a bigger K loop around the microkernel, even in cases where the inner K is 1, we still loop 16 over it due to the BR_sizes.
+Our best kernels have a performance of around 127 GFLOPS.
+With the help of the visualization tool, we found that the performance was best for the K = 32 sweep and became worse for larger K.
+This is due to the fact that, for example, for K = 64 you actually need a K size of 1024 because of the BR = 16.
 
 
 If you like to try your own settings, you can use the program :code:`check_brgemm` which you can find in the build/bin directory after building our project.
