@@ -525,11 +525,57 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
     if (node->node_type == node_t::leaf) {
         node_op = TensorOperation::prim_t::none;
     } else if (node->node_type == node_t::permutation) {
-        TensorOperation::prim_t child_op = lowerNode(node->left_child);
+        if (node->left_child == nullptr) {
+            std::cerr << "Left child tensor is null, cannot lower permutation node." << std::endl;
+            return TensorOperation::prim_t::none;
+        }
+
+        lowerNode(node->left_child);
+        node_op = TensorOperation::prim_t::copy;
+
+        TensorOperationUnary::dtype_t dtype = TensorOperationUnary::dtype_t::fp32;
+        TensorOperationUnary::prim_t prim_type = TensorOperationUnary::prim_t::trans;
+
+        std::vector<TensorOperationUnary::exec_t> exec_types;
+        std::vector<int64_t> dim_sizes;
+        std::vector<int64_t> strides_in;
+        std::vector<int64_t> strides_out;
+
+        for (auto id : node->left_tensor->id) {
+            strides_in.push_back(id.stride);
+            dim_sizes.push_back(id.dim_sizes);
+        }
+
+        for (int i = 0; i < node->notation.size(); i++) {
+            strides_out.push_back(0);
+        }
+        int counter = 0;
+        for (auto id : node->notation) {
+            strides_out[id] = node->out_tensor->id[counter++].stride;
+            exec_types.push_back(TensorOperationUnary::exec_t::seq);
+        }
+
+        std::span<TensorOperationUnary::exec_t>
+            exec_types_span(exec_types);
+        std::span<int64_t> dim_sizes_span(dim_sizes);
+        std::span<int64_t> strides_in_span(strides_in);
+        std::span<int64_t> strides_out_span(strides_out);
+        TensorOperationUnary::error_t result = node->op_unary.setup(dtype,
+                                                                    prim_type,
+                                                                    exec_types_span,
+                                                                    dim_sizes_span,
+                                                                    strides_in_span,
+                                                                    strides_out_span);
+
+        if (result != TensorOperationUnary::error_t::success) {
+            std::cerr << "Setup failed for permutation operation" << std::endl;
+            return TensorOperation::prim_t::none;
+        }
+        node->op_unary.compile();
     } else if (node->node_type == node_t::contraction) {
         this->bias_ids.push_back(node->id);
-        TensorOperation::prim_t left_op = lowerNode(node->left_child);
-        TensorOperation::prim_t right_op = lowerNode(node->right_child);
+        lowerNode(node->left_child);
+        lowerNode(node->right_child);
 
         TensorOperation::dtype_t dtype = TensorOperation::dtype_t::fp32;
         TensorOperation::prim_t prim_first_touch = node->first_touch;
@@ -663,10 +709,12 @@ void EinsumTree::execute(std::vector<void*> inputs, std::vector<void*> biases, v
     // First calculate the total size of the output tensor
     int32_t size = 1;
     for (auto id : this->root->out_tensor->id) {
-        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n))) {
+        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::undefined))) {
             size *= id.dim_sizes;
         }
     }
+
+    // TODO: check if all permutation node allocation is correct.
 
     // Copy the data
     memcpy(output, result, size * sizeof(float));
@@ -693,43 +741,54 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
 
     // For non-leaf nodes, we need to allocate output memory
     uint32_t out_size = 1;
+    uint32_t n_size = 1;
+    uint32_t m_size = 1;
     for (auto id : node->out_tensor->id) {
-        out_size *= id.dim_sizes;  // Include ALL dimensions, not just m and n
-    }
-
-    float* output_f = new float[out_size]();  // Initialize to zero
-    if (this->use_bias && node->node_type == EinsumTree::node_t::contraction) {
-        // get correct bias for this node
-        float* bias = nullptr;
-        for (size_t i = 0; i < biases.size(); i++) {
-            if (node->id == this->bias_ids[i]) {
-                bias = (float*)biases[i];
-                break;
-            }
-        }
-
-        // get n and m dimensions of output tensor
-        uint32_t n_size = 1;
-        uint32_t m_size = 1;
-        for (auto id : node->out_tensor->id) {
-            if (id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
-                n_size *= id.dim_sizes;
-            } else if (id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
-                m_size *= id.dim_sizes;
-            }
-        }
-
-        // fill each column with the corresponding bias value
-        for (size_t j = 0; j < n_size; j++) {
-            std::fill(&output_f[j * m_size], &output_f[j * m_size + m_size], bias[j]);
+        if (id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+            n_size *= id.dim_sizes;
+            out_size *= id.dim_sizes;
+        } else if (id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) {
+            m_size *= id.dim_sizes;
+            out_size *= id.dim_sizes;
+        } else if (id.dim_t == static_cast<int>(TensorOperation::dim_t::c)) {
+            out_size *= id.dim_sizes;
         }
     }
-    void* output = static_cast<void*>(output_f);
+
+    if (node->node_type == EinsumTree::node_t::permutation) {
+        out_size = 1;  // For permutation nodes, we only need to consider the output size
+        for (size_t i = 0; i < node->out_tensor->id.size(); i++) {
+            out_size *= node->out_tensor->id[i].dim_sizes;
+        }
+    }
+
+    float* output_f = nullptr;
+    void* output = nullptr;
 
     if (node->node_type == EinsumTree::node_t::contraction) {
         // Execute left and right children
         void* left_output = executeNode(node->left_child, inputs, biases);
         void* right_output = executeNode(node->right_child, inputs, biases);
+
+        output_f = new float[out_size]();  // Initialize to zero
+
+        if (this->use_bias) {
+            // get correct bias for this node
+            float* bias = nullptr;
+            for (size_t i = 0; i < biases.size(); i++) {
+                if (node->id == this->bias_ids[i]) {
+                    bias = (float*)biases[i];
+                    break;
+                }
+            }
+
+            // fill each column with the corresponding bias value
+            for (size_t j = 0; j < n_size; j++) {
+                std::fill(&output_f[j * m_size], &output_f[j * m_size + m_size], bias[j]);
+            }
+        }
+
+        output = static_cast<void*>(output_f);
 
         if (left_output == nullptr || right_output == nullptr) {
             std::cerr << "Failed to execute child nodes." << std::endl;
@@ -750,6 +809,8 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
     } else if (node->node_type == EinsumTree::node_t::permutation) {
         // Execute child node
         void* child_output = executeNode(node->left_child, inputs, biases);
+        output_f = new float[out_size]();  // Initialize to zero
+        output = static_cast<void*>(output_f);
 
         if (child_output == nullptr) {
             std::cerr << "Failed to execute child node for permutation." << std::endl;
@@ -758,7 +819,12 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
 
         // Execute the permutation operation
-        node->op.execute(child_output, nullptr, output);
+        node->op_unary.execute(child_output, output);
+
+        if (node->left_child->node_type != EinsumTree::node_t::leaf) {
+            // If the left child is not a leaf, we need to clean up the child output
+            delete[] static_cast<float*>(child_output);
+        }
     } else {
         std::cerr << "Unsupported node type for execution: " << static_cast<int>(node->node_type) << std::endl;
         delete[] output_f;  // Clean up allocated memory
@@ -839,4 +905,23 @@ void EinsumTree::delete_tree() {
     this->leaf_ids.clear();
     this->bias_ids.clear();
     this->id_dims.clear();
+}
+
+uint32_t EinsumTree::operations() {
+    uint32_t total_dims = 1;
+    for (auto dim : this->id_dims) {
+        total_dims *= dim;
+    }
+
+    uint32_t out_dims = 1;
+    for (auto id : this->root->out_tensor->id) {
+        if (id.dim_t == static_cast<int>(TensorOperation::dim_t::m) ||
+            id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) {
+            out_dims *= id.dim_sizes;
+        }
+    }
+
+    uint32_t multiplications = total_dims;
+    uint32_t additions = total_dims - out_dims;
+    return multiplications + additions;
 }
