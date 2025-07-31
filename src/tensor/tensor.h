@@ -78,6 +78,17 @@ class Tensor {
     static Tensor from_csv(std::string path);
 
     /**
+     * @brief Load input and output values for example calculations.
+     *
+     * This function reads a CSV file specified by the given path. It parses each line
+     * assuming comma-separated values, converts valid tokens to floats
+     *
+     * @param path The path to the CSV file.
+     * @return std::vector<Tensor> A vector containing the parsed input / output tensors.
+     */
+    static std::vector<Tensor> load_example(std::string path, int batch_size);
+
+    /**
      * @brief Compare this tensor with another tensor.
      *
      * @param tensor The tensor that should be compared with.

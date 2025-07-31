@@ -82,27 +82,19 @@ TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
     Tensor b3 = model[5];
 
     // load example input and output
-    Tensor example = Tensor::from_csv("../../python/data/example.csv");
+    std::vector<Tensor> example = Tensor::load_example("../../python/data/example.csv", 4);
 
     // convert the vetor to a tensor
-    Tensor input = Tensor(4, 4);
-    // because we use Tensor::from_csv, we have to split the values into 2
-    // parts: Input and Output (currently we use batch size of 4 for that example)
-    for (int i = 0; i < 4 * 4; i++) {
-        input.data[i] = example.data[i];
-    }
+    Tensor input = example[0];
 
     // output
     Tensor output = Tensor(4, 3);
-    Tensor output_ref = Tensor(4, 3);
-    for (int i = 4 * 4; i < example.size; i++) {
-        output_ref.data[i] = example.data[i];
-    }
+    Tensor output_ref = example[1];
 
     // DEBUG
-    input.print();
-    output_ref.print();
-    b1.print();
+    // input.print();
+    // output_ref.print();
+    // b1.print();
 
     forward(input, W1, b1, W2, b2, W3, b3, output);
 
