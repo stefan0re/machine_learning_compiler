@@ -329,3 +329,10 @@ TEST_CASE("Einsum::Trees::EinsumTrees::Large Tree Example 1 Lower", "[Einsum][Tr
     delete[] out_int2;
     tree.delete_tree();
 }
+
+TEST_CASE("Einsum::Trees::EinsumTrees::simple permutation example", "[Einsum][Trees][EinsumTrees]") {
+    std::vector<TensorOperationUnary::exec_t> i_exec_types = {TensorOperationUnary::exec_t::seq,
+                                                              TensorOperationUnary::exec_t::seq,
+                                                              TensorOperationUnary::exec_t::seq};
+    std::vector<int64_t> i_dim_sizes = {2, 3, 2};
+}
