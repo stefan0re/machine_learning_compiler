@@ -246,4 +246,10 @@ The larger the batch size, the more the two times converge.
 We also tested even larger batch sizes, which resulted in Pytorch being faster than our implementation from a batch size of 512.
 However, the difference was never greater than one millisecond.
 
+We are happy with our results, if you want to run the model benchmarks or any other benchmarks yourself you can do so with this command:
+
+.. code-block:: bash
+
+    ./build/bin/bench_iris_model 64
+
 We all worked on the tasks in equal parts.
