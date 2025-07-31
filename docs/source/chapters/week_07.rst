@@ -159,3 +159,13 @@ In the third example, the performance drops only slightly, as there is additiona
 Nevertheless, we are very satisfied that it is only 2 GFLOPS, we know that it was significantly more before the fused implementation.
 
 To run our performance tests use the executable :code:`./build/bin/bench_ten_op_backend`, which can be run when you have built the project.
+
+
+
+Unary
+-----
+
+We have decided to write a new class for the Unary tensor operations. This is very similar to the binary backend, except that it only gets one tensor as input.
+There is also just one main primitive, no first or last touch primitive.
+You can see the code in the file `TensorOperationUnary.cpp <https://github.com/stefan0re/machine_learning_compiler/blob/main/src/einsum/backend/TensorOperationUnary.cpp>`_.
+For the reorder operation, we decided to execute scalar code because we did not have a fully functional transpose primitive at the time of development.
