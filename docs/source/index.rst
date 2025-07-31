@@ -15,9 +15,9 @@
    including implementation challenges, optimization strategies, and performance evaluations.
 
 
-==============================================================
+===============================================================
 Optimised Tensor Contraction Library (C++ | aarch64 | NEON ASM)
-==============================================================
+===============================================================
 
 .. image:: https://img.shields.io/badge/Platform-aarch64-green
     :target: https://github.com/stefan0re/machine_learning_compiler/
@@ -28,7 +28,7 @@ Optimised Tensor Contraction Library (C++ | aarch64 | NEON ASM)
 High-performance tensor contraction library with **Just-in-Time (JIT)** kernel generation for **NEON/Assembly**, optimized for **ARM aarch64** platforms. Designed for **machine learning**, **scientific computing**, and **high-throughput tensor operations**.
 
 ⚡ Features
-==========
+===========
 
 - 🚀 **JIT Kernel Compilation**  
   Runtime generation and compilation of high-performance **NEON/Assembly** kernels.
@@ -107,7 +107,26 @@ The project includes robust test coverage:
 🚀 Getting Started
 ==================
 
-????? 
+.. code-block:: bash
+
+    # Download the repository
+    git clone https://github.com/stefan0re/machine_learning_compiler.git
+
+    # Navigate to the project directory and create a build directory
+    cd machine_learning_compiler
+    mkdir build && cd build
+
+    # build the project using CMake
+    cmake ..
+    make 
+
+    # Run the tests
+    ctest
+
+    # Run the examples
+    ./bin/check_brgemm 64 64 64 4
+    ./bin/bench_bench_ten_op_optimized
+    ...
 
 📜 License
 ==========

@@ -90,7 +90,26 @@ The project includes robust test coverage:
 🚀 Getting Started
 ==================
 
-????? 
+.. code-block:: bash
+
+    # Download the repository
+    git clone https://github.com/stefan0re/machine_learning_compiler.git
+
+    # Navigate to the project directory and create a build directory
+    cd machine_learning_compiler
+    mkdir build && cd build
+
+    # build the project using CMake
+    cmake ..
+    make 
+
+    # Run the tests
+    ctest
+
+    # Run the example
+    ./bin/check_brgemm 64 64 64 4
+    ./bin/bench_bench_ten_op_optimized
+    ...
 
 📜 License
 ==========
