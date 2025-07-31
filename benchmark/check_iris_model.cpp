@@ -114,7 +114,7 @@ void test_model() {
     // output
     Tensor output = Tensor(3);
     Tensor output_ref = Tensor(3);
-    output_ref.data = new float[3]{example.data[4], example.data[5], example.data[6]};
+    output_ref.data = new float[3]{example.data[16], example.data[17], example.data[18]};
 
     forward(input, W1, b1, W2, b2, W3, b3, output);
     std::cout << "Compare:    PyTorch /   C++   /    mlc " << std::endl;
