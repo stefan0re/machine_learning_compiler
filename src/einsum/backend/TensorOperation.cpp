@@ -77,9 +77,9 @@ namespace einsum::backend {
 
         for (int64_t l_it = 0; l_it < l_size; l_it++) {
             // derive if this is first or last access to the output block
-            if (id_loop == 0 && _dim_types[_loop_ids[id_loop]] != dim_t::k && _loop_ids.size() > 0) {
+            if (_loop_ids.size() > 0 && id_loop == 0 && _dim_types[_loop_ids[id_loop]] != dim_t::k) {
                 first_access = true;
-            } else if (id_loop == 0 && _dim_types[_loop_ids[id_loop]] == dim_t::k && l_it == 0 && _loop_ids.size() > 0) {
+            } else if (_loop_ids.size() > 0 && id_loop == 0 && _dim_types[_loop_ids[id_loop]] == dim_t::k && l_it == 0) {
                 first_access = true;
             } else if (_loop_ids.size() == 0) {
                 first_access = true;
