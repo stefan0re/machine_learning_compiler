@@ -216,6 +216,7 @@ Finally, we tested our own example, which is a little smaller:
      - (   1,    6,    48,  480,     0 )
 
 Result:
+
 .. code-block:: text
   
   Running own example with optimizations...
@@ -226,3 +227,5 @@ Result:
 In general, this contraction has a very low arithmetic intensity.
 The results of this example are significantly worse than the previous ones, because on the one hand the outer loops are small and the parallelization therefore brings more overhead than benefit.
 And on the other hand, the kernel sizes are small even if they have already been fused.
+
+The executable for these benchmarks is again in the build directory and can be run with the command :code:`./build/bin/bench_ten_op_optimized`.
