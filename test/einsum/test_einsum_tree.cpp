@@ -331,8 +331,25 @@ TEST_CASE("Einsum::Trees::EinsumTrees::Large Tree Example 1 Lower", "[Einsum][Tr
 }
 
 TEST_CASE("Einsum::Trees::EinsumTrees::simple permutation example", "[Einsum][Trees][EinsumTrees]") {
-    std::vector<TensorOperationUnary::exec_t> i_exec_types = {TensorOperationUnary::exec_t::seq,
-                                                              TensorOperationUnary::exec_t::seq,
-                                                              TensorOperationUnary::exec_t::seq};
-    std::vector<int64_t> i_dim_sizes = {2, 3, 2};
+    std::cout << "Running first pbtc example..." << std::endl;
+    std::string str_repr = "[0,1,2]->[2,0,1]";
+
+    EinsumTree tree = EinsumTree(str_repr, {4, 3, 2});
+    tree.lower();
+
+    float* in = new float[4 * 3 * 2];
+    float* out = new float[4 * 3 * 2];
+    float out_ref[24] = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23,
+                         2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24};
+
+    for (size_t i = 0; i < 24; i++) {
+        in[i] = i + 1;
+        out[i] = 0;
+    }
+
+    tree.execute({in}, {}, out);
+
+    for (size_t i = 0; i < 24; i++) {
+        REQUIRE(out[i] == out_ref[i]);
+    }
 }

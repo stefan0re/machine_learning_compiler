@@ -86,9 +86,9 @@ TEST_CASE("Einsum::Backend::TensorOperationUnary Reorder", "TEST 2") {
     std::vector<TensorOperationUnary::exec_t> i_exec_types = {TensorOperationUnary::exec_t::seq,
                                                               TensorOperationUnary::exec_t::seq,
                                                               TensorOperationUnary::exec_t::seq};
-    std::vector<int64_t> i_dim_sizes = {2, 3, 2};
+    std::vector<int64_t> i_dim_sizes = {4, 3, 2};
     std::vector<int64_t> i_strides_in0 = {6, 2, 1};
-    std::vector<int64_t> i_strides_out = {3, 1, 6};
+    std::vector<int64_t> i_strides_out = {3, 1, 12};
 
     std::span<TensorOperationUnary::exec_t> i_exec_types_span(i_exec_types);
     std::span<int64_t> i_dim_sizes_span(i_dim_sizes);
@@ -103,11 +103,12 @@ TEST_CASE("Einsum::Backend::TensorOperationUnary Reorder", "TEST 2") {
     tensor_op.compile();
 
     // create in0 and out tensor
-    int64_t size_in0 = 2 * 3 * 2;
-    int64_t size_out = 2 * 3 * 2;
+    int64_t size_in0 = 4 * 3 * 2;
+    int64_t size_out = 4 * 3 * 2;
     float* tensor_in0 = new float[size_in0];
     float* tensor_out = new float[size_out];
-    float tensor_out_ref[12] = {1, 3, 5, 7, 9, 11, 2, 4, 6, 8, 10, 12};
+    float tensor_out_ref[24] = {1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23,
+                                2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24};
 
     srand(42);
     for (size_t i = 0; i < size_in0; i++) {

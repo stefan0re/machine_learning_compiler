@@ -33,17 +33,14 @@ using namespace einsum::trees;
 void first_example() {
     std::cout << "Running first pbtc example..." << std::endl;
     std::string str_repr = "[[8,4],[7,3,8]->[7,3,4]],[[[2,6,7],[1,5,6]->[1,2,5,7]],[0,5]->[0,1,2,7]]->[0,1,2,3,4]";
-    auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 50; i++) {
-        EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
-        tree.lower();
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "  Compiling first example: " << elapsed.count() / 50 << " seconds" << std::endl;
 
+    auto start = std::chrono::high_resolution_clock::now();
     EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
     tree.lower();
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+
+    std::cout << "  Compiling first example: " << elapsed.count() << " seconds" << std::endl;
 
     float* in0 = new float[3 * 3];
     float* in1 = new float[32 * 128 * 3];
@@ -129,16 +126,14 @@ void second_example() {
     std::string str_repr = "[[[[3,6,8,9]->[8,6,9,3]],[[2,5,7,9]->[7,5,2,9]]->[7,8,5,6,2,3]],[0,4,5,6]->[0,4,7,8,2,3]],[1,4,7,8]->[0,1,2,3]";
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 50; i++) {
-        EinsumTree tree = EinsumTree(str_repr, {60, 60, 20, 20, 8, 8, 8, 8, 8, 8});
-        tree.lower();
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "  Compiling second example: " << elapsed.count() / 50 << " seconds" << std::endl;
 
     EinsumTree tree = EinsumTree(str_repr, {60, 60, 20, 20, 8, 8, 8, 8, 8, 8});
     tree.lower();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Compiling second example: " << elapsed.count() << " seconds" << std::endl;
+
     tree.print();
 
     float* in0 = new float[20 * 8 * 8 * 8];
@@ -216,18 +211,15 @@ void third_example() {
     std::string str_repr = "[[7,3,8],[8,4]->[7,3,4]],[[0,5],[[5,1,6],[6,2,7]->[5,1,2,7]]->[0,1,2,7]]->[0,1,2,3,4]";
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 50; i++) {
-        EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
-        tree.optimize();
-        tree.lower();
-    }
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "  Compiling second example: " << elapsed.count() / 50 << " seconds" << std::endl;
 
     EinsumTree tree = EinsumTree(str_repr, {100, 72, 128, 128, 3, 71, 305, 32, 3});
     tree.optimize();
     tree.lower();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Compiling second example: " << elapsed.count() << " seconds" << std::endl;
+
     tree.print();
 
     float* in0 = new float[3 * 3];
@@ -313,18 +305,14 @@ void fourth_example() {
     std::string str_repr = "[1,4,7,8],[[0,4,5,6],[[2,5,7,9],[3,6,8,9]->[2,5,7,3,6,8]]->[0,4,2,7,3,8]]->[0,1,2,3]";
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 50; i++) {
-        EinsumTree tree = EinsumTree(str_repr, {60, 60, 20, 20, 8, 8, 8, 8, 8, 8});
-        tree.lower();
-        tree.optimize();
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "  Compiling fourth example: " << elapsed.count() / 50 << " seconds" << std::endl;
     EinsumTree tree = EinsumTree(str_repr, {60, 60, 20, 20, 8, 8, 8, 8, 8, 8});
     tree.lower();
     tree.optimize();
+
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Compiling fourth example: " << elapsed.count() << " seconds" << std::endl;
+
     tree.print();
 
     float* in0 = new float[20 * 8 * 8 * 8];
@@ -406,18 +394,14 @@ void fifth_example() {
     std::string str_repr = "[[2,7,3],[3,8,4]->[2,7,8,4]],[[4,9,0],[[0,5,1],[1,6,2]->[0,5,6,2]]->[4,9,5,6,2]]->[5,6,7,8,9]";
 
     auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < 50; i++) {
-        EinsumTree tree = EinsumTree(str_repr, {40, 40, 40, 40, 40, 25, 25, 25, 25, 25});
-        tree.lower();
-        tree.optimize();
-    }
-
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = end - start;
-    std::cout << "  Compiling fifth example: " << elapsed.count() / 50 << " seconds" << std::endl;
     EinsumTree tree = EinsumTree(str_repr, {40, 40, 40, 40, 40, 25, 25, 25, 25, 25});
     tree.lower();
     tree.optimize();
+    auto end = std::chrono::high_resolution_clock::now();
+
+    std::chrono::duration<double> elapsed = end - start;
+    std::cout << "  Compiling fifth example: " << elapsed.count() << " seconds" << std::endl;
+
     tree.print();
 
     float* in0 = new float[40 * 40 * 25];
@@ -467,10 +451,16 @@ void fifth_example() {
 
 int main() {
     std::cout << "Benchmarking Einsum Strings..." << std::endl;
+    std::cout << "*****************************************" << std::endl;
     first_example();
+    std::cout << "*****************************************" << std::endl;
     // second_example();
-    third_example();
+    // std::cout << "*****************************************" << std::endl;
+    // third_example();
+    // std::cout << "*****************************************" << std::endl;
     // fourth_example();
-    fifth_example();
+    // std::cout << "*****************************************" << std::endl;
+    // fifth_example();
+    // std::cout << "*****************************************" << std::endl;
     return EXIT_SUCCESS;
 }

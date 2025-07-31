@@ -541,41 +541,31 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
         std::vector<int64_t> strides_in;
         std::vector<int64_t> strides_out;
 
-        uint32_t dim_id = 0;
         for (auto id : node->left_tensor->id) {
             strides_in.push_back(id.stride);
             dim_sizes.push_back(id.dim_sizes);
         }
 
-        for (auto id : node->out_tensor->id) {
-            strides_out.push_back(id.stride);
+        for (int i = 0; i < node->notation.size(); i++) {
+            strides_out.push_back(0);
+        }
+        int counter = 0;
+        for (auto id : node->notation) {
+            strides_out[id] = node->out_tensor->id[counter++].stride;
             exec_types.push_back(TensorOperationUnary::exec_t::seq);
         }
-
-        std::cout << "\nNode ID: " << node->id << "\n";
-        std::cout << "\nIn strides: ";
-        for (auto stride : strides_in) {
-            std::cout << " " << stride;
-        }
-
-        std::cout << "\nOut strides: ";
-        for (auto stride : strides_out) {
-            std::cout << " " << stride;
-        }
-        std::cout << std::endl;
 
         std::span<TensorOperationUnary::exec_t>
             exec_types_span(exec_types);
         std::span<int64_t> dim_sizes_span(dim_sizes);
         std::span<int64_t> strides_in_span(strides_in);
         std::span<int64_t> strides_out_span(strides_out);
-        TensorOperationUnary::error_t result = node->op_unary.setup(
-            dtype,
-            prim_type,
-            exec_types_span,
-            dim_sizes_span,
-            strides_in_span,
-            strides_out_span);
+        TensorOperationUnary::error_t result = node->op_unary.setup(dtype,
+                                                                    prim_type,
+                                                                    exec_types_span,
+                                                                    dim_sizes_span,
+                                                                    strides_in_span,
+                                                                    strides_out_span);
 
         if (result != TensorOperationUnary::error_t::success) {
             std::cerr << "Setup failed for permutation operation" << std::endl;
@@ -719,10 +709,12 @@ void EinsumTree::execute(std::vector<void*> inputs, std::vector<void*> biases, v
     // First calculate the total size of the output tensor
     int32_t size = 1;
     for (auto id : this->root->out_tensor->id) {
-        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n))) {
+        if ((id.dim_t == static_cast<int>(TensorOperation::dim_t::m)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::n)) || (id.dim_t == static_cast<int>(TensorOperation::dim_t::undefined))) {
             size *= id.dim_sizes;
         }
     }
+
+    // TODO: check if all permutation node allocation is correct.
 
     // Copy the data
     memcpy(output, result, size * sizeof(float));
@@ -760,6 +752,13 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
             out_size *= id.dim_sizes;
         } else if (id.dim_t == static_cast<int>(TensorOperation::dim_t::c)) {
             out_size *= id.dim_sizes;
+        }
+    }
+
+    if (node->node_type == EinsumTree::node_t::permutation) {
+        out_size = 1;  // For permutation nodes, we only need to consider the output size
+        for (size_t i = 0; i < node->out_tensor->id.size(); i++) {
+            out_size *= node->out_tensor->id[i].dim_sizes;
         }
     }
 
@@ -809,7 +808,6 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
     } else if (node->node_type == EinsumTree::node_t::permutation) {
         // Execute child node
-        std::cout << "Executing permutation node with ID: " << node->id << std::endl;
         void* child_output = executeNode(node->left_child, inputs, biases);
         output_f = new float[out_size]();  // Initialize to zero
         output = static_cast<void*>(output_f);
@@ -821,7 +819,6 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
 
         // Execute the permutation operation
-        std::cout << "Executing permutation operation for node ID: " << node->id << std::endl;
         node->op_unary.execute(child_output, output);
 
         if (node->left_child->node_type != EinsumTree::node_t::leaf) {
