@@ -285,7 +285,7 @@ Results
 We tested our implementation with the given einsum strings.
 
 Tree 1
-``````
+^^^^^^
 String ``[[7,3,8],[8,4]->[7,3,4]],[[0,5],[[5,1,6],[6,2,7]->[5,1,2,7]]->[0,1,2,7]]->[0,1,2,3,4]``
 Tree structure:
 
@@ -316,7 +316,7 @@ Optimized:
         └─ 0,5
 
 Tree 2
-``````
+^^^^^^
 String ``[1,4,7,8],[[0,4,5,6],[[2,5,7,9],[3,6,8,9]->[2,5,7,3,6,8]]->[0,4,2,7,3,8]]->[0,1,2,3]``
 Tree structure:
 
@@ -346,8 +346,9 @@ Optimized:
      └─ 1,4,7,8
 
 Tree 3
-``````
+^^^^^^
 String ``[[0,1],[1,2]->[0,2]],[[3,4],[4,5]->[3,5]]->[0,1,2,3,4]``
+
 Tree structure:
 
 .. code-block:: text
@@ -377,5 +378,25 @@ Optimized:
         │  └─ 0,5,1
         └─ 4,9,0
 
+Benchmarks
+^^^^^^^^^^
+
+.. list-table:: Benchmarks for compiling and executing einsum trees
+   :widths: 40 30 30
+   :header-rows: 1
+
+   * - Variable
+     - Compile Time (ms)
+     - GFLOPS
+   * - Example 1
+     - 0.34
+     - 3.01
+   * - Example 2
+     - -
+     - -
+   * - Example 3
+     - -
+     - -
+   
 We all worked on the tasks in equal parts.
 Our code can be viewed on `Github <https://github.com/stefan0re/machine_learning_compiler>`_ under version week10.
