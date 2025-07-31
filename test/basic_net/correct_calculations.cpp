@@ -17,21 +17,30 @@ void relu(Tensor& vec) {
 // in row-major access pattern
 void matmul_add(const Tensor& x, const Tensor& W, const Tensor& b, Tensor& out) {
     /*
-    W = [w1.1, w1.2, w1.3, w1.4,        [x1,   [y1,
-         w2.1, w2.2, w2.3, w2.4,   *     x2, =  y2,
-         w3.1, w3.2, w3.3, w3.4,         x3,    y3,
-                ......          ]        x4]    ...]
+    W = [w1.1, w1.2, w1.3, w1.4,        [x1, x5         [y1, y_n
+         w2.1, w2.2, w2.3, w2.4,   *     x2, x6 ...  =   y2, y_n+1
+         w3.1, w3.2, w3.3, w3.4,         x3, x7          y3, y_n+2
+                ......          ]        x4, x8    ]        ...    ]
 
     -> y1 = w1.1 * x1 + w1.2 + w1.3 * w3 + w1.4 * w4 + b1.1
-    -> Tensor(4, 64) -> stride: (64, 1)
+    -> Tensor(64, 4) -> stride: (4, 1)
     */
-    for (size_t i = 0; i < out.size; ++i) {
-        float sum = 0.0f;
-        for (size_t j = 0; j < x.size; ++j) {
-            // for each value in X and each row in W
-            sum += x.data[j] * W.data[i * W.id[0].stride + j * W.id[1].stride];
+
+    size_t batch_size = x.id[0].dim_sizes;
+    size_t input_dim = x.id[1].dim_sizes;
+    size_t output_dim = W.id[0].dim_sizes;
+
+    for (size_t b_idx = 0; b_idx < batch_size; ++b_idx) {
+        for (size_t o = 0; o < output_dim; ++o) {
+            float sum = 0.0f;
+            for (size_t i = 0; i < input_dim; ++i) {
+                size_t x_index = b_idx * x.id[0].stride + i * x.id[1].stride;
+                size_t W_index = o * W.id[0].stride + i * W.id[1].stride;
+                sum += x.data[x_index] * W.data[W_index];
+            }
+            size_t out_index = b_idx * out.id[0].stride + o * out.id[1].stride;
+            out.data[out_index] = sum + b.data[o];
         }
-        out.data[i] = sum + b.data[i];
     }
 }
 
@@ -43,8 +52,8 @@ void forward(const Tensor& input,                 // size = b = 4
              Tensor& output)                      // output: size = e
 {
     // Temporary tensors
-    Tensor z1 = Tensor(64);
-    Tensor z2 = Tensor(16);
+    Tensor z1 = Tensor(4, 64);
+    Tensor z2 = Tensor(4, 16);
 
     // fc1
     matmul_add(input, W1, b1, z1);
@@ -75,14 +84,20 @@ TEST_CASE("Model::BasicNet::Output", "[Model][BasicNet][Output]") {
     // load example input and output
     Tensor example = Tensor::from_csv("../../python/data/example.csv");
 
-    // input
-    Tensor input = Tensor(4);
-    input.data = new float[4]{example.data[0], example.data[1], example.data[2], example.data[3]};
+    // convert the vetor to a tensor
+    Tensor input = Tensor(4, 4);
+    // because we use Tensor::from_csv, we have to split the values into 2
+    // parts: Input and Output (currently we use batch size of 4 for that example)
+    for (int i = 0; i < 4 * 4; i++) {
+        input.data[i] = example.data[i];
+    }
 
     // output
-    Tensor output = Tensor(3);
-    Tensor output_ref = Tensor(3);
-    output_ref.data = new float[3]{example.data[4], example.data[5], example.data[6]};
+    Tensor output = Tensor(4, 3);
+    Tensor output_ref = Tensor(4, 3);
+    for (int i = 4 * 4; i < example.size; i++) {
+        output_ref.data[i] = example.data[i];
+    }
 
     // DEBUG
     input.print();

@@ -78,7 +78,7 @@ class Tensor {
     static Tensor from_csv(std::string path);
 
     /**
-     * @brief Compare this tensor with anothe
+     * @brief Compare this tensor with another tensor.
      *
      * @param tensor The tensor that should be compared with.
      * @param delta A small margin to compensate floating point calculation errors.

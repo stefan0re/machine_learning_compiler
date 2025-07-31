@@ -21,7 +21,7 @@ class Tests:
         """
 
         # model parameters
-        a = 1
+        a = 4
         b = 4
         c = 64
         d = 16
@@ -30,8 +30,7 @@ class Tests:
         # load one sample from the data
         print("Get a sample...")
         df = pd.read_csv(dataset_path)
-        # TODO: Inserte batch size here
-        X = df.sample(1)
+        X = df.sample(a)
         # filter the class out
         X_numeric = X.select_dtypes(include=[np.number])
         X_tensor = torch.tensor(X_numeric.values, dtype=torch.float32)
