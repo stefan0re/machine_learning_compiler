@@ -8,8 +8,9 @@
    at **Friedrich Schiller Universität Jena**, taught by *Alexander Breuer* in 2025.  
    Developed by **Stefan Remke**, **Phillip Rothenbeck**, and **Tom Schmidt**.
 
-   📂 The source code is available at:  
+   📂 The source code is available at GitHub and the release v1.0:  
    `GitHub Repository <https://github.com/stefan0re/machine_learning_compiler>`_
+   `Release <https://github.com/stefan0re/machine_learning_compiler/releases/tag/v1.0>`_.
 
    This documentation outlines the various stages and tasks completed throughout the course,
    including implementation challenges, optimization strategies, and performance evaluations.
