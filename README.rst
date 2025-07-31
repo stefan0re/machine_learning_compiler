@@ -3,9 +3,9 @@ Optimised Tensor Contraction Library (C++ | aarch64 | NEON ASM)
 ==============================================================
 
 .. image:: https://img.shields.io/badge/Platform-aarch64-green
-    :target: https://github.com/yourusername/yourrepo
+    :target: https://github.com/stefan0re/machine_learning_compiler/
 .. image:: https://img.shields.io/badge/Language-C++17-blue
-    :target: https://github.com/yourusername/yourrepo
+    :target: https://github.com/stefan0re/machine_learning_compiler/
 .. image:: https://img.shields.io/badge/License-MIT-lightgrey
 
 High-performance tensor contraction library with **Just-in-Time (JIT)** kernel compilation for **NEON/Assembly**, optimized for **ARM aarch64** platforms. Designed for **machine learning**, **scientific computing**, and **high-throughput tensor operations**.
