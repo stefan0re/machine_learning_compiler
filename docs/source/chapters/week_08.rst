@@ -393,5 +393,5 @@ Benchmarks
      - 20.2666
 
 
-
+We all worked on the tasks in equal parts.
 Our code can be viewed on `Github <https://github.com/stefan0re/machine_learning_compiler>`_ under version week8.
