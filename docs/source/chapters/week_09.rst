@@ -20,16 +20,27 @@ With the help of a stack we translate this into a tree structure with nodes:
 
     struct TreeNode {
         int32_t id;
-        std::vector<uint32_t> notation;
         node_t node_type;
         TreeNode* parent;
         TreeNode* left_child;
         TreeNode* right_child;
+
+        std::vector<uint32_t> notation;
+        Tensor* left_tensor;
+        Tensor* right_tensor;
+        Tensor* out_tensor;
+
+        TensorOperation::prim_t first_touch;
+        TensorOperation::prim_t operation_primitive;
+        TensorOperation::prim_t last_touch;
+
+        TensorOperation op;
     };
 
 The einsum notation for the output tensor of each node is stored as a vector of integer in each respective node.
 The tree is created by iterating over each character of the input string and storing the context in the before-mentioned stack. Based on this information we decide, where a new node is supposed to be added.
 
+Each node has a type, which defines if the node is a leaf, a permutation or a contraction node. The stride information is calculated in the separate Tensor class, which is not shown here.
 By utilizing a recursive function to print the tree we can see, that a correct tree was build:
 
 .. code-block:: text
@@ -39,6 +50,9 @@ By utilizing a recursive function to print the tree we can see, that a correct t
      └─ 1,2
 
 This also works for larger trees:
+
+Example 1
+^^^^^^^^^
 
 .. code-block:: C++
 
@@ -56,41 +70,46 @@ This also works for larger trees:
         │  └─ 1,5,6
         └─ 0,5
 
-Coming to the lowering function, we first wanted to implement a working function for with only contraction nodes as our unary operations are not working correctly.
-We solve this again by using a structure, that hold both the operation objects and the corresponding tensor information:
+And with permutation nodes:
+
+Example 2
+^^^^^^^^^	
 
 .. code-block:: C++
-    :linenos:
 
-    struct OpSteps {
-        struct OpStep {
-            uint32_t in_ten_left;
-            std::vector<uint32_t> in_ten_left_notation;
-            uint32_t in_ten_right;
-            std::vector<uint32_t> in_ten_right_notation;
-            uint32_t out_ten;
-            std::vector<uint32_t> out_ten_notation;
-        };
-        std::vector<einsum::backend::TensorOperation> step_list;
-        std::vector<OpStep> tensor_order;
-    };
+    "[[[[3,6,8,9]->[8,6,9,3]],[[2,5,7,9]->[7,5,2,9]]->[7,8,5,6,2,3]],[0,4,5,6]->[0,4,7,8,2,3]],[1,4,7,8]->[0,1,2,3]"
 
-We solve this task by using a recursive function, that returns a :code:`OpStep` object. If we find our selfs in a contraction node, which is marked by the type
+.. code-block:: text
 
-.. code-block:: C++
-    :linenos:
+    └─ 0,1,2,3
+       ├─ 0,4,7,8,2,3
+       │  ├─ 7,8,5,6,2,3
+       │  │  ├─ 8,6,9,3
+       │  │  │  └─ 3,6,8,9
+       │  │  └─ 7,5,2,9
+       │  │     └─ 2,5,7,9
+       │  └─ 0,4,5,6
+       └─ 1,4,7,8
 
-    enum class node_t : uint32_t {
-        leaf = 0,
-        permutation = 1,
-        contraction = 2,
-    };
+The lowering function is implemented in a recursive manner. It moves downwards through the tree and creates the :code:`TensorOperation` and :code:`TensorOperationUnary` objects for each node that are later used to execute the tree.
+The information to create the operation objects is taken from the size vector and each tensor class of the node.
 
-we first get the information of each child (and maybe even create another operation by doing so). Then create a :code:`TensorOperation` object with this collected information.
-Finally we add this object and a :code:`OpStep` object to the respective lists in :code:`OpSteps`.
+Benchmarks
+^^^^^^^^^^
 
-Our code fail when adding the :code:`TensorOperation` object to the vector. As our implementation has no copy constructor. This error is going to be fixed in near future.
-As we do not have a fully working version, we have no benchmarks to report.
+.. list-table:: Benchmarks for compiling and executing einsum trees
+   :widths: 40 30 30
+   :header-rows: 1
+
+   * - Variable
+     - Compile Time (ms)
+     - GFLOPS
+   * - Example 1
+     - 0.21
+     - 6.00
+   * - Example 2
+     - -
+     - -
 
 We all worked on the tasks in equal parts.
 Our code can be viewed on `Github <https://github.com/stefan0re/machine_learning_compiler>`_ under version week9.

@@ -353,3 +353,4 @@ TEST_CASE("Einsum::Trees::EinsumTrees::simple permutation example", "[Einsum][Tr
         REQUIRE(out[i] == out_ref[i]);
     }
 }
+

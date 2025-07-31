@@ -66,7 +66,7 @@ void benchmark_brgemm() {
                 }
                 auto l_end = std::chrono::high_resolution_clock::now();
                 std::chrono::duration<double> l_duration = l_end - l_start;
-                int64_t iteration = 20.0 / l_duration.count();
+                int64_t iteration = 10.0 / l_duration.count();
 
                 l_start = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < iteration; i++) {
@@ -76,7 +76,7 @@ void benchmark_brgemm() {
                 }
                 l_end = std::chrono::high_resolution_clock::now();
                 l_duration = l_end - l_start;
-                double gflops = (2.0 * m * n * k) * iteration;
+                double gflops = (2.0 * m * n * k * br) * iteration;
                 gflops /= l_duration.count();
                 gflops /= 1e9;
                 std::cout << "  Duration: " << l_duration.count() << std::endl;

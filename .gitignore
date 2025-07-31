@@ -2,3 +2,7 @@ env_sphinx*
 build*
 .cache
 *.o
+**/__pycache__/
+__pycache__
+env
+
