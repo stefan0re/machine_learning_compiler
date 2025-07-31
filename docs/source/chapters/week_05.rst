@@ -6,8 +6,8 @@ The solutions to this second task can be found in `this directory <https://githu
 GEMM
 ____
 
-get_kernel_sizes
-++++++++++++++++
+Kernel blocking
++++++++++++++++
 
 In order to be able to process all matrix sizes, we first need to figure out the sizes of the sub-matrices and kernels. Thus, we implemented a algorithm that return these kernel sizes based on the dimensions of the :math:`C` matrix. 
 
@@ -53,6 +53,10 @@ Derived from the “big” kernel, only the edge column is then created on the r
         i_used_vector_reg_count_small = m_blocks * kernelsize_small.N;
     }
 
+
+Generator
++++++++++
+
 The JIT-generator function for the GEMM is pretty much strate forward after this blocking.
 The accumulation on a C submatrix is first made in a K loop.
 For this we wrote a microkernel function that only handles the compute.
@@ -64,7 +68,18 @@ Around this is then looped again in N in order to calculate the sub-matrices up 
 The full implementation can be seen in this `here <https://github.com/stefan0re/machine_learning_compiler/blob/main/src/mini_jit/generator/Brgemm.cpp>`_, and here are `tests <https://github.com/stefan0re/machine_learning_compiler/blob/main/test/mini_jit/test_gemm.cpp>`_ for all sizes.
 In our test we have to test cases one with the leading dimensions equal to the M K and M, and another one with random bigger leading dimensions.
 
-TODO: link to csv file with full sweep and report the mean performance of all kernels.
+Performance
++++++++++++
+
+To measure all possible cases and let Edward sweat a little, we did a GEMM sweep over M,N = 1-64 and K = {1,16,32,64,128}.
+We have written the results of our sweep to a CSV file that can be analyzed using the `visualization tool <http://scalable.uni-jena.de/opt/gemm/>`_ from the lecture. 
+`GEMM-CSV-Download <../_static/m4_gemm.csv>`__
+
+.. image:: ../_static/vis_gemm.png
+    :alt: Plot of GEMM performance
+
+The mean performance of all GEMM kernels is 76.988 GFLOPS.
+Our best kernels have a performance of around 127 GFLOPS.
 
 
 Batch-Reduce GEMM
@@ -77,4 +92,14 @@ After each inner K loop, the address of the next outer K is calculated with the 
 
 Again as with our regular GEMM we have written tests to verify the correctness of the code. (`Link <https://github.com/stefan0re/machine_learning_compiler/blob/main/test/mini_jit/test_brgemm.cpp>`_).
 
-TODO: report arithmetic mean performance of all settings.
+Again our results can be seen in a CSV file that can be analyzed using the visualization tool from the lecture.
+Since we always use the same batch reduce size of 16, we have simply created the same type of CSV again, knowing that a batch size is used.
+`BRGEMM-CSV-Download <../_static/m4_brgemm.csv>`__
+
+
+If you like to try your own settings, you can use the program :code:`check_brgemm` which you can find in the build/bin directory after building our project.
+An example command to run it is:
+
+.. code-block:: bash
+
+    ./build/bin/check_brgemm 64 64 64 2
