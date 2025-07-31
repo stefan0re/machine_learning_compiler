@@ -525,11 +525,67 @@ TensorOperation::prim_t EinsumTree::lowerNode(TreeNode* node) {
     if (node->node_type == node_t::leaf) {
         node_op = TensorOperation::prim_t::none;
     } else if (node->node_type == node_t::permutation) {
-        TensorOperation::prim_t child_op = lowerNode(node->left_child);
+        if (node->left_child == nullptr) {
+            std::cerr << "Left child tensor is null, cannot lower permutation node." << std::endl;
+            return TensorOperation::prim_t::none;
+        }
+
+        lowerNode(node->left_child);
+        node_op = TensorOperation::prim_t::copy;
+
+        TensorOperationUnary::dtype_t dtype = TensorOperationUnary::dtype_t::fp32;
+        TensorOperationUnary::prim_t prim_type = TensorOperationUnary::prim_t::trans;
+
+        std::vector<TensorOperationUnary::exec_t> exec_types;
+        std::vector<int64_t> dim_sizes;
+        std::vector<int64_t> strides_in;
+        std::vector<int64_t> strides_out;
+
+        uint32_t dim_id = 0;
+        for (auto id : node->left_tensor->id) {
+            strides_in.push_back(id.stride);
+            dim_sizes.push_back(id.dim_sizes);
+        }
+
+        for (auto id : node->out_tensor->id) {
+            strides_out.push_back(id.stride);
+            exec_types.push_back(TensorOperationUnary::exec_t::seq);
+        }
+
+        std::cout << "\nNode ID: " << node->id << "\n";
+        std::cout << "\nIn strides: ";
+        for (auto stride : strides_in) {
+            std::cout << " " << stride;
+        }
+
+        std::cout << "\nOut strides: ";
+        for (auto stride : strides_out) {
+            std::cout << " " << stride;
+        }
+        std::cout << std::endl;
+
+        std::span<TensorOperationUnary::exec_t>
+            exec_types_span(exec_types);
+        std::span<int64_t> dim_sizes_span(dim_sizes);
+        std::span<int64_t> strides_in_span(strides_in);
+        std::span<int64_t> strides_out_span(strides_out);
+        TensorOperationUnary::error_t result = node->op_unary.setup(
+            dtype,
+            prim_type,
+            exec_types_span,
+            dim_sizes_span,
+            strides_in_span,
+            strides_out_span);
+
+        if (result != TensorOperationUnary::error_t::success) {
+            std::cerr << "Setup failed for permutation operation" << std::endl;
+            return TensorOperation::prim_t::none;
+        }
+        node->op_unary.compile();
     } else if (node->node_type == node_t::contraction) {
         this->bias_ids.push_back(node->id);
-        TensorOperation::prim_t left_op = lowerNode(node->left_child);
-        TensorOperation::prim_t right_op = lowerNode(node->right_child);
+        lowerNode(node->left_child);
+        lowerNode(node->right_child);
 
         TensorOperation::dtype_t dtype = TensorOperation::dtype_t::fp32;
         TensorOperation::prim_t prim_first_touch = node->first_touch;
@@ -753,6 +809,7 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
     } else if (node->node_type == EinsumTree::node_t::permutation) {
         // Execute child node
+        std::cout << "Executing permutation node with ID: " << node->id << std::endl;
         void* child_output = executeNode(node->left_child, inputs, biases);
         output_f = new float[out_size]();  // Initialize to zero
         output = static_cast<void*>(output_f);
@@ -764,7 +821,13 @@ void* EinsumTree::executeNode(TreeNode* node, std::vector<void*> inputs, std::ve
         }
 
         // Execute the permutation operation
-        node->op.execute(child_output, nullptr, output);
+        std::cout << "Executing permutation operation for node ID: " << node->id << std::endl;
+        node->op_unary.execute(child_output, output);
+
+        if (node->left_child->node_type != EinsumTree::node_t::leaf) {
+            // If the left child is not a leaf, we need to clean up the child output
+            delete[] static_cast<float*>(child_output);
+        }
     } else {
         std::cerr << "Unsupported node type for execution: " << static_cast<int>(node->node_type) << std::endl;
         delete[] output_f;  // Clean up allocated memory

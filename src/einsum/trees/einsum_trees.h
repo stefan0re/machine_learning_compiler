@@ -7,6 +7,7 @@
 
 #include "../../tensor/tensor.h"
 #include "../backend/TensorOperation.h"
+#include "../backend/TensorOperationUnary.h"
 
 namespace einsum {
     namespace trees {
@@ -41,6 +42,7 @@ class einsum::trees::EinsumTree {
         TensorOperation::prim_t last_touch;
 
         TensorOperation op;
+        TensorOperationUnary op_unary;
     };
 
     TreeNode* root = nullptr;
