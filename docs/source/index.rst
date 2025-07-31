@@ -131,3 +131,4 @@ This project is licensed under the MIT License.
    chapters/week_08.rst
    chapters/week_09.rst
    chapters/week_10.rst
+   chapters/individual_phase.rst
