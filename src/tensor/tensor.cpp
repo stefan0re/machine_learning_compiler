@@ -205,3 +205,41 @@ Tensor Tensor::from_csv(std::string path) {
 
     return t;
 }
+
+std::vector<Tensor> Tensor::load_example(std::string path, int batch_size) {
+    std::ifstream file(path);
+    std::string line;
+    std::vector<Tensor> layers;
+
+    int in_size;
+    int line_count = 0;
+
+    // for each line
+    while (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<float> values;
+
+        // parse floats from line
+        while (std::getline(ss, token, ',')) {
+            values.push_back(std::stof(token));
+        }
+
+        // calculate the size of the input
+        in_size = values.size() / batch_size;
+        // create the tensor
+        // this is the pytorch row-major standart
+        Tensor t = Tensor(batch_size, in_size);
+
+        // allocate raw float array and copy values
+        t.data = new float[values.size()];
+        for (size_t i = 0; i < values.size(); ++i) {
+            t.data[i] = values[i];
+        }
+
+        // store the tensor
+        layers.push_back(t);
+    }
+
+    return layers;
+}
