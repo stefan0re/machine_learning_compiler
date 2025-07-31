@@ -136,7 +136,7 @@ First and Last Touch Primitives in Einsum Trees
 
 In order to use activation functions like ReLU, we must be able to add markers for first and last touch primitives to each node. 
 Thus, we continued our standard for describing the einsum tree by adding multiple characters, which each represent a different first/last touch primitive.
-For example 'r' stands for ReLU and 'z' for zero. These characters must be positioned correctly for them to be translated correctly. A first touch primitive has to be 
+For example 'r' stands for ReLU and 'z' for zero. These characters must be positioned in such a way for them to be translated correctly. A first touch primitive has to be 
 inside the brackets, of the respective tensor holding the tensor dimension IDs. For example, if we have a tensor with dimension IDs :code:`[0, 1, 3]`, the first 
 touch primitive 'z' has to be placed as follows:
 
@@ -144,7 +144,7 @@ touch primitive 'z' has to be placed as follows:
 
     [0, 1, 3, z]
 
-If we want to use a last touch primitive, it has to be placed after the brackets, like this: 
+If we want to use a last touch primitive, it has to be placed after the brackets like this: 
 
 .. code-block:: text
 
@@ -154,12 +154,15 @@ If we want to use a last touch primitive, it has to be placed after the brackets
 Bias Implementation
 ^^^^^^^^^^^^^^^^^^^
 
-The bias of a neural network layer is a simple tensor that is added to the output of the layer. In our task it is specifically a vector that has to be added to 
-each row of each output matrix. Thus, our first simple implementation was to pass the bias vector into our recursive execution function of the einsum tree. An 
+The bias of a neural network layer is a tensor that is added to the output of the layer. In our task, it is specifically a vector that has to be added to 
+each row of each output matrix. Thus, our first basic implementation was to pass the bias vector into our recursive execution function of the einsum tree. An 
 extra addition was performed after the execution of a contraction using the correctly marked bias vector. This implementation was simple but not very efficient, 
 as it required an additional loop over the output matrix after each contraction. Therefore, we adopted an idea from a classmate, which was given to us after the 
 final presentation. Our current implementation loads the respective bias vector into the output tensor of each contraction. This is achieved by filling each 
 column with the corresponding bias value, since we work with column-major tensors. This way, we can avoid the further additions and load the bias directly 
 ("add") to our intermediate output tensors.
+
+.. image:: ../_static/bias_calc.png
+    :alt: Visualization of bias calculation
 
 We all worked on the tasks in equal parts.
