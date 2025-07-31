@@ -128,5 +128,16 @@ This performs:
 - Plotting of inference timings
 - Export of a sample batch for C++ validation
 
+Features and Optimizations
+--------------------------
+
+First and Last Touch primitives in Einsum Trees
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In order to use activation functions like ReLU, we have to be able to add markers for first and last touch primitives to each node. 
+Thus, we continued our standard for describing the einsum tree by adding multiple characters, which each represent a different first/last touch primitive.
+For example 'r' stands for ReLU and 'z' for zero. These characters have to be positioned correctly for them to be used. A first touch primitive has to be 
+inside the brackets, of the respective tensor holding the tensor dimension IDs. For example, if we have a tensor with dimension IDs '[0, 1, 3]', the first 
+touch primitive 'z' has to be placed like this: '[0, 1, 3, z]'. If we want to use a last touch primitive, it has to be placed after the brackets, like this: '[0, 1, 3]r'.  
 
 We all worked on the tasks in equal parts.
